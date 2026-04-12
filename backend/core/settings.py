@@ -67,7 +67,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # --- DATABASE CONFIGURATION (RAILWAY READY) ---
-# This looks for your 'DATABASE_URL' in the .env file
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),
@@ -125,3 +124,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- CORS SETTINGS ---
 CORS_ALLOW_ALL_ORIGINS = True
+
+# --- FIX FOR 403 FORBIDDEN ERROR ---
+CSRF_TRUSTED_ORIGINS = [
+    'https://yaris-autocare-production.up.railway.app',
+    'https://*.railway.app'
+]
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
