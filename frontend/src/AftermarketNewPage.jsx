@@ -5,9 +5,7 @@ import {
   Save, X, MapPin, DollarSign, Tag, 
   Camera, Barcode, Trash2, Printer, Truck 
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 
-// Hardcoded Railway URL to ensure connection
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const COLORS = { 
@@ -52,18 +50,23 @@ const AftermarketNewPage = () => {
     setImages([...images, ...newImages]);
   };
 
-  // --- SAVE LOGIC ---
+  // --- THE CRITICAL SAVE LOGIC ---
   const handleSave = async (e) => {
-    if (e) e.preventDefault(); // Prevent page refresh
-    console.log("Step 1: Save clicked");
+    // 1. Stop any default browser behavior or parent redirects
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
-    if (!formData.name) return alert("Product name is required!");
+    if (!formData.name) {
+      alert("Product name is required!");
+      return;
+    }
     
     setLoading(true);
-    console.log("Step 2: Packaging data...");
+    console.log("Saving to Railway...");
 
     try {
-      // Mapping to match your AftermarketPart model exactly
       const dataToSend = {
         part_name: formData.name,
         sku: formData.sku,
@@ -76,15 +79,18 @@ const AftermarketNewPage = () => {
         description: formData.description
       };
 
-      console.log("Step 3: Sending to Railway...", dataToSend);
-
+      // 2. WAIT for the server to respond
       const response = await axios.post(`${API_URL}/api/parts/`, dataToSend);
       
-      console.log("Step 4: Success!", response.data);
-      alert("Success! Part added to Yaris Autocare Inventory.");
-      navigate('/aftermarket');
+      console.log("Server response:", response.data);
+
+      // 3. ONLY redirect AFTER successful save
+      if (response.status === 201 || response.status === 200) {
+        alert("Success! Part added to Yaris Autocare Inventory.");
+        navigate('/aftermarket');
+      }
     } catch (error) {
-      console.error("Step 5: Error caught!", error.response?.data || error.message);
+      console.error("Save failed:", error.response?.data || error.message);
       alert("Error: " + JSON.stringify(error.response?.data || "Check connection"));
     } finally {
       setLoading(false);
@@ -98,10 +104,17 @@ const AftermarketNewPage = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ margin: 0, fontWeight: '900', fontSize: '28px' }}>Add New Product</h2>
-          <p style={{ color: COLORS.slate }}>Database: {API_URL}</p>
+          <p style={{ color: COLORS.slate }}>Railway Cloud: {API_URL}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button type="button" onClick={() => navigate(-1)} style={secondaryBtn}><X size={18}/> Cancel</button>
+          {/* Use a simple button to prevent routing interference */}
+          <button 
+            type="button" 
+            onClick={() => navigate('/aftermarket')} 
+            style={secondaryBtn}
+          >
+            <X size={18}/> Cancel
+          </button>
           
           <button 
             type="button"
