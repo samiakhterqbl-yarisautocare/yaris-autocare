@@ -8,7 +8,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 
 // Get the backend address from your Vercel settings
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const COLORS = { 
   primary: '#ef4444', 
