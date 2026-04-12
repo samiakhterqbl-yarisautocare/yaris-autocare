@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Save, X, MapPin, DollarSign, Tag, 
-  Camera, Barcode, Trash2, Printer 
+  Camera, Barcode, Trash2, Printer, Truck 
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -31,7 +31,7 @@ const AftermarketNewPage = () => {
     cost: '',
     price: '',
     loc: '',
-    supplier: '',
+    supplier: 'Yaris Autocare',
     description: ''
   });
 
@@ -53,36 +53,38 @@ const AftermarketNewPage = () => {
   };
 
   // --- SAVE LOGIC ---
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    if (e) e.preventDefault(); // Prevent page refresh
+    console.log("Step 1: Save clicked");
+
     if (!formData.name) return alert("Product name is required!");
     
     setLoading(true);
+    console.log("Step 2: Packaging data...");
+
     try {
-      // Mapping React state names to Django Model field names
+      // Mapping to match your AftermarketPart model exactly
       const dataToSend = {
-        part_name: formData.name,       // Matches Django
+        part_name: formData.name,
         sku: formData.sku,
         quantity: parseInt(formData.qty) || 0,
-        price: parseFloat(formData.price) || 0,
+        supplier: formData.supplier,
         cost_price: parseFloat(formData.cost) || 0,
+        sale_price: parseFloat(formData.price) || 0,
         location: formData.loc,
-        description: formData.description,
-        condition: "New",               // Default for aftermarket
-        status: "For Sale",             // Default status
-        category: "Aftermarket"         // Default category
+        min_stock_level: parseInt(formData.min_stock) || 5,
+        description: formData.description
       };
 
-      console.log("Sending data to Railway:", dataToSend);
+      console.log("Step 3: Sending to Railway...", dataToSend);
 
       const response = await axios.post(`${API_URL}/api/parts/`, dataToSend);
       
-      if (response.status === 201 || response.status === 200) {
-        alert("Success! Part added to Yaris Autocare Inventory.");
-        navigate('/aftermarket');
-      }
+      console.log("Step 4: Success!", response.data);
+      alert("Success! Part added to Yaris Autocare Inventory.");
+      navigate('/aftermarket');
     } catch (error) {
-      console.error("Save failed:", error.response?.data || error.message);
-      // This alert will tell you exactly which field Django is unhappy with
+      console.error("Step 5: Error caught!", error.response?.data || error.message);
       alert("Error: " + JSON.stringify(error.response?.data || "Check connection"));
     } finally {
       setLoading(false);
@@ -96,17 +98,18 @@ const AftermarketNewPage = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ margin: 0, fontWeight: '900', fontSize: '28px' }}>Add New Product</h2>
-          <p style={{ color: COLORS.slate }}>Cloud Sync: {API_URL}</p>
+          <p style={{ color: COLORS.slate }}>Database: {API_URL}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => navigate(-1)} style={secondaryBtn}><X size={18}/> Cancel</button>
+          <button type="button" onClick={() => navigate(-1)} style={secondaryBtn}><X size={18}/> Cancel</button>
           
           <button 
+            type="button"
             onClick={handleSave} 
             disabled={loading}
             style={{ ...primaryBtn, opacity: loading ? 0.7 : 1 }}
           >
-            <Save size={18}/> {loading ? 'Saving to Cloud...' : 'Create Product'}
+            <Save size={18}/> {loading ? 'Saving...' : 'Create Product'}
           </button>
         </div>
       </div>
@@ -133,7 +136,7 @@ const AftermarketNewPage = () => {
               {images.map(img => (
                 <div key={img.id} style={{ height: '100px', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                   <img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="part" />
-                  <button onClick={() => setImages(images.filter(i => i.id !== img.id))} style={deleteBtn}><Trash2 size={12}/></button>
+                  <button type="button" onClick={() => setImages(images.filter(i => i.id !== img.id))} style={deleteBtn}><Trash2 size={12}/></button>
                 </div>
               ))}
               <div onClick={() => fileInputRef.current.click()} style={uploadBtn}>
@@ -157,8 +160,18 @@ const AftermarketNewPage = () => {
               <div style={iconInput}><MapPin size={16}/> <input name="loc" value={formData.loc} onChange={handleChange} style={bareInput} /></div>
             </div>
             <div style={inputGroup}>
+              <label style={labelStyle}>Supplier</label>
+              <div style={iconInput}><Truck size={16}/> <input name="supplier" value={formData.supplier} onChange={handleChange} style={bareInput} /></div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={inputGroup}>
                 <label style={labelStyle}>Available Qty</label>
                 <input type="number" name="qty" value={formData.qty} onChange={handleChange} style={inputStyle} />
+              </div>
+              <div style={inputGroup}>
+                <label style={labelStyle}>Min Stock</label>
+                <input type="number" name="min_stock" value={formData.min_stock} onChange={handleChange} style={inputStyle} />
+              </div>
             </div>
           </div>
 
