@@ -1,10 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios'; // 1. Added Axios for the "Save" action
 import { 
   Save, X, MapPin, Truck, DollarSign, Tag, 
   Camera, Plus, Barcode, Trash2, Star, Printer 
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+
+// Get the backend address from your Vercel settings
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const COLORS = { 
   primary: '#ef4444', 
@@ -17,6 +21,7 @@ const COLORS = {
 const AftermarketNewPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const [loading, setLoading] = useState(false); // Track if we are saving
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,7 +36,33 @@ const AftermarketNewPage = () => {
   });
 
   const [images, setImages] = useState([]);
-  const [mainPhotoId, setMainPhotoId] = useState(null);
+
+  // --- SAVE TO CLOUD LOGIC ---
+  const handleSave = async () => {
+    if (!formData.name) return alert("Product name is required!");
+    
+    setLoading(true);
+    try {
+      // Package the data for Django
+      const dataToSend = {
+        ...formData,
+        qty: parseInt(formData.qty),
+        price: parseFloat(formData.price) || 0,
+        cost: parseFloat(formData.cost) || 0
+      };
+
+      // Send to Railway
+      await axios.post(`${API_URL}/api/parts/`, dataToSend);
+      
+      alert("Part added successfully to inventory!");
+      navigate('/aftermarket'); // Go back to the list
+    } catch (error) {
+      console.error("Save failed:", error);
+      alert("Failed to save to Railway. Check the console for errors.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -46,38 +77,6 @@ const AftermarketNewPage = () => {
       file: file
     }));
     setImages([...images, ...newImages]);
-    if (images.length === 0 && newImages.length > 0) setMainPhotoId(newImages[0].id);
-  };
-
-  // --- PRINT LOGIC ---
-  const handlePrint = () => {
-    const printContent = document.getElementById('label-area').innerHTML;
-    const windowPrint = window.open('', '', 'width=600,height=600');
-    windowPrint.document.write(`
-      <html>
-        <head>
-          <title>Print Label</title>
-          <style>
-            @page { size: 50mm 30mm; margin: 0; }
-            body { margin: 0; padding: 0; font-family: sans-serif; }
-            .label-wrapper { 
-              width: 50mm; 
-              height: 30mm; 
-              padding: 2mm; 
-              box-sizing: border-box; 
-              display: flex; 
-              flex-direction: column;
-              justify-content: space-between;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="label-wrapper">${printContent}</div>
-          <script>setTimeout(() => { window.print(); window.close(); }, 250);</script>
-        </body>
-      </html>
-    `);
-    windowPrint.document.close();
   };
 
   return (
@@ -87,12 +86,19 @@ const AftermarketNewPage = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ margin: 0, fontWeight: '900', fontSize: '28px' }}>Add New Product</h2>
-          <p style={{ color: COLORS.slate }}>50mm x 30mm Label Ready</p>
+          <p style={{ color: COLORS.slate }}>Connected to: {API_URL}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button onClick={() => navigate(-1)} style={secondaryBtn}><X size={18}/> Cancel</button>
-          <button onClick={handlePrint} style={{ ...secondaryBtn, backgroundColor: '#475569' }}><Printer size={18}/> Print Label</button>
-          <button onClick={() => navigate('/aftermarket')} style={primaryBtn}><Save size={18}/> Create Product</button>
+          
+          {/* UPDATED CREATE BUTTON */}
+          <button 
+            onClick={handleSave} 
+            disabled={loading}
+            style={{ ...primaryBtn, opacity: loading ? 0.5 : 1 }}
+          >
+            <Save size={18}/> {loading ? 'Saving...' : 'Create Product'}
+          </button>
         </div>
       </div>
 
@@ -112,36 +118,19 @@ const AftermarketNewPage = () => {
             </div>
           </div>
 
-          {/* HIDDEN PREVIEW FOR PRINTING ENGINE */}
-          <div style={{ display: 'none' }}>
-            <div id="label-area">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ width: '65%' }}>
-                   <div style={{ fontSize: '7pt', fontWeight: 'bold', marginBottom: '1mm' }}>YARIS AUTOCARE</div>
-                   <div style={{ fontSize: '8pt', fontWeight: '900', lineHeight: '1', height: '8mm', overflow: 'hidden' }}>{formData.name || 'NEW PRODUCT'}</div>
-                   <div style={{ fontSize: '10pt', fontWeight: '900', color: COLORS.primary, marginTop: '1mm' }}>{formData.sku || 'SKU-PENDING'}</div>
-                </div>
-                <div style={{ width: '30%', textAlign: 'right' }}>
-                  <QRCodeSVG value={formData.sku || 'N/A'} size={35} />
-                </div>
-              </div>
-              <div style={{ borderTop: '0.2mm solid #000', marginTop: '1mm', paddingTop: '1mm', display: 'flex', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '6pt' }}>LOC: {formData.loc || 'N/A'}</div>
-                <div style={{ fontSize: '11pt', fontWeight: '900' }}>${formData.price || '0.00'}</div>
-              </div>
-            </div>
-          </div>
-
           <div style={cardStyle}>
             <h4 style={sectionTitle}>PRODUCT IMAGES</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
               {images.map(img => (
-                <div key={img.id} style={{ height: '100px', borderRadius: '8px', overflow: 'hidden', position: 'relative', border: img.id === mainPhotoId ? `3px solid ${COLORS.primary}` : 'none' }}>
+                <div key={img.id} style={{ height: '100px', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                   <img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button onClick={() => setImages(images.filter(i => i.id !== img.id))} style={deleteBtn}><Trash2 size={12}/></button>
                 </div>
               ))}
-              <div onClick={() => fileInputRef.current.click()} style={uploadBtn}><Camera size={24} /><input type="file" hidden multiple ref={fileInputRef} onChange={handlePhotoUpload} /></div>
+              <div onClick={() => fileInputRef.current.click()} style={uploadBtn}>
+                <Camera size={24} />
+                <input type="file" hidden multiple ref={fileInputRef} onChange={handlePhotoUpload} />
+              </div>
             </div>
           </div>
         </div>
@@ -182,7 +171,7 @@ const AftermarketNewPage = () => {
   );
 };
 
-// --- STYLES ---
+// ... (Your existing styles remain the same below) ...
 const cardStyle = { backgroundColor: '#fff', padding: '25px', borderRadius: '20px', border: `1px solid ${COLORS.border}` };
 const inputGroup = { marginBottom: '15px' };
 const labelStyle = { display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate, marginBottom: '5px' };
