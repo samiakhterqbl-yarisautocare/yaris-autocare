@@ -1,13 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // 1. Added Axios for the "Save" action
+import axios from 'axios';
 import { 
-  Save, X, MapPin, Truck, DollarSign, Tag, 
-  Camera, Plus, Barcode, Trash2, Star, Printer 
+  Save, X, MapPin, DollarSign, Tag, 
+  Camera, Barcode, Trash2, Printer 
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
-// Get the backend address from your Vercel settings
+// Hardcoded Railway URL to ensure connection
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const COLORS = { 
@@ -21,7 +21,7 @@ const COLORS = {
 const AftermarketNewPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const [loading, setLoading] = useState(false); // Track if we are saving
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,33 +36,6 @@ const AftermarketNewPage = () => {
   });
 
   const [images, setImages] = useState([]);
-
-  // --- SAVE TO CLOUD LOGIC ---
-  const handleSave = async () => {
-    if (!formData.name) return alert("Product name is required!");
-    
-    setLoading(true);
-    try {
-      // Package the data for Django
-      const dataToSend = {
-        ...formData,
-        qty: parseInt(formData.qty),
-        price: parseFloat(formData.price) || 0,
-        cost: parseFloat(formData.cost) || 0
-      };
-
-      // Send to Railway
-      await axios.post(`${API_URL}/api/parts/`, dataToSend);
-      
-      alert("Part added successfully to inventory!");
-      navigate('/aftermarket'); // Go back to the list
-    } catch (error) {
-      console.error("Save failed:", error);
-      alert("Failed to save to Railway. Check the console for errors.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,6 +52,43 @@ const AftermarketNewPage = () => {
     setImages([...images, ...newImages]);
   };
 
+  // --- SAVE LOGIC ---
+  const handleSave = async () => {
+    if (!formData.name) return alert("Product name is required!");
+    
+    setLoading(true);
+    try {
+      // Mapping React state names to Django Model field names
+      const dataToSend = {
+        part_name: formData.name,       // Matches Django
+        sku: formData.sku,
+        quantity: parseInt(formData.qty) || 0,
+        price: parseFloat(formData.price) || 0,
+        cost_price: parseFloat(formData.cost) || 0,
+        location: formData.loc,
+        description: formData.description,
+        condition: "New",               // Default for aftermarket
+        status: "For Sale",             // Default status
+        category: "Aftermarket"         // Default category
+      };
+
+      console.log("Sending data to Railway:", dataToSend);
+
+      const response = await axios.post(`${API_URL}/api/parts/`, dataToSend);
+      
+      if (response.status === 201 || response.status === 200) {
+        alert("Success! Part added to Yaris Autocare Inventory.");
+        navigate('/aftermarket');
+      }
+    } catch (error) {
+      console.error("Save failed:", error.response?.data || error.message);
+      // This alert will tell you exactly which field Django is unhappy with
+      alert("Error: " + JSON.stringify(error.response?.data || "Check connection"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: '40px', maxWidth: '1100px', margin: '0 auto', backgroundColor: COLORS.bg, minHeight: '100vh' }}>
       
@@ -86,18 +96,17 @@ const AftermarketNewPage = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ margin: 0, fontWeight: '900', fontSize: '28px' }}>Add New Product</h2>
-          <p style={{ color: COLORS.slate }}>Connected to: {API_URL}</p>
+          <p style={{ color: COLORS.slate }}>Cloud Sync: {API_URL}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button onClick={() => navigate(-1)} style={secondaryBtn}><X size={18}/> Cancel</button>
           
-          {/* UPDATED CREATE BUTTON */}
           <button 
             onClick={handleSave} 
             disabled={loading}
-            style={{ ...primaryBtn, opacity: loading ? 0.5 : 1 }}
+            style={{ ...primaryBtn, opacity: loading ? 0.7 : 1 }}
           >
-            <Save size={18}/> {loading ? 'Saving...' : 'Create Product'}
+            <Save size={18}/> {loading ? 'Saving to Cloud...' : 'Create Product'}
           </button>
         </div>
       </div>
@@ -110,7 +119,7 @@ const AftermarketNewPage = () => {
             <h4 style={sectionTitle}>GENERAL INFORMATION</h4>
             <div style={inputGroup}>
               <label style={labelStyle}>Product Name</label>
-              <input name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Brake Pad Set" style={inputStyle} />
+              <input name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Masuma Oil Filter" style={inputStyle} />
             </div>
             <div style={inputGroup}>
               <label style={labelStyle}>Description</label>
@@ -123,7 +132,7 @@ const AftermarketNewPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
               {images.map(img => (
                 <div key={img.id} style={{ height: '100px', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
-                  <img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="part" />
                   <button onClick={() => setImages(images.filter(i => i.id !== img.id))} style={deleteBtn}><Trash2 size={12}/></button>
                 </div>
               ))}
@@ -171,7 +180,7 @@ const AftermarketNewPage = () => {
   );
 };
 
-// ... (Your existing styles remain the same below) ...
+// --- STYLES ---
 const cardStyle = { backgroundColor: '#fff', padding: '25px', borderRadius: '20px', border: `1px solid ${COLORS.border}` };
 const inputGroup = { marginBottom: '15px' };
 const labelStyle = { display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate, marginBottom: '5px' };
