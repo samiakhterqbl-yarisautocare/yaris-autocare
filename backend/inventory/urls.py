@@ -1,19 +1,16 @@
 from django.urls import path
-from .views import (
-    AftermarketPartCreateView, 
-    BulkPartCreateView, 
-    get_car_details,
-    PartCreateView
-)
+from .views import *
 
 urlpatterns = [
-    # 1. This matches your React AftermarketNewPage (axios.post to /api/parts/)
-    path('parts/', AftermarketPartCreateView.as_view(), name='create-aftermarket-part'), 
+    # Aftermarket
+    path('aftermarket/', AftermarketListCreateView.as_view()),
+    path('aftermarket/<int:pk>/', AftermarketDetailView.as_view()),
     
-    # 2. This is for adding used parts (if you use it later)
-    path('used-parts/', PartCreateView.as_view(), name='create-used-part'),
+    # Used Parts
+    path('used-parts/', UsedPartListCreateView.as_view()),
+    path('used-parts/<int:pk>/', UsedPartDetailView.as_view()),
     
-    # 3. Existing Donor Car routes
-    path('bulk-create/', BulkPartCreateView.as_view(), name='bulk-create-parts'),
-    path('car-details/<int:car_id>/', get_car_details, name='car-details'),
+    # Cars & Dismantle
+    path('donor-cars/', DonorCarListView.as_view()),
+    path('bulk-create/', BulkPartCreateView.as_view()),
 ]
