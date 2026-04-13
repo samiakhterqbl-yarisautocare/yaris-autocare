@@ -2,65 +2,110 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, Scissors, Package, Wrench, 
-  ShoppingCart, AlertTriangle, Menu, X, ShieldCheck
+  ShoppingCart, Menu, X, ShieldCheck, ChevronRight
 } from 'lucide-react';
 
-// --- TEMPORARY PLACEHOLDERS TO PREVENT CRASHING ---
-// If you have these files ready, replace these lines with: import X from './X';
-const HomePage = () => <div style={{padding:'40px'}}><h1>Dashboard Home</h1></div>;
-const UsedPartsModule = () => <div style={{padding:'40px'}}><h1>Used Parts Inventory</h1></div>;
-const AftermarketModule = () => <div style={{padding:'40px'}}><h1>Aftermarket New Parts</h1></div>;
-const DismantleModule = () => <div style={{padding:'40px'}}><h1>Dismantle Yard</h1></div>;
-const SalesModule = () => <div style={{padding:'40px'}}><h1>Sales & Invoicing</h1></div>;
+// --- IMPORTS ---
+import HomePage from './HomePage';
+import AftermarketModule from './AftermarketModule';
+import AftermarketNewPage from './AftermarketNewPage';
+import AftermarketEditPage from './AftermarketEditPage';
+import AftermarketDetailPage from './AftermarketDetailPage';
+import DismantleModule from './DismantleModule';
+
+const COLORS = {
+  primary: '#ef4444', 
+  dark: '#0f172a',    
+  sidebar: '#1e293b', 
+  bg: '#f8fafc',
+  border: '#e2e8f0'
+};
+
+const NavItem = ({ to, icon, label }) => (
+  <Link to={to} style={navItemStyle}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {icon}
+      <span style={{ fontWeight: '600' }}>{label}</span>
+    </div>
+    <ChevronRight size={14} opacity={0.5} />
+  </Link>
+);
 
 export default function App() {
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(true);
 
   return (
     <Router>
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: COLORS.bg }}>
         
-        {/* HEADER */}
-        <header style={{ height: '70px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 25px', position: 'sticky', top: 0, zIndex: 1100 }}>
-          <button onClick={() => setSidebarOpen(!isSidebarOpen)} style={{background:'none', border:'none', cursor:'pointer'}}><Menu size={20}/></button>
-          <Link to="/" style={{ textDecoration: 'none', color: '#0f172a', fontSize: '20px', fontWeight: '900', marginLeft: '20px' }}>
-            YARIS <span style={{ color: '#ef4444' }}>AUTOCARE</span>
-          </Link>
-        </header>
+        {/* SIDEBAR */}
+        <aside style={{ ...sidebarContainer, width: isOpen ? '280px' : '0px', opacity: isOpen ? 1 : 0, overflow: 'hidden' }}>
+          <div style={logoSection}>
+            <div style={logoIcon}>Y</div>
+            <h1 style={logoText}>YARIS <span style={{color: COLORS.primary}}>AUTOCARE</span></h1>
+          </div>
 
-        <div style={{ display: 'flex', flex: 1 }}>
-          {/* SIDEBAR */}
-          {isSidebarOpen && (
-            <aside style={{ width: '260px', backgroundColor: '#fff', borderRight: '1px solid #e2e8f0', padding: '20px' }}>
-              <nav style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <Link to="/" style={navLinkStyle}><LayoutDashboard size={18}/> Dashboard</Link>
-                <Link to="/used-parts" style={navLinkStyle}><Package size={18}/> Used Parts</Link>
-                <Link to="/aftermarket" style={navLinkStyle}><Wrench size={18}/> New Parts</Link>
-                <Link to="/dismantle" style={navLinkStyle}><Scissors size={18}/> Dismantle</Link>
-                <Link to="/sales" style={navLinkStyle}><ShoppingCart size={18}/> Sales</Link>
-              </nav>
-            </aside>
-          )}
+          <nav style={navSection}>
+            <NavItem to="/" icon={<LayoutDashboard size={18}/>} label="Dashboard" />
+            <NavItem to="/aftermarket" icon={<Wrench size={18}/>} label="Aftermarket" />
+            <NavItem to="/dismantle" icon={<Scissors size={18}/>} label="Dismantle Yard" />
+            <NavItem to="/used-parts" icon={<Package size={18}/>} label="Used Parts" />
+            <NavItem to="/sales" icon={<ShoppingCart size={18}/>} label="Sales & POS" />
+          </nav>
 
-          {/* MAIN */}
-          <main style={{ flex: 1 }}>
+          <div style={sidebarFooter}>
+            <div style={complianceBox}>
+              <ShieldCheck size={14} color="#22c55e" />
+              <span style={{fontSize: '11px', fontWeight: 'bold'}}>LICENSED TAS DISMANTLER</span>
+            </div>
+          </div>
+        </aside>
+
+        {/* MAIN CONTENT */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <header style={headerStyle}>
+            <button onClick={() => setIsOpen(!isOpen)} style={toggleBtn}>
+              {isOpen ? <X size={20}/> : <Menu size={20} />}
+            </button>
+            <div style={userProfile}>
+              <div style={{textAlign: 'right'}}>
+                <div style={{fontSize: '13px', fontWeight: '800'}}>Admin Panel</div>
+                <div style={{fontSize: '11px', color: '#64748b'}}>ABN 91 650 944 157</div>
+              </div>
+              <div style={avatar}>BA</div>
+            </div>
+          </header>
+
+          <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/used-parts" element={<UsedPartsModule />} />
               <Route path="/aftermarket" element={<AftermarketModule />} />
+              <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
+              <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
+              <Route path="/aftermarket/:id" element={<AftermarketDetailPage />} />
               <Route path="/dismantle" element={<DismantleModule />} />
-              <Route path="/sales" element={<SalesModule />} />
-              <Route path="*" element={<HomePage />} />
+              
+              {/* Placeholders for used parts until you create them */}
+              <Route path="/used-parts" element={<div style={{padding:'20px'}}><h2>Used Parts Coming Soon</h2></div>} />
+              <Route path="/sales" element={<div style={{padding:'20px'}}><h2>Sales System Coming Soon</h2></div>} />
             </Routes>
           </main>
         </div>
-
-        <footer style={{ backgroundColor: '#0f172a', color: '#94a3b8', padding: '15px 30px', fontSize: '11px', textAlign: 'center' }}>
-          Yaris Autocare | ABN: 91 650 944 157 | LIC: 6130 / 419296067
-        </footer>
       </div>
     </Router>
   );
 }
 
-const navLinkStyle = { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px', textDecoration: 'none', color: '#1e293b', fontWeight: '600' };
+// --- STYLES ---
+const sidebarContainer = { backgroundColor: COLORS.sidebar, color: '#fff', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' };
+const logoSection = { padding: '30px 20px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #334155' };
+const logoIcon = { backgroundColor: COLORS.primary, width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '18px' };
+const logoText = { margin: 0, fontSize: '18px', fontWeight: '900', letterSpacing: '-1px' };
+const navSection = { padding: '20px 15px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' };
+const navItemStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 15px', borderRadius: '10px', textDecoration: 'none', color: '#cbd5e1', fontSize: '14px', transition: '0.2s' };
+const sidebarFooter = { padding: '20px', borderTop: '1px solid #334155' };
+const complianceBox = { display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8' };
+const headerStyle = { height: '70px', backgroundColor: '#fff', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 30px' };
+const toggleBtn = { background: 'none', border: 'none', cursor: 'pointer', color: COLORS.dark };
+const userProfile = { display: 'flex', alignItems: 'center', gap: '12px' };
+const avatar = { width: '35px', height: '35px', borderRadius: '10px', backgroundColor: COLORS.dark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' };
