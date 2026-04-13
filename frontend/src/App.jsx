@@ -2,7 +2,7 @@ import React, { useState, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Scissors, Package, Wrench, 
-  ShoppingCart, Menu, X, ChevronRight, AlertTriangle
+  ShoppingCart, Menu, X, ChevronRight, AlertTriangle, Settings, ExternalLink
 } from 'lucide-react';
 
 // Lazy Load Modules
@@ -26,26 +26,38 @@ const COLORS = {
   border: '#e2e8f0' 
 };
 
+// Replace this with your actual Railway Admin URL if different
+const DJANGO_ADMIN_URL = 'https://yaris-autocare-production.up.railway.app/admin/';
+
 export default function App() {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
     <Router>
-      <div style={appWrapper}>
+      <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: COLORS.bg }}>
         
-        {/* SIDEBAR - Fixed Industrial Sidebar */}
+        {/* SIDEBAR */}
         <aside style={{ 
-          ...sidebarStyle, 
-          width: isOpen ? '260px' : '0px', 
+          backgroundColor: COLORS.sidebar,
+          width: isOpen ? '260px' : '0px',
           minWidth: isOpen ? '260px' : '0px',
-          opacity: isOpen ? 1 : 0 
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          color: '#fff',
+          zIndex: 100
         }}>
-          <div style={logoSection}>
-            <div style={logoIcon}>Y</div>
-            <h1 style={logoText}>YARIS <span style={{color: COLORS.primary}}>AUTOCARE</span></h1>
-          </div>
+          {/* LOGO SECTION - Now Linked to Home */}
+          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ padding: '25px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ backgroundColor: COLORS.primary, width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '20px', boxShadow: '0 0 15px rgba(239, 68, 68, 0.4)' }}>Y</div>
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#fff', letterSpacing: '-0.5px' }}>YARIS <span style={{color: COLORS.primary}}>AUTOCARE</span></h1>
+            </div>
+          </Link>
           
-          <nav style={navSection}>
+          <nav style={{ flex: 1, padding: '20px 0' }}>
             <NavItem to="/" icon={<LayoutDashboard size={20}/>} label="Dashboard" />
             <NavItem to="/used-parts" icon={<Package size={20}/>} label="Used Parts" />
             <NavItem to="/aftermarket" icon={<Wrench size={20}/>} label="Aftermarket" />
@@ -54,30 +66,51 @@ export default function App() {
             <NavItem to="/sales" icon={<ShoppingCart size={20}/>} label="Sales & POS" />
           </nav>
 
-          <div style={sidebarFooter}>
-            <div style={{fontWeight: '700', color: '#94a3b8'}}>TERMINAL V2.0</div>
-            <div>Tas Auto Wreckers</div>
+          {/* SYSTEM LINKS - Including Django Admin */}
+          <div style={{ padding: '15px', borderTop: '1px solid #334155', backgroundColor: '#161e2b' }}>
+            <a 
+              href={DJANGO_ADMIN_URL} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={adminLinkStyle}
+            >
+              <Settings size={16} />
+              <span style={{ flex: 1 }}>SYSTEM ADMIN</span>
+              <ExternalLink size={12} opacity={0.5} />
+            </a>
+            <div style={{ padding: '10px 5px 0 5px', fontSize: '10px', color: '#64748b', fontWeight: '700' }}>
+              TAS AUTO WRECKERS TERMINAL V2.0
+            </div>
           </div>
         </aside>
 
-        {/* MAIN VIEWPORT */}
-        <div style={viewport}>
-          <header style={headerStyle}>
-            <button onClick={() => setIsOpen(!isOpen)} style={toggleBtn}>
+        {/* VIEWPORT */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
+          <header style={{ 
+            height: '64px', 
+            backgroundColor: '#fff', 
+            borderBottom: `1px solid ${COLORS.border}`, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0 24px',
+            flexShrink: 0
+          }}>
+            <button onClick={() => setIsOpen(!isOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.dark }}>
               {isOpen ? <X size={20}/> : <Menu size={20} />}
             </button>
             
-            <div style={userHeader}>
-              <div style={{textAlign: 'right'}}>
-                <div style={userTitle}>ADMIN CONTROL</div>
-                <div style={userSub}>Legana Yard Terminal</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: COLORS.dark }}>ADMIN CONTROL</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Legana Yard Terminal</div>
               </div>
-              <div style={avatar}>BA</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: COLORS.dark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px' }}>BA</div>
             </div>
           </header>
 
-          <main style={contentArea}>
-            <Suspense fallback={<div style={loading}>Initializing Module...</div>}>
+          <main style={{ flex: 1, overflowY: 'auto', padding: '32px', width: '100%' }}>
+            <Suspense fallback={<div style={{ fontWeight: '700', padding: '20px' }}>Initializing Terminal Module...</div>}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/used-parts" element={<UsedPartsModule />} />
@@ -105,34 +138,37 @@ const NavItem = ({ to, icon, label }) => {
   const isActive = location.pathname === to;
   return (
     <Link to={to} style={{ 
-      ...navItemStyle, 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'space-between', 
+      padding: '14px 25px', 
+      textDecoration: 'none', 
+      fontSize: '14px', 
+      transition: '0.2s',
       backgroundColor: isActive ? '#334155' : 'transparent',
       color: isActive ? '#fff' : '#cbd5e1',
       borderLeft: isActive ? `4px solid ${COLORS.primary}` : '4px solid transparent'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {icon} <span style={{fontWeight: '600'}}>{label}</span>
+        {icon} <span style={{ fontWeight: '600' }}>{label}</span>
       </div>
       {isActive && <ChevronRight size={14} />}
     </Link>
   );
 };
 
-// --- INDUSTRIAL LAYOUT STYLES ---
-const appWrapper = { display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', backgroundColor: COLORS.bg };
-const sidebarStyle = { backgroundColor: COLORS.sidebar, color: '#fff', display: 'flex', flexDirection: 'column', transition: 'all 0.2s ease' };
-const logoSection = { padding: '25px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #334155' };
-const logoIcon = { backgroundColor: COLORS.primary, width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' };
-const logoText = { margin: 0, fontSize: '18px', fontWeight: '900', letterSpacing: '-0.5px' };
-const navSection = { padding: '20px 0', flex: 1 };
-const navItemStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', textDecoration: 'none', fontSize: '14px', transition: '0.2s' };
-const sidebarFooter = { padding: '20px', fontSize: '10px', borderTop: '1px solid #334155' };
-const viewport = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' };
-const headerStyle = { height: '64px', backgroundColor: '#fff', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' };
-const toggleBtn = { background: 'none', border: 'none', cursor: 'pointer', color: COLORS.dark };
-const userHeader = { display: 'flex', alignItems: 'center', gap: '12px' };
-const userTitle = { fontSize: '12px', fontWeight: '800', color: COLORS.dark };
-const userSub = { fontSize: '11px', color: '#64748b' };
-const avatar = { width: '36px', height: '36px', borderRadius: '8px', backgroundColor: COLORS.dark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' };
-const contentArea = { flex: 1, overflowY: 'auto', padding: '24px', boxSizing: 'border-box' };
-const loading = { padding: '24px', fontWeight: '700', color: COLORS.dark };
+const adminLinkStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '12px',
+  backgroundColor: '#1e293b',
+  borderRadius: '8px',
+  color: '#94a3b8',
+  textDecoration: 'none',
+  fontSize: '12px',
+  fontWeight: '800',
+  border: '1px solid #334155',
+  transition: '0.2s',
+  marginBottom: '5px'
+};
