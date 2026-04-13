@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, Package, AlertTriangle, 
   ArrowUpRight, Car, Search, Zap, Clock, TrendingUp,
-  Scissors, ShoppingCart // FIXED: Added missing icons
+  Scissors, ShoppingCart // FIXED: These must be imported here
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -45,18 +45,18 @@ export default function HomePage() {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* HEADER SECTION */}
+      {/* TOP HEADER */}
       <div style={headerSection}>
         <div>
           <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>Yard Control Panel</h2>
-          <p style={{ color: '#64748b', fontSize: '16px', marginTop: '5px' }}>Live business terminal — Legana Yard</p>
+          <p style={{ color: '#64748b', fontSize: '16px', marginTop: '5px' }}>Legana Terminal — Full Width View</p>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); navigate(`/used-parts?search=${searchTerm}`); }} style={searchContainer}>
           <Search size={20} style={searchIcon} />
           <input 
             type="text" 
-            placeholder="Search parts, stock #, or VIN..." 
+            placeholder="Search stock # or VIN..." 
             style={searchInput}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -66,65 +66,33 @@ export default function HomePage() {
 
       {/* STATS GRID */}
       <div style={statsGrid}>
-        <StatCard 
-          title="Revenue (MTD)" 
-          val={`$${summary.total_revenue.toLocaleString()}`} 
-          trend="+12.5%" 
-          subtitle="Real-time sales"
-          icon={<BarChart3 size={24}/>} 
-          color="#22c55e" 
-        />
-        <StatCard 
-          title="Used Inventory" 
-          val={summary.used_parts_count} 
-          trend="In Stock" 
-          subtitle="Cataloged items"
-          icon={<Package size={24}/>} 
-          color="#0f172a" 
-        />
-        <StatCard 
-          title="Aftermarket" 
-          val={summary.aftermarket_count} 
-          trend="Online" 
-          subtitle="New stock"
-          icon={<Zap size={24}/>} 
-          color="#3b82f6" 
-        />
-        <StatCard 
-          title="Low Stock" 
-          val={summary.low_stock_alerts} 
-          trend="Action Needed" 
-          subtitle="Critical levels"
-          icon={<AlertTriangle size={24}/>} 
-          color="#ef4444" 
-        />
+        <StatCard title="Revenue (MTD)" val={`$${summary.total_revenue.toLocaleString()}`} trend="+12.5%" subtitle="Live sales" icon={<BarChart3 size={24}/>} color="#22c55e" />
+        <StatCard title="Used Inventory" val={summary.used_parts_count} trend="In Stock" subtitle="Salvaged items" icon={<Package size={24}/>} color="#0f172a" />
+        <StatCard title="Aftermarket" val={summary.aftermarket_count} trend="Online" subtitle="New stock" icon={<Zap size={24}/>} color="#3b82f6" />
+        <StatCard title="Low Stock" val={summary.low_stock_alerts} trend="Critical" subtitle="Action needed" icon={<AlertTriangle size={24}/>} color="#ef4444" />
       </div>
 
-      {/* LOWER CONTENT AREA */}
+      {/* LOWER AREA */}
       <div style={contentLayout}>
-        {/* Activity Stream */}
         <div style={largeCard}>
           <div style={cardHeader}>
-            <h3 style={cardTitle}><Clock size={20} color="#64748b" /> Recent Operations</h3>
-            <span style={liveBadge}>LIVE SYNC</span>
+            <h3 style={cardTitle}><Clock size={20} color="#64748b" /> Activity Feed</h3>
+            <span style={liveBadge}>REAL-TIME</span>
           </div>
           <div style={streamList}>
-            <ActivityItem bold="Dismantle" text="New donor car processed (Stock #YAR-101)" time="Just now" />
-            <ActivityItem bold="Inventory" text="Adjusted stock level for Camry Oil Filter" time="1 hr ago" />
-            <ActivityItem bold="System" text="Database synced with Railway Cloud" time="2 hrs ago" />
+            <p style={{fontSize: '14px', color: '#64748b', padding: '20px 0'}}>Waiting for recent activity updates from yard...</p>
           </div>
         </div>
 
-        {/* Action Center */}
         <div style={sideContainer}>
           <div style={smallCard}>
-            <h3 style={cardTitle}><Car size={20} color="#64748b" /> Quick Actions</h3>
+            <h3 style={cardTitle}><Car size={20} color="#64748b" /> Operations</h3>
             <div style={actionGrid}>
               <button onClick={() => navigate('/dismantle')} style={actionBtnStyle}>
-                <Scissors size={18}/> Dismantle New Car
+                <Scissors size={18}/> Dismantle Car
               </button>
               <button onClick={() => navigate('/sales')} style={actionBtnStyle}>
-                <ShoppingCart size={18}/> Process New Sale
+                <ShoppingCart size={18}/> New Sale
               </button>
             </div>
           </div>
@@ -134,36 +102,20 @@ export default function HomePage() {
   );
 }
 
-const ActivityItem = ({ bold, text, time }) => (
-  <div style={streamRow}>
-    <div style={statusDot}></div>
-    <div style={{flex: 1}}>
-      <p style={{margin: 0, fontSize: '14px', color: '#1e293b'}}><strong>{bold}:</strong> {text}</p>
-      <span style={{fontSize: '12px', color: '#94a3b8'}}>{time}</span>
-    </div>
-  </div>
-);
-
 // --- STYLES ---
 const headerSection = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' };
 const searchContainer = { position: 'relative', width: '450px' };
 const searchIcon = { position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' };
-const searchInput = { width: '100%', padding: '16px 20px 16px 55px', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none', backgroundColor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' };
-
+const searchInput = { width: '100%', padding: '16px 20px 16px 55px', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none', backgroundColor: '#fff' };
 const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' };
-const contentLayout = { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginTop: '24px' };
-
+const contentLayout = { display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '24px', marginTop: '24px' };
 const cardStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' };
 const largeCard = { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0' };
 const smallCard = { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0' };
 const cardHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' };
 const cardTitle = { margin: 0, fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px', color: '#0f172a' };
 const liveBadge = { backgroundColor: '#f0fdf4', color: '#22c55e', fontSize: '11px', fontWeight: '900', padding: '6px 12px', borderRadius: '8px' };
-
 const streamList = { display: 'flex', flexDirection: 'column' };
-const streamRow = { display: 'flex', gap: '20px', padding: '20px 0', borderBottom: '1px solid #f8fafc' };
-const statusDot = { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', marginTop: '6px' };
-
 const sideContainer = { display: 'flex', flexDirection: 'column', gap: '24px' };
 const actionGrid = { display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginTop: '20px' };
-const actionBtnStyle = { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: '0.2s' };
+const actionBtnStyle = { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' };
