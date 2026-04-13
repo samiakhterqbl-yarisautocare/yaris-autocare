@@ -34,12 +34,13 @@ export default function App() {
     <Router>
       <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: COLORS.bg, width: '100vw', overflowX: 'hidden' }}>
         
-        {/* SIDEBAR - Professional Fixed Width */}
+        {/* SIDEBAR */}
         <aside style={{ 
           ...sidebarStyle, 
           width: isOpen ? '260px' : '0px', 
           minWidth: isOpen ? '260px' : '0px',
-          opacity: isOpen ? 1 : 0 
+          opacity: isOpen ? 1 : 0,
+          overflow: 'hidden'
         }}>
           <div style={logoSection}>
             <div style={logoIcon}>Y</div>
@@ -54,11 +55,11 @@ export default function App() {
             <NavItem to="/sales" icon={<ShoppingCart size={20}/>} label="Sales & POS" />
           </nav>
           <div style={sidebarFooter}>
-            Tas Auto Wreckers v2.1
+            Tas Auto Wreckers Terminal
           </div>
         </aside>
 
-        {/* MAIN CONTENT - Full Width Responsive */}
+        {/* MAIN CONTENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
           <header style={headerStyle}>
             <button onClick={() => setIsOpen(!isOpen)} style={toggleBtn}>
@@ -68,14 +69,14 @@ export default function App() {
             <div style={userProfile}>
               <div style={{textAlign: 'right'}}>
                 <div style={{fontSize: '14px', fontWeight: '800', color: COLORS.dark}}>Admin Control</div>
-                <div style={{fontSize: '12px', color: '#64748b'}}>Launceston Terminal</div>
+                <div style={{fontSize: '12px', color: '#64748b'}}>Legana, Tasmania</div>
               </div>
               <div style={avatar}>BA</div>
             </div>
           </header>
 
           <main style={mainContentStyle}>
-            <Suspense fallback={<div style={{padding: '40px', fontWeight: 'bold'}}>Loading Module...</div>}>
+            <Suspense fallback={<div style={{padding: '40px', fontWeight: 'bold'}}>Initializing Module...</div>}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/used-parts" element={<UsedPartsModule />} />
@@ -112,19 +113,18 @@ const NavItem = ({ to, icon, label }) => {
         {icon} 
         <span style={{fontWeight: '600'}}>{label}</span>
       </div>
-      {isActive && <div style={activeIndicator} />}
+      {isActive && <ChevronRight size={14} />}
     </Link>
   );
 };
 
-// Styles
+// --- STYLES ---
 const sidebarStyle = { backgroundColor: COLORS.sidebar, color: '#fff', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', zIndex: 100 };
 const logoSection = { padding: '30px 24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #334155' };
 const logoIcon = { backgroundColor: COLORS.primary, width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '18px' };
 const logoText = { margin: 0, fontSize: '20px', fontWeight: '900', letterSpacing: '-1px' };
 const navSection = { padding: '24px 16px', flex: 1 };
 const navItemStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '15px', marginBottom: '8px', transition: '0.2s' };
-const activeIndicator = { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: COLORS.primary };
 const sidebarFooter = { padding: '20px', fontSize: '11px', color: '#64748b', textAlign: 'center', borderTop: '1px solid #334155' };
 
 const headerStyle = { height: '80px', backgroundColor: '#fff', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', position: 'sticky', top: 0, zIndex: 90 };
