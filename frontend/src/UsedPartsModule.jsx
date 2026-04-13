@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  Plus, Search, Car, Layers, Zap, Disc, Wind, 
-  ArrowRight, Package, filter as FilterIcon 
-} from 'lucide-react';
-
+import { Plus, Search, Car, Layers, Zap, Disc, Wind, ArrowRight, Package, Filter as FilterIcon } from 'lucide-react';
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const CATEGORIES = [
