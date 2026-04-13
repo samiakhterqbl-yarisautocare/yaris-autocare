@@ -1,46 +1,51 @@
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import DonorCar, InventoryItem, AftermarketPart
-from .serializers import DonorCarSerializer, InventoryItemSerializer, AftermarketPartSerializer
+from django.db.models import Sum, F
+from .models import *
+from .serializers import *
 
-# --- USED PARTS ---
+# --- INVENTORY VIEWS ---
 class UsedPartListCreateView(generics.ListCreateAPIView):
     queryset = InventoryItem.objects.all().order_by('-id')
     serializer_class = InventoryItemSerializer
 
-class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = InventoryItem.objects.all()
-    serializer_class = InventoryItemSerializer
-
-# --- AFTERMARKET ---
 class AftermarketListCreateView(generics.ListCreateAPIView):
     queryset = AftermarketPart.objects.all().order_by('-id')
     serializer_class = AftermarketPartSerializer
 
-class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = AftermarketPart.objects.all()
+# --- LOW STOCK ALERT ---
+class LowStockListView(generics.ListAPIView):
     serializer_class = AftermarketPartSerializer
+    def get_queryset(self):
+        return AftermarketPart.objects.filter(quantity__lte=F('min_stock_level'))
 
-# --- DISMANTLE & CARS ---
-class DonorCarListView(generics.ListCreateAPIView):
-    queryset = DonorCar.objects.all().order_by('-date_added')
-    serializer_class = DonorCarSerializer
+# --- BUSINESS SUMMARY ---
+class BusinessSummaryView(APIView):
+    def get(self, request):
+        revenue = Invoice.objects.aggregate(total=Sum('total_amount'))['total'] or 0
+        used_count = InventoryItem.objects.count()
+        new_count = AftermarketPart.objects.count()
+        return Response({
+            "total_revenue": revenue,
+            "used_parts_in_stock": used_count,
+            "new_parts_in_stock": new_count
+        })
 
-class BulkPartCreateView(APIView):
+# --- BULK DISMANTLE ---
+class BulkDismantleView(APIView):
     def post(self, request):
         car_id = request.data.get('car_id')
-        parts = request.data.get('parts', [])
-        try:
-            car = DonorCar.objects.get(id=car_id)
-            for p in parts:
-                InventoryItem.objects.create(
-                    donor_car=car, 
-                    part_name=p.get('part_name'), 
-                    price=p.get('price', 0), 
-                    category=p.get('category', 'Uncategorized'), 
-                    condition=p.get('condition', 'Used')
-                )
-            return Response({"message": "Success"}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        parts = request.data.get('parts', []) # Expected: [{part_name, price, category}]
+        car = DonorCar.objects.get(id=car_id)
+        for p in parts:
+            InventoryItem.objects.create(
+                donor_car=car, part_name=p['part_name'], 
+                price=p['price'], category=p['category'], condition="Used"
+            )
+        return Response({"status": "Car dismantled successfully"}, status=status.HTTP_201_CREATED)
+
+# --- INVOICING ---
+class InvoiceListCreateView(generics.ListCreateAPIView):
+    queryset = Invoice.objects.all()
+    serializer_class = InvoiceSerializer
