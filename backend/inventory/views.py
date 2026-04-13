@@ -1,55 +1,46 @@
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, generics
-from rest_framework.decorators import api_view
-from .models import DonorCar, InventoryItem, AftermarketPart  # Added AftermarketPart
-from .serializers import DonorCarSerializer, InventoryItemSerializer, AftermarketPartSerializer # Added AftermarketPartSerializer
+from .models import DonorCar, InventoryItem, AftermarketPart
+from .serializers import DonorCarSerializer, InventoryItemSerializer, AftermarketPartSerializer
 
-# --- AFTERMARKET NEW PARTS ---
-# This matches your AftermarketNewPage.jsx button
-class AftermarketPartCreateView(generics.CreateAPIView):
-    queryset = AftermarketPart.objects.all()
-    serializer_class = AftermarketPartSerializer
+# --- USED PARTS ---
+class UsedPartListCreateView(generics.ListCreateAPIView):
+    queryset = InventoryItem.objects.all().order_by('-id')
+    serializer_class = InventoryItemSerializer
 
-# --- USED/SALVAGED PARTS ---
-# View for adding single used items
-class PartCreateView(generics.CreateAPIView):
+class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = InventoryItem.objects.all()
     serializer_class = InventoryItemSerializer
 
-# Existing Bulk Create View for Donor Cars
+# --- AFTERMARKET ---
+class AftermarketListCreateView(generics.ListCreateAPIView):
+    queryset = AftermarketPart.objects.all().order_by('-id')
+    serializer_class = AftermarketPartSerializer
+
+class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = AftermarketPart.objects.all()
+    serializer_class = AftermarketPartSerializer
+
+# --- DISMANTLE & CARS ---
+class DonorCarListView(generics.ListCreateAPIView):
+    queryset = DonorCar.objects.all().order_by('-date_added')
+    serializer_class = DonorCarSerializer
+
 class BulkPartCreateView(APIView):
     def post(self, request):
         car_id = request.data.get('car_id')
-        parts_list = request.data.get('parts', [])
-        price = request.data.get('price', 0)
-        condition = request.data.get('condition', 'Used') # Default to 'Used' based on your model
-        
+        parts = request.data.get('parts', [])
         try:
             car = DonorCar.objects.get(id=car_id)
-            for part_name in parts_list:
+            for p in parts:
                 InventoryItem.objects.create(
-                    donor_car=car,
-                    part_name=part_name,
-                    category="Uncategorized",
-                    status="For Sale",
-                    price=price,
-                    condition=condition
+                    donor_car=car, 
+                    part_name=p.get('part_name'), 
+                    price=p.get('price', 0), 
+                    category=p.get('category', 'Uncategorized'), 
+                    condition=p.get('condition', 'Used')
                 )
-            return Response({"message": f"Successfully created {len(parts_list)} parts"}, status=status.HTTP_201_CREATED)
-        except DonorCar.DoesNotExist:
-            return Response({"error": "Car not found"}, status=status.HTTP_404_NOT_FOUND)
-
-# --- UTILITY VIEWS ---
-@api_view(['GET'])
-def get_car_details(request, car_id):
-    try:
-        car = DonorCar.objects.get(id=car_id)
-        return Response({
-            "model": car.model,
-            "year": car.year,
-            "color": car.color,
-            "stock_number": car.stock_number
-        })
-    except DonorCar.DoesNotExist:
-        return Response({"error": "Car not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "Success"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
