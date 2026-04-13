@@ -12,10 +12,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-7h2l)j!7(m%@s&hr=!+he9t$ih_*je)f1ecakl5k(p2@w^&9@!')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# Railway/Vercel URLs will vary, '*' is easiest for now
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS for Railway and Vercel
+ALLOWED_HOSTS = ['yaris-autocare-production.up.railway.app', 'yaris-autocare.vercel.app', 'localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -29,16 +29,16 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'corsheaders',
-    'storages',  # Required for AWS S3 connection
+    'storages',  # AWS S3
     
-    # Your custom app
+    # Custom Apps
     'inventory',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', # Must be at the top
+    'corsheaders.middleware.CorsMiddleware',  # MUST stay at the very top
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Fixes the messy/ugly look on Railway
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -72,17 +72,9 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),
         conn_max_age=600,
-        ssl_require=False
+        ssl_require=True if not DEBUG else False
     )
 }
-
-# If no DATABASE_URL is found (local dev), use SQLite
-if not os.getenv('DATABASE_URL'):
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -101,8 +93,6 @@ USE_TZ = True
 # --- STATIC & MEDIA FILES ---
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Use WhiteNoise to serve static files on Railway
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # --- AWS S3 CONFIGURATION ---
@@ -111,14 +101,12 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'ap-southeast-2')
 
-# Use S3 only if keys are present
 if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = None
-    AWS_S3_VERIFY = True
     AWS_QUERYSTRING_AUTH = False  
 else:
     MEDIA_URL = '/media/'
@@ -126,13 +114,16 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- CORS SETTINGS ---
-CORS_ALLOW_ALL_ORIGINS = True
+# --- CORS & SECURITY SETTINGS ---
+CORS_ALLOW_ALL_ORIGINS = True  # Safest for initial deployment sync
 
-# --- FIX FOR 403 FORBIDDEN ERROR ---
 CSRF_TRUSTED_ORIGINS = [
     'https://yaris-autocare-production.up.railway.app',
-    'https://*.railway.app'
+    'https://yaris-autocare.vercel.app'
 ]
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+
+# Ensure secure cookies for HTTPS (Railway uses HTTPS)
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
