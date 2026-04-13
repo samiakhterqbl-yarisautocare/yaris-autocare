@@ -59,7 +59,7 @@ export default function App() {
           </div>
         </aside>
 
-        {/* MAIN CONTENT */}
+        {/* MAIN CONTENT AREA */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
           <header style={headerStyle}>
             <button onClick={() => setIsOpen(!isOpen)} style={toggleBtn}>
@@ -69,14 +69,14 @@ export default function App() {
             <div style={userProfile}>
               <div style={{textAlign: 'right'}}>
                 <div style={{fontSize: '14px', fontWeight: '800', color: COLORS.dark}}>Admin Control</div>
-                <div style={{fontSize: '12px', color: '#64748b'}}>Legana, Tasmania</div>
+                <div style={{fontSize: '12px', color: '#64748b'}}>Legana Terminal</div>
               </div>
               <div style={avatar}>BA</div>
             </div>
           </header>
 
           <main style={mainContentStyle}>
-            <Suspense fallback={<div style={{padding: '40px', fontWeight: 'bold'}}>Initializing Module...</div>}>
+            <Suspense fallback={<div style={{padding: '40px', fontWeight: 'bold'}}>Loading...</div>}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/used-parts" element={<UsedPartsModule />} />
