@@ -3,38 +3,17 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, Package, AlertTriangle, 
-  ArrowUpRight, Car, Search, Zap, Clock, TrendingUp,
-  Scissors, ShoppingCart // FIXED: These must be imported here
+  ArrowUpRight, Car, Search, Zap, Clock, 
+  Scissors, ShoppingCart 
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
-
-const StatCard = ({ title, val, trend, icon, color, subtitle }) => (
-  <div style={cardStyle}>
-    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-      <div style={{backgroundColor: color + '15', color: color, padding: '14px', borderRadius: '16px'}}>{icon}</div>
-      <div style={{textAlign: 'right'}}>
-        <div style={{fontSize: '12px', color: '#22c55e', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
-          {trend} <ArrowUpRight size={14} style={{marginLeft: '4px'}}/>
-        </div>
-        <div style={{fontSize: '11px', color: '#94a3b8', marginTop: '4px'}}>{subtitle}</div>
-      </div>
-    </div>
-    <div style={{marginTop: '25px'}}>
-      <div style={{fontSize: '14px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px'}}>{title}</div>
-      <div style={{fontSize: '36px', fontWeight: '900', color: '#0f172a', marginTop: '5px'}}>{val}</div>
-    </div>
-  </div>
-);
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [summary, setSummary] = useState({
-    total_revenue: 0,
-    used_parts_count: 0,
-    aftermarket_count: 0,
-    low_stock_alerts: 0
+    total_revenue: 0, used_parts_count: 0, aftermarket_count: 0, low_stock_alerts: 0
   });
 
   useEffect(() => {
@@ -44,57 +23,57 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div style={{ width: '100%' }}>
-      {/* TOP HEADER */}
-      <div style={headerSection}>
+    <div style={dashboardContainer}>
+      {/* SECTION 1: SYSTEM HEADER */}
+      <div style={pageHeader}>
         <div>
-          <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>Yard Control Panel</h2>
-          <p style={{ color: '#64748b', fontSize: '16px', marginTop: '5px' }}>Legana Terminal — Full Width View</p>
+          <h2 style={titleStyle}>System Dashboard</h2>
+          <div style={breadcrumb}>Legana Terminal &gt; Overview</div>
         </div>
-
-        <form onSubmit={(e) => { e.preventDefault(); navigate(`/used-parts?search=${searchTerm}`); }} style={searchContainer}>
-          <Search size={20} style={searchIcon} />
+        <div style={searchBox}>
+          <Search size={16} style={searchIcon}/>
           <input 
-            type="text" 
-            placeholder="Search stock # or VIN..." 
-            style={searchInput}
+            style={searchInput} 
+            placeholder="Search stock, parts, or VIN..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </form>
+        </div>
       </div>
 
-      {/* STATS GRID */}
+      {/* SECTION 2: HIGH-DENSITY METRICS */}
       <div style={statsGrid}>
-        <StatCard title="Revenue (MTD)" val={`$${summary.total_revenue.toLocaleString()}`} trend="+12.5%" subtitle="Live sales" icon={<BarChart3 size={24}/>} color="#22c55e" />
-        <StatCard title="Used Inventory" val={summary.used_parts_count} trend="In Stock" subtitle="Salvaged items" icon={<Package size={24}/>} color="#0f172a" />
-        <StatCard title="Aftermarket" val={summary.aftermarket_count} trend="Online" subtitle="New stock" icon={<Zap size={24}/>} color="#3b82f6" />
-        <StatCard title="Low Stock" val={summary.low_stock_alerts} trend="Critical" subtitle="Action needed" icon={<AlertTriangle size={24}/>} color="#ef4444" />
+        <MetricCard title="MTD REVENUE" val={`$${summary.total_revenue}`} color="#22c55e" icon={<BarChart3 size={20}/>} />
+        <MetricCard title="USED INVENTORY" val={summary.used_parts_count} color="#0f172a" icon={<Package size={20}/>} />
+        <MetricCard title="AFTERMARKET" val={summary.aftermarket_count} color="#3b82f6" icon={<Zap size={20}/>} />
+        <MetricCard title="STOCK ALERTS" val={summary.low_stock_alerts} color="#ef4444" icon={<AlertTriangle size={20}/>} />
       </div>
 
-      {/* LOWER AREA */}
-      <div style={contentLayout}>
-        <div style={largeCard}>
-          <div style={cardHeader}>
-            <h3 style={cardTitle}><Clock size={20} color="#64748b" /> Activity Feed</h3>
-            <span style={liveBadge}>REAL-TIME</span>
+      {/* SECTION 3: WORKFLOW AREA */}
+      <div style={workflowGrid}>
+        {/* Activity Table - Industrial Look */}
+        <div style={panel}>
+          <div style={panelHeader}>
+            <div style={panelTitle}><Clock size={16}/> SYSTEM ACTIVITY LOG</div>
+            <div style={statusBadge}>LIVE SYNC</div>
           </div>
-          <div style={streamList}>
-            <p style={{fontSize: '14px', color: '#64748b', padding: '20px 0'}}>Waiting for recent activity updates from yard...</p>
+          <div style={logList}>
+            <LogItem label="INVENTORY" msg="New Salvage: 2011 Yaris Alternator added" time="2m ago" />
+            <LogItem label="SALES" msg="Invoice INV-2026-104 processed" time="15m ago" />
+            <LogItem label="SYSTEM" msg="Database integrity check complete" time="1h ago" />
           </div>
         </div>
 
-        <div style={sideContainer}>
-          <div style={smallCard}>
-            <h3 style={cardTitle}><Car size={20} color="#64748b" /> Operations</h3>
-            <div style={actionGrid}>
-              <button onClick={() => navigate('/dismantle')} style={actionBtnStyle}>
-                <Scissors size={18}/> Dismantle Car
-              </button>
-              <button onClick={() => navigate('/sales')} style={actionBtnStyle}>
-                <ShoppingCart size={18}/> New Sale
-              </button>
-            </div>
+        {/* Quick Command Center */}
+        <div style={panel}>
+          <div style={panelHeader}><div style={panelTitle}><Car size={16}/> TERMINAL COMMANDS</div></div>
+          <div style={commandGrid}>
+            <button onClick={() => navigate('/dismantle')} style={cmdBtn}>
+              <Scissors size={18}/> START DISMANTLE
+            </button>
+            <button onClick={() => navigate('/sales')} style={cmdBtn}>
+              <ShoppingCart size={18}/> OPEN POS / SALES
+            </button>
           </div>
         </div>
       </div>
@@ -102,20 +81,46 @@ export default function HomePage() {
   );
 }
 
-// --- STYLES ---
-const headerSection = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' };
-const searchContainer = { position: 'relative', width: '450px' };
-const searchIcon = { position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' };
-const searchInput = { width: '100%', padding: '16px 20px 16px 55px', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none', backgroundColor: '#fff' };
-const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' };
-const contentLayout = { display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '24px', marginTop: '24px' };
-const cardStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' };
-const largeCard = { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0' };
-const smallCard = { backgroundColor: '#fff', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0' };
-const cardHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' };
-const cardTitle = { margin: 0, fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px', color: '#0f172a' };
-const liveBadge = { backgroundColor: '#f0fdf4', color: '#22c55e', fontSize: '11px', fontWeight: '900', padding: '6px 12px', borderRadius: '8px' };
-const streamList = { display: 'flex', flexDirection: 'column' };
-const sideContainer = { display: 'flex', flexDirection: 'column', gap: '24px' };
-const actionGrid = { display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginTop: '20px' };
-const actionBtnStyle = { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' };
+const MetricCard = ({ title, val, color, icon }) => (
+  <div style={{...panel, padding: '20px'}}>
+    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+      <div style={{fontSize: '11px', fontWeight: '800', color: '#64748b', letterSpacing: '0.5px'}}>{title}</div>
+      <div style={{color: color}}>{icon}</div>
+    </div>
+    <div style={{fontSize: '28px', fontWeight: '900', color: '#0f172a', marginTop: '10px'}}>{val}</div>
+  </div>
+);
+
+const LogItem = ({ label, msg, time }) => (
+  <div style={logRow}>
+    <span style={logLabel}>{label}</span>
+    <span style={logMsg}>{msg}</span>
+    <span style={logTime}>{time}</span>
+  </div>
+);
+
+// --- INDUSTRIAL DESIGN STYLES ---
+const dashboardContainer = { display: 'flex', flexDirection: 'column', gap: '24px' };
+const pageHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' };
+const titleStyle = { margin: 0, fontSize: '24px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.5px' };
+const breadcrumb = { fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginTop: '4px' };
+const searchBox = { position: 'relative', width: '320px' };
+const searchIcon = { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' };
+const searchInput = { width: '100%', padding: '10px 12px 10px 36px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', outline: 'none' };
+
+const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' };
+const workflowGrid = { display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px' };
+
+const panel = { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' };
+const panelHeader = { padding: '15px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fcfdfe' };
+const panelTitle = { fontSize: '12px', fontWeight: '900', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' };
+const statusBadge = { fontSize: '9px', fontWeight: '900', color: '#22c55e', backgroundColor: '#f0fdf4', padding: '4px 8px', borderRadius: '4px' };
+
+const logList = { display: 'flex', flexDirection: 'column' };
+const logRow = { display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid #f8fafc', gap: '15px' };
+const logLabel = { fontSize: '9px', fontWeight: '900', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', color: '#64748b' };
+const logMsg = { fontSize: '13px', color: '#1e293b', flex: 1 };
+const logTime = { fontSize: '11px', color: '#94a3b8' };
+
+const commandGrid = { padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' };
+const cmdBtn = { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', textAlign: 'left', fontSize: '13px' };
