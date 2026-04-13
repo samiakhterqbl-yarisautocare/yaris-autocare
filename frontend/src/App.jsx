@@ -5,13 +5,19 @@ import {
   ShoppingCart, Menu, X, ShieldCheck, ChevronRight
 } from 'lucide-react';
 
-// --- IMPORTS ---
+// --- CORE MODULES ---
 import HomePage from './HomePage';
 import AftermarketModule from './AftermarketModule';
 import AftermarketNewPage from './AftermarketNewPage';
 import AftermarketEditPage from './AftermarketEditPage';
 import AftermarketDetailPage from './AftermarketDetailPage';
 import DismantleModule from './DismantleModule';
+
+// --- USED PARTS MODULES ---
+import UsedPartsModule from './UsedPartsModule';
+import UsedPartAddPage from './UsedPartAddPage';
+import UsedPartDetailPage from './UsedPartDetailPage';
+import UsedPartEditPage from './UsedPartEditPage';
 
 const COLORS = {
   primary: '#ef4444', 
@@ -47,9 +53,9 @@ export default function App() {
 
           <nav style={navSection}>
             <NavItem to="/" icon={<LayoutDashboard size={18}/>} label="Dashboard" />
+            <NavItem to="/used-parts" icon={<Package size={18}/>} label="Used Parts" />
             <NavItem to="/aftermarket" icon={<Wrench size={18}/>} label="Aftermarket" />
             <NavItem to="/dismantle" icon={<Scissors size={18}/>} label="Dismantle Yard" />
-            <NavItem to="/used-parts" icon={<Package size={18}/>} label="Used Parts" />
             <NavItem to="/sales" icon={<ShoppingCart size={18}/>} label="Sales & POS" />
           </nav>
 
@@ -78,16 +84,26 @@ export default function App() {
 
           <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
             <Routes>
+              {/* HOME */}
               <Route path="/" element={<HomePage />} />
+              
+              {/* USED PARTS */}
+              <Route path="/used-parts" element={<UsedPartsModule />} />
+              <Route path="/used-parts/add" element={<UsedPartAddPage />} />
+              <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
+              <Route path="/used-parts/edit/:id" element={<UsedPartEditPage />} />
+              
+              {/* AFTERMARKET */}
               <Route path="/aftermarket" element={<AftermarketModule />} />
               <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
               <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
               <Route path="/aftermarket/:id" element={<AftermarketDetailPage />} />
-              <Route path="/dismantle" element={<DismantleModule />} />
               
-              {/* Placeholders for used parts until you create them */}
-              <Route path="/used-parts" element={<div style={{padding:'20px'}}><h2>Used Parts Coming Soon</h2></div>} />
-              <Route path="/sales" element={<div style={{padding:'20px'}}><h2>Sales System Coming Soon</h2></div>} />
+              {/* OPERATIONS */}
+              <Route path="/dismantle" element={<DismantleModule />} />
+              <Route path="/sales" element={<div style={{padding:'20px'}}><h2>Sales System</h2></div>} />
+              
+              <Route path="*" element={<HomePage />} />
             </Routes>
           </main>
         </div>
@@ -96,7 +112,7 @@ export default function App() {
   );
 }
 
-// --- STYLES ---
+// --- STYLES (Kept consistent with your elegant theme) ---
 const sidebarContainer = { backgroundColor: COLORS.sidebar, color: '#fff', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' };
 const logoSection = { padding: '30px 20px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #334155' };
 const logoIcon = { backgroundColor: COLORS.primary, width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '18px' };
