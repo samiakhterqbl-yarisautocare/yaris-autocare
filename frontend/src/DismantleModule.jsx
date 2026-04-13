@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, X, Filter, Car, ChevronRight, Save, CheckCircle, Package, PlusCircle, Tool } from 'lucide-react';
+import { Search, X, Filter, Car, ChevronRight, Save, CheckCircle, Package, PlusCircle, Wrench } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const CATEGORIES = ["Front Body", "Engine Bay", "Mechanical & Drive", "Doors & Glass", "Interior & Safety", "Rear Body"];
