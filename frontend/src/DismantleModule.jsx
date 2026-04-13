@@ -1,165 +1,205 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, X, Filter, Car, ChevronRight, Save, CheckCircle, Package } from 'lucide-react';
+import { Search, X, Filter, Car, ChevronRight, Save, CheckCircle, Package, PlusCircle, Tool } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
-const CATEGORIES = ["Front Body", "Mechanical", "Chassis", "Interior", "Doors", "Rear Body"];
+const CATEGORIES = ["Front Body", "Engine Bay", "Mechanical & Drive", "Doors & Glass", "Interior & Safety", "Rear Body"];
 
-// Mapping parts to categories for quick selection
+// THE FULL MASTER LIST WE DESIGNED
 const CATEGORY_MAP = {
-  "Front Body": ["Front Bumper", "Headlight Left", "Headlight Right", "Bonnet", "Grille", "Radiator Support"],
-  "Mechanical": ["Alternator", "Starter Motor", "AC Compressor", "Engine", "Transmission", "ABS Pump"],
-  "Chassis": ["Front Strut L", "Front Strut R", "Control Arm L", "Control Arm R", "Steering Rack"],
-  "Interior": ["Airbag Set", "Dashboard", "Front Seat L", "Front Seat R", "Instrument Cluster"],
-  "Doors": ["Front Door L", "Front Door R", "Rear Door L", "Rear Door R", "Side Mirror L", "Side Mirror R"],
-  "Rear Body": ["Rear Bumper", "Tail Light L", "Tail Light R", "Boot Lid", "Rear Axle", "Fuel Pump"]
+  "Front Body": [
+    "Front Bumper", "Bonnet", "Grille", "Headlight Left", "Headlight Right", 
+    "Front Fog Light L", "Front Fog Light R", "Front Guard L", "Front Guard R", 
+    "Radiator Support", "Front Bar Reinforcement", "Bonnet Hinge Set", "Bonnet Latch"
+  ],
+  "Engine Bay": [
+    "Engine Assembly", "Alternator", "Starter Motor", "AC Compressor", 
+    "Radiator", "Condenser", "Radiator Fan Assembly", "Air Cleaner Box", 
+    "Throttle Body", "Ignition Coil Set", "Fuse Box Engine", "Brake Master Cylinder",
+    "ABS Pump", "Wiper Motor Front", "Engine Mount Set"
+  ],
+  "Mechanical & Drive": [
+    "Transmission/Gearbox", "Driveshaft Left", "Driveshaft Right", "Front Strut L", 
+    "Front Strut R", "Control Arm L", "Control Arm R", "Steering Rack", 
+    "Power Steering Pump", "Hub & Knuckle L", "Hub & Knuckle R", "Front Brake Caliper L",
+    "Front Brake Caliper R", "Exhaust Manifold", "Catalytic Converter"
+  ],
+  "Doors & Glass": [
+    "Front Door L", "Front Door R", "Rear Door L", "Rear Door R", 
+    "Side Mirror L", "Side Mirror R", "Door Window Glass FL", "Door Window Glass FR",
+    "Window Regulator FL", "Window Regulator FR", "Door Lock Actuator FL", "Door Lock Actuator FR",
+    "Windscreen", "Quarter Glass L", "Quarter Glass R"
+  ],
+  "Interior & Safety": [
+    "Airbag Kit (Full)", "Steering Wheel", "Dashboard Assembly", "Instrument Cluster",
+    "Clock Spring", "Front Seat L", "Front Seat R", "Rear Seat Set", 
+    "Door Trim Set", "Roof Lining", "Center Console", "AC Heater Control", 
+    "Indicator/Wiper Stalk", "Master Window Switch"
+  ],
+  "Rear Body": [
+    "Rear Bumper", "Tail Light L", "Tail Light R", "Boot Lid/Tailgate", 
+    "Tailgate Strut Set", "Rear Bar Reinforcement", "Fuel Pump", "Fuel Tank",
+    "Rear Axle Assembly", "Rear Shock L", "Rear Shock R", "Tow Bar",
+    "Reverse Camera", "Spare Wheel/Tool Kit"
+  ]
 };
 
 const DismantleModule = () => {
+  const [entryMode, setEntryMode] = useState('lookup'); 
   const [carId, setCarId] = useState('');
+  const [newCar, setNewCar] = useState({ stock_number: '', vin: '', model: '', year: '', color: '', make: 'Toyota' });
   const [carData, setCarData] = useState(null);
   const [activeTab, setActiveTab] = useState("Front Body");
-  const [selectedParts, setSelectedParts] = useState([]);
+  const [selectedParts, setSelectedParts] = useState([]); 
   const [loading, setLoading] = useState(false);
-  
-  // Search States
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
 
-  // Lookup Car Details from Railway
   useEffect(() => {
-    if (carId.length >= 1) {
+    if (entryMode === 'lookup' && carId.length >= 1) {
       axios.get(`${API_URL}/api/donor-cars/${carId}/`)
         .then(res => setCarData(res.data))
         .catch(() => setCarData(null));
     }
-  }, [carId]);
+  }, [carId, entryMode]);
 
   const togglePart = (partName) => {
-    setSelectedParts(prev => 
-      prev.includes(partName) ? prev.filter(p => p !== partName) : [...prev, partName]
-    );
+    const isSelected = selectedParts.find(p => p.name === partName);
+    if (isSelected) {
+      setSelectedParts(selectedParts.filter(p => p.name !== partName));
+    } else {
+      setSelectedParts([...selectedParts, { name: partName, category: activeTab }]);
+    }
   };
 
-  const handleSave = async () => {
-    if (!carData || selectedParts.length === 0) return alert("Select a car and parts first!");
+  const handleFinalizeDismantle = async () => {
+    if (selectedParts.length === 0) return alert("Select at least one part!");
     setLoading(true);
-    
+
     try {
-      const partsToCreate = selectedParts.map(name => ({
-        part_name: name,
-        category: activeTab,
+      let donorId = carData?.id;
+      if (entryMode === 'new') {
+        const carRes = await axios.post(`${API_URL}/api/donor-cars/`, newCar);
+        donorId = carRes.data.id;
+      }
+
+      const partsPayload = selectedParts.map(p => ({
+        part_name: p.name,
+        category: p.category,
         price: 0, 
-        condition: "Used"
+        grading: 'A',
+        status: 'Available'
       }));
 
       await axios.post(`${API_URL}/api/bulk-create/`, {
-        car_id: carData.id,
-        parts: partsToCreate
+        car_id: donorId,
+        parts: partsPayload
       });
 
-      alert(`Successfully added ${selectedParts.length} parts to ${carData.stock_number}`);
+      alert(`SAVED: ${selectedParts.length} parts added to ${newCar.stock_number || carData.stock_number}. Ready for QR labeling.`);
       setSelectedParts([]);
+      setCarId('');
+      setCarData(null);
+      setEntryMode('lookup');
     } catch (err) {
-      alert("Error saving dismantle data.");
+      alert("Error: Process failed. Check VIN uniqueness.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto', animation: 'fadeIn 0.5s ease' }}>
+    <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      {/* HEADER: SEARCH & ID LOOKUP */}
+      {/* HEADER ACTION AREA */}
       <div style={headerActionStyle}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={20} style={searchIconStyle} />
-          <input 
-            type="text" 
-            placeholder="Search parts across all categories..." 
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setIsSearching(e.target.value.length > 0); }}
-            style={searchBarStyle}
-          />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => setEntryMode('lookup')} style={entryMode === 'lookup' ? activeModeBtn : inactiveModeBtn}><Search size={18}/> Lookup</button>
+          <button onClick={() => setEntryMode('new')} style={entryMode === 'new' ? activeModeBtn : inactiveModeBtn}><PlusCircle size={18}/> New Car</button>
         </div>
-        
-        <div style={carIdBoxStyle}>
-          <Car size={18} color="#ef4444" />
-          <span style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>DONOR ID:</span>
-          <input type="number" placeholder="0" value={carId} onChange={(e) => setCarId(e.target.value)} style={idInputStyle} />
-        </div>
+
+        {entryMode === 'lookup' ? (
+          <div style={carIdBoxStyle}>
+            <Car size={18} color="#ef4444" />
+            <input type="number" placeholder="ID" value={carId} onChange={(e) => setCarId(e.target.value)} style={idInputStyle} />
+          </div>
+        ) : (
+          <div style={{display: 'flex', gap: '8px'}}>
+             <input placeholder="Stock #" style={miniInput} onChange={e => setNewCar({...newCar, stock_number: e.target.value})} />
+             <input placeholder="VIN" style={miniInput} onChange={e => setNewCar({...newCar, vin: e.target.value})} />
+             <input placeholder="Model" style={miniInput} onChange={e => setNewCar({...newCar, model: e.target.value})} />
+             <input placeholder="Year" style={miniInput} onChange={e => setNewCar({...newCar, year: e.target.value})} />
+          </div>
+        )}
       </div>
 
-      {/* CAR INFO HEADER */}
-      {carData ? (
+      {/* CAR DISPLAY */}
+      {(carData || entryMode === 'new') && (
         <div style={carHeaderStyle}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '900' }}>{carData.year} {carData.model}</h2>
-            <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontWeight: '600' }}>
-              STOCK: <span style={{color: '#ef4444'}}>{carData.stock_number}</span> | VIN: {carData.vin} | COLOR: {carData.color}
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '900' }}>
+              {entryMode === 'new' ? `${newCar.year} ${newCar.model || 'Donor'}` : `${carData.year} ${carData.model}`}
+            </h2>
+            <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontSize: '13px' }}>
+              {entryMode === 'new' ? "Registering New Stock..." : `STOCK: ${carData.stock_number} | VIN: ${carData.vin}`}
             </p>
           </div>
-          <button 
-            onClick={handleSave} 
-            disabled={loading || selectedParts.length === 0}
-            style={saveBtnStyle}
-          >
-            {loading ? "SAVING..." : `CREATE ${selectedParts.length} INVENTORY ITEMS`}
-          </button>
+          <div style={{display: 'flex', gap: '15px'}}>
+             <div style={countBadge}>{selectedParts.length} ITEMS SELECTED</div>
+             <button onClick={handleFinalizeDismantle} disabled={loading} style={saveBtnStyle}>
+               {loading ? "SAVING..." : "FINISH & GENERATE LABELS"}
+             </button>
+          </div>
         </div>
-      ) : (
-        <div style={emptyState}>Enter a Donor Car ID to start dismantling.</div>
       )}
 
       {/* CATEGORY TABS */}
       <div style={tabBarStyle}>
         {CATEGORIES.map(tab => (
-          <button 
-            key={tab} 
-            onClick={() => setActiveTab(tab)}
-            style={activeTab === tab ? activeTabStyle : inactiveTabStyle}
-          >
+          <button key={tab} onClick={() => setActiveTab(tab)} style={activeTab === tab ? activeTabStyle : inactiveTabStyle}>
             {tab}
           </button>
         ))}
       </div>
 
-      {/* CHECKLIST GRID */}
+      {/* MASTER PARTS GRID */}
       <div style={partsGridStyle}>
-        {CATEGORY_MAP[activeTab].map(part => (
-          <div 
-            key={part} 
-            onClick={() => togglePart(part)}
-            style={{
-              ...partCardStyle,
-              borderColor: selectedParts.includes(part) ? '#ef4444' : '#e2e8f0',
-              backgroundColor: selectedParts.includes(part) ? '#fef2f2' : '#fff'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontWeight: '700', fontSize: '14px' }}>{part}</span>
-               {selectedParts.includes(part) ? <CheckCircle size={18} color="#ef4444" /> : <Package size={18} color="#cbd5e1" />}
+        {CATEGORY_MAP[activeTab].map(part => {
+          const isSelected = selectedParts.find(p => p.name === part);
+          return (
+            <div 
+              key={part} 
+              onClick={() => togglePart(part)}
+              style={{
+                ...partCardStyle,
+                borderColor: isSelected ? '#ef4444' : '#e2e8f0',
+                backgroundColor: isSelected ? '#fef2f2' : '#fff'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <span style={{ fontWeight: '700', fontSize: '12px', lineHeight: '1.2' }}>{part}</span>
+                 {isSelected ? <CheckCircle size={16} color="#ef4444" /> : <Package size={16} color="#cbd5e1" />}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 };
 
-// --- STYLES (Aligned with your elegant theme) ---
-const headerActionStyle = { display: 'flex', gap: '20px', marginBottom: '30px', alignItems: 'center' };
-const searchBarStyle = { width: '100%', padding: '15px 15px 15px 50px', borderRadius: '14px', border: '1px solid #e2e8f0', fontSize: '16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' };
-const searchIconStyle = { position: 'absolute', left: '18px', top: '16px', color: '#94a3b8' };
-const carIdBoxStyle = { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#fff', padding: '0 20px', borderRadius: '14px', border: '1px solid #e2e8f0', height: '52px' };
-const idInputStyle = { border: 'none', outline: 'none', width: '40px', fontSize: '18px', fontWeight: '900', color: '#ef4444' };
-const carHeaderStyle = { backgroundColor: '#0f172a', color: '#fff', padding: '35px', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' };
-const saveBtnStyle = { backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '18px 35px', borderRadius: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s' };
-const tabBarStyle = { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '30px', paddingBottom: '10px' };
-const activeTabStyle = { padding: '14px 28px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '12px', border: 'none', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' };
-const inactiveTabStyle = { padding: '14px 28px', backgroundColor: '#fff', color: '#64748b', borderRadius: '12px', border: '1px solid #e2e8f0', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' };
-const partsGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' };
-const partCardStyle = { padding: '20px', borderRadius: '15px', border: '2px solid', cursor: 'pointer', transition: '0.2s' };
-const emptyState = { padding: '60px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '24px', border: '2px dashed #e2e8f0', color: '#94a3b8', fontWeight: '700' };
+// --- STYLES ---
+const headerActionStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center', backgroundColor: '#fff', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' };
+const activeModeBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 15px', backgroundColor: '#0f172a', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '13px' };
+const inactiveModeBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 15px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '8px', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '13px' };
+const carIdBoxStyle = { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f8fafc', padding: '0 12px', borderRadius: '8px', border: '1px solid #e2e8f0', height: '38px' };
+const idInputStyle = { border: 'none', outline: 'none', width: '40px', fontSize: '15px', fontWeight: '900', color: '#ef4444', background: 'none' };
+const miniInput = { padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '12px', width: '90px' };
+const carHeaderStyle = { backgroundColor: '#0f172a', color: '#fff', padding: '25px', borderRadius: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' };
+const countBadge = { backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', padding: '10px 15px', borderRadius: '10px', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center' };
+const saveBtnStyle = { backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '12px 25px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '13px' };
+const tabBarStyle = { display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '20px', paddingBottom: '5px' };
+const activeTabStyle = { padding: '10px 18px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' };
+const inactiveTabStyle = { padding: '10px 18px', backgroundColor: '#fff', color: '#64748b', borderRadius: '8px', border: '1px solid #e2e8f0', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' };
+const partsGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' };
+const partCardStyle = { padding: '15px', borderRadius: '10px', border: '2px solid', cursor: 'pointer', transition: '0.2s' };
 
 export default DismantleModule;
