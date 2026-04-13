@@ -1,126 +1,165 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, X, Filter, Car, ChevronRight, Save } from 'lucide-react';
+import { Search, X, Filter, Car, ChevronRight, Save, CheckCircle, Package } from 'lucide-react';
 
+const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const CATEGORIES = ["Front Body", "Mechanical", "Chassis", "Interior", "Doors", "Rear Body"];
+
+// Mapping parts to categories for quick selection
+const CATEGORY_MAP = {
+  "Front Body": ["Front Bumper", "Headlight Left", "Headlight Right", "Bonnet", "Grille", "Radiator Support"],
+  "Mechanical": ["Alternator", "Starter Motor", "AC Compressor", "Engine", "Transmission", "ABS Pump"],
+  "Chassis": ["Front Strut L", "Front Strut R", "Control Arm L", "Control Arm R", "Steering Rack"],
+  "Interior": ["Airbag Set", "Dashboard", "Front Seat L", "Front Seat R", "Instrument Cluster"],
+  "Doors": ["Front Door L", "Front Door R", "Rear Door L", "Rear Door R", "Side Mirror L", "Side Mirror R"],
+  "Rear Body": ["Rear Bumper", "Tail Light L", "Tail Light R", "Boot Lid", "Rear Axle", "Fuel Pump"]
+};
 
 const DismantleModule = () => {
   const [carId, setCarId] = useState('');
   const [carData, setCarData] = useState(null);
   const [activeTab, setActiveTab] = useState("Front Body");
   const [selectedParts, setSelectedParts] = useState([]);
+  const [loading, setLoading] = useState(false);
   
   // Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [filterCat, setFilterCat] = useState('All');
 
+  // Lookup Car Details from Railway
   useEffect(() => {
-    if (carId) {
-      axios.get(`http://127.0.0.1:8000/api/inventory/car-details/${carId}/`)
-        .then(res => setCarData(res.data)).catch(() => setCarData(null));
+    if (carId.length >= 1) {
+      axios.get(`${API_URL}/api/donor-cars/${carId}/`)
+        .then(res => setCarData(res.data))
+        .catch(() => setCarData(null));
     }
   }, [carId]);
 
-  // Logic to toggle the search results overlay
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    setIsSearching(e.target.value.length > 0);
+  const togglePart = (partName) => {
+    setSelectedParts(prev => 
+      prev.includes(partName) ? prev.filter(p => p !== partName) : [...prev, partName]
+    );
+  };
+
+  const handleSave = async () => {
+    if (!carData || selectedParts.length === 0) return alert("Select a car and parts first!");
+    setLoading(true);
+    
+    try {
+      const partsToCreate = selectedParts.map(name => ({
+        part_name: name,
+        category: activeTab,
+        price: 0, 
+        condition: "Used"
+      }));
+
+      await axios.post(`${API_URL}/api/bulk-create/`, {
+        car_id: carData.id,
+        parts: partsToCreate
+      });
+
+      alert(`Successfully added ${selectedParts.length} parts to ${carData.stock_number}`);
+      setSelectedParts([]);
+    } catch (err) {
+      alert("Error saving dismantle data.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto', animation: 'fadeIn 0.5s ease' }}>
       
-      {/* 1. Header with Result Toggle Search */}
+      {/* HEADER: SEARCH & ID LOOKUP */}
       <div style={headerActionStyle}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={20} style={searchIconStyle} />
           <input 
             type="text" 
-            placeholder="Search parts in this car..." 
+            placeholder="Search parts across all categories..." 
             value={searchQuery}
-            onChange={handleSearch}
+            onChange={(e) => { setSearchQuery(e.target.value); setIsSearching(e.target.value.length > 0); }}
             style={searchBarStyle}
           />
-          {isSearching && <X size={20} onClick={() => setIsSearching(false)} style={clearSearchStyle} />}
         </div>
         
         <div style={carIdBoxStyle}>
           <Car size={18} color="#ef4444" />
-          <input type="number" placeholder="ID" value={carId} onChange={(e) => setCarId(e.target.value)} style={idInputStyle} />
+          <span style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>DONOR ID:</span>
+          <input type="number" placeholder="0" value={carId} onChange={(e) => setCarId(e.target.value)} style={idInputStyle} />
         </div>
       </div>
 
-      {/* 2. Search Results Overlay (Toggled) */}
-      {isSearching && (
-        <div style={searchOverlayStyle}>
-          <div style={searchHeaderStyle}>
-            <h3>Results for "{searchQuery}"</h3>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Filter size={18} />
-              <select onChange={(e) => setFilterCat(e.target.value)} style={filterDropdownStyle}>
-                <option value="All">All Categories</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+      {/* CAR INFO HEADER */}
+      {carData ? (
+        <div style={carHeaderStyle}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '900' }}>{carData.year} {carData.model}</h2>
+            <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontWeight: '600' }}>
+              STOCK: <span style={{color: '#ef4444'}}>{carData.stock_number}</span> | VIN: {carData.vin} | COLOR: {carData.color}
+            </p>
           </div>
-          <div style={resultsGridStyle}>
-             {/* Search Logic goes here to filter parts list */}
-             <p style={{ color: '#64748b' }}>Matching parts will appear here...</p>
-          </div>
+          <button 
+            onClick={handleSave} 
+            disabled={loading || selectedParts.length === 0}
+            style={saveBtnStyle}
+          >
+            {loading ? "SAVING..." : `CREATE ${selectedParts.length} INVENTORY ITEMS`}
+          </button>
         </div>
+      ) : (
+        <div style={emptyState}>Enter a Donor Car ID to start dismantling.</div>
       )}
 
-      {/* 3. Main Dashboard (Hidden or Faded when searching) */}
-      {!isSearching && (
-        <>
-          {carData && (
-            <div style={carHeaderStyle}>
-              <div style={{ color: '#fff' }}>
-                <h2 style={{ margin: 0, fontSize: '28px' }}>{carData.year} {carData.model}</h2>
-                <p style={{ margin: 0, opacity: 0.7 }}>Stock: {carData.stock_number} | {carData.color}</p>
-              </div>
-              <button style={saveBtnStyle}>SAVE {selectedParts.length} ITEMS</button>
+      {/* CATEGORY TABS */}
+      <div style={tabBarStyle}>
+        {CATEGORIES.map(tab => (
+          <button 
+            key={tab} 
+            onClick={() => setActiveTab(tab)}
+            style={activeTab === tab ? activeTabStyle : inactiveTabStyle}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* CHECKLIST GRID */}
+      <div style={partsGridStyle}>
+        {CATEGORY_MAP[activeTab].map(part => (
+          <div 
+            key={part} 
+            onClick={() => togglePart(part)}
+            style={{
+              ...partCardStyle,
+              borderColor: selectedParts.includes(part) ? '#ef4444' : '#e2e8f0',
+              backgroundColor: selectedParts.includes(part) ? '#fef2f2' : '#fff'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontWeight: '700', fontSize: '14px' }}>{part}</span>
+               {selectedParts.includes(part) ? <CheckCircle size={18} color="#ef4444" /> : <Package size={18} color="#cbd5e1" />}
             </div>
-          )}
-
-          <div style={tabBarStyle}>
-            {CATEGORIES.map(tab => (
-              <button 
-                key={tab} 
-                onClick={() => setActiveTab(tab)}
-                style={activeTab === tab ? activeTabStyle : inactiveTabStyle}
-              >
-                {tab}
-              </button>
-            ))}
           </div>
-
-          <div style={partsGridStyle}>
-             {/* Part checklist labels map here */}
-             <p>Select category above to start salvaging.</p>
-          </div>
-        </>
-      )}
+        ))}
+      </div>
     </div>
   );
 };
 
-// --- STYLES ---
+// --- STYLES (Aligned with your elegant theme) ---
 const headerActionStyle = { display: 'flex', gap: '20px', marginBottom: '30px', alignItems: 'center' };
-const searchBarStyle = { width: '100%', padding: '15px 15px 15px 50px', borderRadius: '14px', border: '1px solid #e2e8f0', fontSize: '16px', backgroundColor: '#fff' };
+const searchBarStyle = { width: '100%', padding: '15px 15px 15px 50px', borderRadius: '14px', border: '1px solid #e2e8f0', fontSize: '16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' };
 const searchIconStyle = { position: 'absolute', left: '18px', top: '16px', color: '#94a3b8' };
-const clearSearchStyle = { position: 'absolute', right: '15px', top: '16px', cursor: 'pointer', color: '#64748b' };
-const carIdBoxStyle = { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#fff', padding: '0 15px', borderRadius: '14px', border: '1px solid #e2e8f0', height: '52px' };
-const idInputStyle = { border: 'none', outline: 'none', width: '50px', fontSize: '18px', fontWeight: 'bold' };
-const searchOverlayStyle = { backgroundColor: '#fff', borderRadius: '20px', padding: '30px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' };
-const searchHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' };
-const filterDropdownStyle = { border: 'none', fontWeight: 'bold', cursor: 'pointer', color: '#ef4444' };
-const carHeaderStyle = { backgroundColor: '#0f172a', padding: '30px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' };
-const saveBtnStyle = { backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '15px 30px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' };
-const tabBarStyle = { display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '25px', paddingBottom: '10px' };
-const activeTabStyle = { padding: '12px 24px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer' };
-const inactiveTabStyle = { padding: '12px 24px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer' };
-const partsGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' };
+const carIdBoxStyle = { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#fff', padding: '0 20px', borderRadius: '14px', border: '1px solid #e2e8f0', height: '52px' };
+const idInputStyle = { border: 'none', outline: 'none', width: '40px', fontSize: '18px', fontWeight: '900', color: '#ef4444' };
+const carHeaderStyle = { backgroundColor: '#0f172a', color: '#fff', padding: '35px', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' };
+const saveBtnStyle = { backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '18px 35px', borderRadius: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s' };
+const tabBarStyle = { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '30px', paddingBottom: '10px' };
+const activeTabStyle = { padding: '14px 28px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '12px', border: 'none', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' };
+const inactiveTabStyle = { padding: '14px 28px', backgroundColor: '#fff', color: '#64748b', borderRadius: '12px', border: '1px solid #e2e8f0', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' };
+const partsGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' };
+const partCardStyle = { padding: '20px', borderRadius: '15px', border: '2px solid', cursor: 'pointer', transition: '0.2s' };
+const emptyState = { padding: '60px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '24px', border: '2px dashed #e2e8f0', color: '#94a3b8', fontWeight: '700' };
 
 export default DismantleModule;
