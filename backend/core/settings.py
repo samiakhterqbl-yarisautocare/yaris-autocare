@@ -125,5 +125,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Ensure secure cookies for HTTPS (Railway uses HTTPS)
 if not DEBUG:
     CSRF_COOKIE_SECURE = True
+
+CORS_ALLOW_CREDENTIALS = True
     SESSION_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
