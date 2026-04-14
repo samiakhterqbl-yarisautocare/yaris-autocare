@@ -24,7 +24,8 @@ class DonorCar(models.Model):
             # Auto-generate Stock# (e.g., YAR-2012-V123)
             # Uses last 4 of VIN for uniqueness
             vin_segment = self.vin[-4:] if len(self.vin) >= 4 else uuid.uuid4().hex[:4]
-            self.stock_number = f"YAR-{self.year}-{vin_segment}".upper()
+           prefix = "YAR" if "YARIS" in self.model.upper() else "CAM"
+self.stock_number = f"{prefix}-{self.year}-{vin_segment}".upper()
         super().save(*args, **kwargs)
 
     def __str__(self):
