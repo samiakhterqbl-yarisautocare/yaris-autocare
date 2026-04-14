@@ -123,7 +123,9 @@ export default function App() {
                 <Route path="/dismantle" element={<DismantleModule />} />
                 <Route path="/sales" element={<SalesModule />} />
                 <Route path="/low-stock" element={<LowStockModule />} />
-                <Route path="/used-parts/:id" element={<PartDetailModule />} />
+                <Route path="/used-parts/:id" element={<PartDetailModule />} 
+                <Route path="/yard-master" element={<InventoryMasterModule />} />
+                <Route path="/yard-master/:id" element={<DonorCarDetailView />} />
                 <Route path="*" element={<HomePage />} />
               </Routes>
             </Suspense>
