@@ -11,9 +11,9 @@ class DonorCar(models.Model):
     # Industrial Yard Data
     stock_number = models.CharField(max_length=50, unique=True, editable=False)
     vin = models.CharField(max_length=17, unique=True)
-    rego = models.CharField(max_length=20, blank=True, null=True) # Added for Registry
+    rego = models.CharField(max_length=20, blank=True, null=True) 
     color = models.CharField(max_length=30)
-    notes = models.TextField(blank=True, null=True) # General car condition notes
+    notes = models.TextField(blank=True, null=True)
     
     # Track which parts were salvaged during dismantle
     salvage_checklist = models.JSONField(default=dict, blank=True) 
@@ -21,11 +21,11 @@ class DonorCar(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.stock_number:
-            # Auto-generate Stock# (e.g., YAR-2012-V123)
-            # Uses last 4 of VIN for uniqueness
+            # Auto-generate Stock# (e.g., YAR-2012-V123 or CAM-2012-V123)
             vin_segment = self.vin[-4:] if len(self.vin) >= 4 else uuid.uuid4().hex[:4]
-           prefix = "YAR" if "YARIS" in self.model.upper() else "CAM"
-self.stock_number = f"{prefix}-{self.year}-{vin_segment}".upper()
+            # Use prefix based on model name
+            prefix = "YAR" if "YARIS" in self.model.upper() else "CAM"
+            self.stock_number = f"{prefix}-{self.year}-{vin_segment}".upper()
         super().save(*args, **kwargs)
 
     def __str__(self):
