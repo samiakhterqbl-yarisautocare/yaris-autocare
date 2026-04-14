@@ -7,7 +7,7 @@ from django.utils import timezone
 from .models import *
 from .serializers import *
 
-# --- 1. DONOR CAR REGISTRY (NEW) ---
+# --- 1. DONOR CAR REGISTRY ---
 
 class DonorCarListCreateView(generics.ListCreateAPIView):
     """ Handles Phase 1: Creating the Donor Car Profile """
@@ -72,11 +72,11 @@ class BulkDismantleView(APIView):
 # --- 4. GLOBAL SEARCH & FILTERING (PHASE 6) ---
 
 class GlobalSearchView(APIView):
-    """ The search engine for 5000+ parts across VIN, Stock#, and Name """
+    """ The search engine for parts across VIN, Stock#, and Name """
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
-            return Response([])
+            return Response({"used": [], "aftermarket": []})
 
         # Search in Used Parts (InventoryItem)
         used_parts = InventoryItem.objects.filter(
@@ -84,13 +84,13 @@ class GlobalSearchView(APIView):
             Q(label_id__icontains=query) | 
             Q(donor_car__stock_number__icontains=query) |
             Q(donor_car__vin__icontains=query)
-        )[:50] # Limit results for speed
+        ).distinct()[:50] 
 
         # Search in Aftermarket
         new_parts = AftermarketPart.objects.filter(
             Q(part_name__icontains=query) | 
             Q(sku__icontains=query)
-        )[:50]
+        ).distinct()[:50]
 
         return Response({
             "used": InventoryItemSerializer(used_parts, many=True).data,
@@ -105,6 +105,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         total = self.request.data.get('total_amount', 0)
+        # Australian GST calculation (1/11th of total)
         gst = float(total) / 11 
         inv_no = f"INV-{timezone.now().strftime('%Y%m')}-{Invoice.objects.count() + 1000}"
         
@@ -133,3 +134,24 @@ class LowStockListView(generics.ListAPIView):
 class ImageUploadView(generics.CreateAPIView):
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
+
+# --- 7. IMAGE LOGIC (FIXES RAILWAY CRASH) ---
+
+@api_view(['POST'])
+def set_main_image(request, image_id):
+    """ Sets a specific image as 'is_main' and resets others for that part """
+    try:
+        image = ProductImage.objects.get(id=image_id)
+        part = image.inventory_item # ForeignKey to InventoryItem
+        
+        if part:
+            # Set all sibling images to False
+            ProductImage.objects.filter(inventory_item=part).update(is_main=False)
+            # Set target image to True
+            image.is_main = True
+            image.save()
+            return Response({"status": "Success", "message": "Main image updated"})
+        return Response({"error": "Image is not linked to a part"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    except ProductImage.DoesNotExist:
+        return Response({"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
