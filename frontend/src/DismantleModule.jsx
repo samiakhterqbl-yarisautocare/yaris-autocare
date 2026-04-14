@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'react-qr-code';
 
+// Matches your Railway deployment
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const COLORS = { primary: '#ef4444', dark: '#0f172a', border: '#e2e8f0', bg: '#f8fafc' };
 
@@ -33,10 +34,13 @@ export default function DismantleModule() {
     if (!carForm.model || !carForm.year || !carForm.vin) return alert("Model, Year, and VIN are compulsory!");
     setLoading(true);
     try {
+      // Create the Donor Car profile
       const res = await axios.post(`${API_URL}/api/donor-cars/`, carForm);
       setCarData(res.data);
       setPhase('checklist');
-    } catch (err) { alert("Error: VIN already exists."); }
+    } catch (err) { 
+      alert(err.response?.data?.vin ? "Error: VIN already exists." : "Connection error to Railway."); 
+    }
     finally { setLoading(false); }
   };
 
@@ -60,12 +64,20 @@ export default function DismantleModule() {
     if (selectedParts.length === 0) return alert("Please select at least one part!");
     setLoading(true);
     try {
-      const payload = { car_id: carData.id, parts: selectedParts.map(p => ({ part_name: p.name, category: p.category })) };
+      const payload = { 
+        car_id: carData.id, 
+        parts: selectedParts.map(p => ({ part_name: p.name, category: p.category })) 
+      };
+      // Corrected endpoint to match Django urls.py
       await axios.post(`${API_URL}/api/bulk-create/`, payload);
       setPhase('labels');
-    } catch (err) { alert("Bulk creation failed."); }
+    } catch (err) { 
+      alert("Bulk creation failed. Ensure Railway is running."); 
+    }
     finally { setLoading(false); }
   };
+
+  // --- UI RENDERERS ---
 
   if (phase === 'decision') return (
     <div style={container}>
@@ -75,7 +87,7 @@ export default function DismantleModule() {
           <PlusCircle size={48} color={COLORS.primary} />
           <div style={bigBtnText}>REGISTER NEW DONOR</div>
         </button>
-        <button onClick={() => alert("Search functionality coming in Master Yard module")} style={{...bigBtn, opacity: 0.5}}>
+        <button onClick={() => alert("Search functionality handled in Admin Panel")} style={{...bigBtn, opacity: 0.5}}>
           <Search size={48} />
           <div style={bigBtnText}>FIND EXISTING STOCK</div>
         </button>
@@ -146,7 +158,6 @@ export default function DismantleModule() {
         })}
       </div>
 
-      {/* CUSTOM PART INJECTOR */}
       <div style={customSection}>
         <h3 style={{fontSize: '14px', fontWeight: '900', marginBottom: '15px'}}>Missing a part? Add it manually:</h3>
         <form onSubmit={addCustomPart} style={{display: 'flex', gap: '10px'}}>
@@ -168,13 +179,14 @@ export default function DismantleModule() {
         <h2 style={titleStyle}>Labels: {carData.stock_number}</h2>
         <div style={{display: 'flex', gap: '10px'}}>
           <button onClick={() => window.print()} style={primaryBtn}><Printer size={18}/> PRINT</button>
-          <button onClick={() => window.location.reload()} style={outlineBtn}><RefreshCw size={18}/> NEW CAR</button>
+          <button onClick={() => setPhase('decision')} style={outlineBtn}><RefreshCw size={18}/> NEW CAR</button>
         </div>
       </div>
       <div style={labelGrid} id="printableArea">
         {selectedParts.map((p, index) => (
           <div key={index} style={qrLabel}>
             <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+              {/* QR Code value matches label_id logic in Django models.py */}
               <QRCode size={64} value={`${carData.stock_number}-${p.name.replace(/\s/g, '').toUpperCase()}`} />
               <div style={{flex: 1}}>
                 <div style={labelStockNo}>{carData.stock_number}</div>
@@ -189,7 +201,7 @@ export default function DismantleModule() {
   );
 }
 
-// STYLES
+// STYLES (Keep existing styles below)
 const container = { width: '100%' };
 const titleStyle = { fontSize: '28px', fontWeight: '900', color: COLORS.dark };
 const decisionGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '30px' };
@@ -203,7 +215,7 @@ const formGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' 
 const formCol = { display: 'flex', flexDirection: 'column' };
 const labelStyle = { fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' };
 const inputStyle = { padding: '15px', borderRadius: '12px', border: `1px solid ${COLORS.border}`, marginBottom: '20px', outline: 'none' };
-const inputCompulsory = { ...inputStyle, border: `1px solid ${COLORS.dark}` };
+const inputCompulsory = { ...inputStyle, border: `2px solid ${COLORS.dark}` };
 const formFooter = { marginTop: '40px', textAlign: 'right' };
 const primaryBtn = { backgroundColor: COLORS.dark, color: '#fff', padding: '16px 30px', borderRadius: '14px', border: 'none', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' };
 const outlineBtn = { ...primaryBtn, backgroundColor: '#fff', color: COLORS.dark, border: `1px solid ${COLORS.border}` };
@@ -217,7 +229,7 @@ const partsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, min
 const partCard = { padding: '20px', borderRadius: '16px', border: '2px solid', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
 const customSection = { marginTop: '40px', padding: '30px', border: `1px dashed ${COLORS.border}`, borderRadius: '20px', backgroundColor: '#fff' };
 const labelGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '10px' };
-const qrLabel = { padding: '20px', border: '1px solid #000', borderRadius: '10px' };
+const qrLabel = { padding: '20px', border: '1px solid #000', borderRadius: '10px', backgroundColor: '#fff' };
 const labelStockNo = { fontSize: '16px', fontWeight: '900' };
 const labelPartName = { fontSize: '14px', fontWeight: '800', borderBottom: '1px solid #000', marginBottom: '4px' };
 const labelCarInfo = { fontSize: '11px', fontWeight: '700' };
