@@ -111,23 +111,22 @@ export default function App() {
 
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px', width: '100%' }}>
             <Suspense fallback={<div style={{ fontWeight: '700', padding: '20px' }}>Initializing Terminal Module...</div>}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/used-parts" element={<UsedPartsModule />} />
-                <Route path="/used-parts/add" element={<UsedPartAddPage />} />
-                <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
-                <Route path="/aftermarket" element={<AftermarketModule />} />
-                <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
-                <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
-                <Route path="/aftermarket/:id" element={<AftermarketDetailPage />} />
-                <Route path="/dismantle" element={<DismantleModule />} />
-                <Route path="/sales" element={<SalesModule />} />
-                <Route path="/low-stock" element={<LowStockModule />} />
-                <Route path="/used-parts/:id" element={<PartDetailModule />} 
-                <Route path="/yard-master" element={<InventoryMasterModule />} />
-                <Route path="/yard-master/:id" element={<DonorCarDetailView />} />
-                <Route path="*" element={<HomePage />} />
-              </Routes>
+             <Routes>
+  <Route path="/" element={<HomePage />} />
+  <Route path="/used-parts" element={<UsedPartsModule />} />
+  <Route path="/used-parts/add" element={<UsedPartAddPage />} />
+  <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
+  <Route path="/aftermarket" element={<AftermarketModule />} />
+  <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
+  <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
+  <Route path="/aftermarket/:id" element={<AftermarketDetailPage />} />
+  <Route path="/dismantle" element={<DismantleModule />} />
+  <Route path="/sales" element={<SalesModule />} />
+  <Route path="/low-stock" element={<LowStockModule />} />
+  {/* Corrected the closing tags below */}
+  <Route path="/yard-master" element={<HomePage />} /> 
+  <Route path="*" element={<HomePage />} />
+</Routes>
             </Suspense>
           </main>
         </div>
