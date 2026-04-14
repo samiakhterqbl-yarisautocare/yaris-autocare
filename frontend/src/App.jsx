@@ -5,7 +5,7 @@ import {
   ShoppingCart, Menu, X, ChevronRight, AlertTriangle, Settings, ExternalLink
 } from 'lucide-react';
 
-// Lazy Load Modules
+// Lazy Load All Modules (Ensure these filenames match your actual files EXACTLY)
 const HomePage = lazy(() => import('./HomePage'));
 const AftermarketModule = lazy(() => import('./AftermarketModule'));
 const AftermarketDetailPage = lazy(() => import('./AftermarketDetailPage'));
@@ -17,6 +17,9 @@ const SalesModule = lazy(() => import('./SalesModule'));
 const UsedPartsModule = lazy(() => import('./UsedPartsModule'));
 const UsedPartAddPage = lazy(() => import('./UsedPartAddPage'));
 const UsedPartDetailPage = lazy(() => import('./UsedPartDetailPage'));
+// Added missing imports that were used in your routes:
+const InventoryMasterModule = lazy(() => import('./InventoryMasterModule')); 
+const DonorCarDetailView = lazy(() => import('./DonorCarDetailView'));
 
 const COLORS = { 
   primary: '#ef4444', 
@@ -26,7 +29,6 @@ const COLORS = {
   border: '#e2e8f0' 
 };
 
-// Replace this with your actual Railway Admin URL if different
 const DJANGO_ADMIN_URL = 'https://yaris-autocare-production.up.railway.app/admin/';
 
 export default function App() {
@@ -49,11 +51,10 @@ export default function App() {
           color: '#fff',
           zIndex: 100
         }}>
-          {/* LOGO SECTION - Now Linked to Home */}
           <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div style={{ padding: '25px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ backgroundColor: COLORS.primary, width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '20px', boxShadow: '0 0 15px rgba(239, 68, 68, 0.4)' }}>Y</div>
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#fff', letterSpacing: '-0.5px' }}>YARIS <span style={{color: COLORS.primary}}>AUTOCARE</span></h1>
+              <div style={{ backgroundColor: COLORS.primary, width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '20px' }}>Y</div>
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#fff' }}>YARIS <span style={{color: COLORS.primary}}>AUTOCARE</span></h1>
             </div>
           </Link>
           
@@ -66,67 +67,48 @@ export default function App() {
             <NavItem to="/sales" icon={<ShoppingCart size={20}/>} label="Sales & POS" />
           </nav>
 
-          {/* SYSTEM LINKS - Including Django Admin */}
           <div style={{ padding: '15px', borderTop: '1px solid #334155', backgroundColor: '#161e2b' }}>
-            <a 
-              href={DJANGO_ADMIN_URL} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={adminLinkStyle}
-            >
+            <a href={DJANGO_ADMIN_URL} target="_blank" rel="noopener noreferrer" style={adminLinkStyle}>
               <Settings size={16} />
               <span style={{ flex: 1 }}>SYSTEM ADMIN</span>
               <ExternalLink size={12} opacity={0.5} />
             </a>
-            <div style={{ padding: '10px 5px 0 5px', fontSize: '10px', color: '#64748b', fontWeight: '700' }}>
-              TAS AUTO WRECKERS TERMINAL V2.0
-            </div>
           </div>
         </aside>
 
         {/* VIEWPORT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
-          <header style={{ 
-            height: '64px', 
-            backgroundColor: '#fff', 
-            borderBottom: `1px solid ${COLORS.border}`, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            padding: '0 24px',
-            flexShrink: 0
-          }}>
-            <button onClick={() => setIsOpen(!isOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.dark }}>
+          <header style={{ height: '64px', backgroundColor: '#fff', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
+            <button onClick={() => setIsOpen(!isOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
               {isOpen ? <X size={20}/> : <Menu size={20} />}
             </button>
-            
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', fontWeight: '800', color: COLORS.dark }}>ADMIN CONTROL</div>
+                <div style={{ fontSize: '12px', fontWeight: '800' }}>ADMIN CONTROL</div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>Legana Yard Terminal</div>
               </div>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: COLORS.dark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px' }}>BA</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: COLORS.dark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>BA</div>
             </div>
           </header>
 
-          <main style={{ flex: 1, overflowY: 'auto', padding: '32px', width: '100%' }}>
-            <Suspense fallback={<div style={{ fontWeight: '700', padding: '20px' }}>Initializing Terminal Module...</div>}>
-             <Routes>
-  <Route path="/" element={<HomePage />} />
-  <Route path="/used-parts" element={<UsedPartsModule />} />
-  <Route path="/used-parts/add" element={<UsedPartAddPage />} />
-  <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
-  <Route path="/aftermarket" element={<AftermarketModule />} />
-  <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
-  <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
-  <Route path="/aftermarket/:id" element={<AftermarketDetailPage />} />
-  <Route path="/dismantle" element={<DismantleModule />} />
-  <Route path="/sales" element={<SalesModule />} />
-  <Route path="/low-stock" element={<LowStockModule />} />
-  {/* Corrected the closing tags below */}
-  <Route path="/yard-master" element={<HomePage />} /> 
-  <Route path="*" element={<HomePage />} />
-</Routes>
+          <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+            <Suspense fallback={<div style={{ fontWeight: '700' }}>Loading Module...</div>}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/used-parts" element={<UsedPartsModule />} />
+                <Route path="/used-parts/add" element={<UsedPartAddPage />} />
+                <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
+                <Route path="/aftermarket" element={<AftermarketModule />} />
+                <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
+                <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
+                <Route path="/aftermarket/:id" element={<AftermarketDetailPage />} />
+                <Route path="/dismantle" element={<DismantleModule />} />
+                <Route path="/sales" element={<SalesModule />} />
+                <Route path="/low-stock" element={<LowStockModule />} />
+                <Route path="/yard-master" element={<InventoryMasterModule />} />
+                <Route path="/yard-master/:id" element={<DonorCarDetailView />} />
+                <Route path="*" element={<HomePage />} />
+              </Routes>
             </Suspense>
           </main>
         </div>
@@ -140,16 +122,9 @@ const NavItem = ({ to, icon, label }) => {
   const isActive = location.pathname === to;
   return (
     <Link to={to} style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'space-between', 
-      padding: '14px 25px', 
-      textDecoration: 'none', 
-      fontSize: '14px', 
-      transition: '0.2s',
-      backgroundColor: isActive ? '#334155' : 'transparent',
-      color: isActive ? '#fff' : '#cbd5e1',
-      borderLeft: isActive ? `4px solid ${COLORS.primary}` : '4px solid transparent'
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 25px', 
+      textDecoration: 'none', fontSize: '14px', backgroundColor: isActive ? '#334155' : 'transparent',
+      color: isActive ? '#fff' : '#cbd5e1', borderLeft: isActive ? `4px solid ${COLORS.primary}` : '4px solid transparent'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {icon} <span style={{ fontWeight: '600' }}>{label}</span>
@@ -159,18 +134,4 @@ const NavItem = ({ to, icon, label }) => {
   );
 };
 
-const adminLinkStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '12px',
-  backgroundColor: '#1e293b',
-  borderRadius: '8px',
-  color: '#94a3b8',
-  textDecoration: 'none',
-  fontSize: '12px',
-  fontWeight: '800',
-  border: '1px solid #334155',
-  transition: '0.2s',
-  marginBottom: '5px'
-};
+const adminLinkStyle = { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#94a3b8', textDecoration: 'none', fontSize: '12px', fontWeight: '800' };
