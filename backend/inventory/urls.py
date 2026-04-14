@@ -1,16 +1,23 @@
 from django.urls import path
 from rest_framework import generics
-from .models import DonorCar, Invoice
-from .serializers import DonorCarSerializer, InvoiceSerializer
+from .models import Invoice
+from .serializers import InvoiceSerializer
 
-# Explicitly naming the views ensures the NameError is resolved
+# This section imports the specific functions/classes from your views.py
 from .views import (
-    UsedPartListCreateView, UsedPartDetailView, 
-    AftermarketListCreateView, AftermarketDetailView,
-    ImageUploadView, BulkDismantleView, 
-    BusinessSummaryView, LowStockListView,
-    DonorCarListCreateView, DonorCarDetailView,
-    GlobalSearchView, set_main_image  # <--- Explicitly imported
+    UsedPartListCreateView, 
+    UsedPartDetailView, 
+    AftermarketListCreateView, 
+    AftermarketDetailView,
+    ImageUploadView, 
+    BulkDismantleView, 
+    BusinessSummaryView, 
+    LowStockListView,
+    DonorCarListCreateView, 
+    DonorCarDetailView,
+    GlobalSearchView, 
+    set_main_image,
+    InvoiceListCreateView  # <--- THIS IS THE FIX
 )
 
 urlpatterns = [
