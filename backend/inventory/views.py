@@ -100,6 +100,7 @@ class GlobalSearchView(APIView):
 # --- 5. SALES & INVOICING ---
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
+    """ Handles Invoicing and GST calculations for Launceston operations """
     queryset = Invoice.objects.all().order_by('-date')
     serializer_class = InvoiceSerializer
 
@@ -142,12 +143,10 @@ def set_main_image(request, image_id):
     """ Sets a specific image as 'is_main' and resets others for that part """
     try:
         image = ProductImage.objects.get(id=image_id)
-        part = image.inventory_item # ForeignKey to InventoryItem
+        part = image.inventory_item 
         
         if part:
-            # Set all sibling images to False
             ProductImage.objects.filter(inventory_item=part).update(is_main=False)
-            # Set target image to True
             image.is_main = True
             image.save()
             return Response({"status": "Success", "message": "Main image updated"})
