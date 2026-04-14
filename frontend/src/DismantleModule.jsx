@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import QRCode from 'react-qr-code';
 
-// Matches your Railway deployment
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const COLORS = { primary: '#ef4444', dark: '#0f172a', border: '#e2e8f0', bg: '#f8fafc' };
 
@@ -34,12 +33,11 @@ export default function DismantleModule() {
     if (!carForm.model || !carForm.year || !carForm.vin) return alert("Model, Year, and VIN are compulsory!");
     setLoading(true);
     try {
-      // Create the Donor Car profile
       const res = await axios.post(`${API_URL}/api/donor-cars/`, carForm);
       setCarData(res.data);
       setPhase('checklist');
     } catch (err) { 
-      alert(err.response?.data?.vin ? "Error: VIN already exists." : "Connection error to Railway."); 
+      alert(err.response?.status === 500 ? "Server Error: Database sync required on Railway." : "VIN already exists or network error."); 
     }
     finally { setLoading(false); }
   };
@@ -64,20 +62,12 @@ export default function DismantleModule() {
     if (selectedParts.length === 0) return alert("Please select at least one part!");
     setLoading(true);
     try {
-      const payload = { 
-        car_id: carData.id, 
-        parts: selectedParts.map(p => ({ part_name: p.name, category: p.category })) 
-      };
-      // Corrected endpoint to match Django urls.py
+      const payload = { car_id: carData.id, parts: selectedParts.map(p => ({ part_name: p.name, category: p.category })) };
       await axios.post(`${API_URL}/api/bulk-create/`, payload);
       setPhase('labels');
-    } catch (err) { 
-      alert("Bulk creation failed. Ensure Railway is running."); 
-    }
+    } catch (err) { alert("Bulk creation failed."); }
     finally { setLoading(false); }
   };
-
-  // --- UI RENDERERS ---
 
   if (phase === 'decision') return (
     <div style={container}>
@@ -87,7 +77,7 @@ export default function DismantleModule() {
           <PlusCircle size={48} color={COLORS.primary} />
           <div style={bigBtnText}>REGISTER NEW DONOR</div>
         </button>
-        <button onClick={() => alert("Search functionality handled in Admin Panel")} style={{...bigBtn, opacity: 0.5}}>
+        <button onClick={() => alert("Manage existing cars in System Admin")} style={{...bigBtn, opacity: 0.5}}>
           <Search size={48} />
           <div style={bigBtnText}>FIND EXISTING STOCK</div>
         </button>
@@ -112,8 +102,8 @@ export default function DismantleModule() {
             <input style={inputCompulsory} type="number" placeholder="2012" value={carForm.year} onChange={e => setCarForm({...carForm, year: e.target.value})} />
           </div>
           <div style={formCol}>
-            <label style={labelStyle}>VIN (Full 17 digits) *</label>
-            <input style={inputCompulsory} placeholder="VIN Number" value={carForm.vin} onChange={e => setCarForm({...carForm, vin: e.target.value})} />
+            <label style={labelStyle}>VIN *</label>
+            <input style={inputCompulsory} placeholder="17 digit VIN" value={carForm.vin} onChange={e => setCarForm({...carForm, vin: e.target.value})} />
             <label style={labelStyle}>Color</label>
             <input style={inputStyle} placeholder="Silver" value={carForm.color} onChange={e => setCarForm({...carForm, color: e.target.value})} />
             <label style={labelStyle}>Rego</label>
@@ -139,13 +129,11 @@ export default function DismantleModule() {
           <button onClick={handleFinalizeDismantle} disabled={loading} style={finishBtn}>FINALIZE & PRINT</button>
         </div>
       </div>
-
       <div style={tabContainer}>
         {CATEGORIES.map(cat => (
           <button key={cat} onClick={() => setActiveTab(cat)} style={activeTab === cat ? activeTabStyle : inactiveTabStyle}>{cat}</button>
         ))}
       </div>
-
       <div style={partsGrid}>
         {CATEGORY_MAP[activeTab].map(part => {
           const isSelected = selectedParts.find(p => p.name === part);
@@ -157,17 +145,10 @@ export default function DismantleModule() {
           );
         })}
       </div>
-
       <div style={customSection}>
-        <h3 style={{fontSize: '14px', fontWeight: '900', marginBottom: '15px'}}>Missing a part? Add it manually:</h3>
         <form onSubmit={addCustomPart} style={{display: 'flex', gap: '10px'}}>
-          <input 
-            style={{...inputStyle, marginBottom: 0, flex: 1}} 
-            placeholder="Enter custom part name (e.g. Roof Rack, Rare Trim...)" 
-            value={customPartName}
-            onChange={(e) => setCustomPartName(e.target.value)}
-          />
-          <button type="submit" style={{...primaryBtn, padding: '0 25px'}}><Plus size={20}/> ADD PART</button>
+          <input style={{...inputStyle, marginBottom: 0, flex: 1}} placeholder="Add custom part..." value={customPartName} onChange={(e) => setCustomPartName(e.target.value)} />
+          <button type="submit" style={{...primaryBtn, padding: '0 25px'}}>+ ADD</button>
         </form>
       </div>
     </div>
@@ -179,14 +160,13 @@ export default function DismantleModule() {
         <h2 style={titleStyle}>Labels: {carData.stock_number}</h2>
         <div style={{display: 'flex', gap: '10px'}}>
           <button onClick={() => window.print()} style={primaryBtn}><Printer size={18}/> PRINT</button>
-          <button onClick={() => setPhase('decision')} style={outlineBtn}><RefreshCw size={18}/> NEW CAR</button>
+          <button onClick={() => window.location.reload()} style={outlineBtn}>NEW CAR</button>
         </div>
       </div>
       <div style={labelGrid} id="printableArea">
         {selectedParts.map((p, index) => (
           <div key={index} style={qrLabel}>
             <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
-              {/* QR Code value matches label_id logic in Django models.py */}
               <QRCode size={64} value={`${carData.stock_number}-${p.name.replace(/\s/g, '').toUpperCase()}`} />
               <div style={{flex: 1}}>
                 <div style={labelStockNo}>{carData.stock_number}</div>
@@ -201,7 +181,6 @@ export default function DismantleModule() {
   );
 }
 
-// STYLES (Keep existing styles below)
 const container = { width: '100%' };
 const titleStyle = { fontSize: '28px', fontWeight: '900', color: COLORS.dark };
 const decisionGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '30px' };
