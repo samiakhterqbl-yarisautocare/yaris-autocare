@@ -7,29 +7,34 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = ['id', 'image', 'is_main', 'created_at']
 
-# --- 2. DONOR CAR SERIALIZER ---
+# --- 2. USED PARTS SERIALIZER (Phases 3, 4 & 6) ---
+class InventoryItemSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+    
+    # Industrial Data from Parent Car
+    donor_car_stock = serializers.ReadOnlyField(source='donor_car.stock_number')
+    donor_car_details = serializers.ReadOnlyField(source='donor_car.__str__')
+    donor_car_make = serializers.ReadOnlyField(source='donor_car.make')
+    donor_car_model = serializers.ReadOnlyField(source='donor_car.model')
+    donor_car_year = serializers.ReadOnlyField(source='donor_car.year')
+    
+    # Grading & Status Display
+    grading_display = serializers.CharField(source='get_grading_display', read_only=True)
+    usage_display = serializers.CharField(source='get_usage_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = InventoryItem
+        fields = '__all__'
+
+# --- 3. DONOR CAR SERIALIZER (Phase 6 Master View) ---
 class DonorCarSerializer(serializers.ModelSerializer):
-    # This shows how many parts are currently linked to this car
+    # This allows you to see the actual parts list inside the car view
+    parts = InventoryItemSerializer(many=True, read_only=True)
     parts_count = serializers.IntegerField(source='parts.count', read_only=True)
 
     class Meta:
         model = DonorCar
-        fields = '__all__'
-
-# --- 3. USED PARTS SERIALIZER ---
-class InventoryItemSerializer(serializers.ModelSerializer):
-    # Nested images for the gallery
-    images = ProductImageSerializer(many=True, read_only=True)
-    
-    # Human-readable fields from the donor car
-    donor_car_stock = serializers.ReadOnlyField(source='donor_car.stock_number')
-    donor_car_details = serializers.ReadOnlyField(source='donor_car.__str__')
-    
-    # Grading Display (Shows "Grade A - Excellent" instead of just "A")
-    grading_display = serializers.CharField(source='get_grading_display', read_only=True)
-
-    class Meta:
-        model = InventoryItem
         fields = '__all__'
 
 # --- 4. AFTERMARKET SERIALIZER ---
@@ -46,7 +51,6 @@ class AftermarketPartSerializer(serializers.ModelSerializer):
 
 # --- 5. SALES & INVOICE SERIALIZER ---
 class InvoiceSerializer(serializers.ModelSerializer):
-    # Formats the date to a cleaner style (e.g., 13 April 2026)
     formatted_date = serializers.DateTimeField(format="%d %B %Y", source='date', read_only=True)
 
     class Meta:
