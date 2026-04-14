@@ -21,24 +21,27 @@ class DonorCar(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.stock_number:
-            # Auto-generate Stock# (e.g., YAR-2012-V123 or CAM-2012-V123)
-            vin_segment = self.vin[-4:] if len(self.vin) >= 4 else uuid.uuid4().hex[:4]
-            # Use prefix based on model name
-            prefix = "YAR" if "YARIS" in self.model.upper() else "CAM"
+            # Safety: Ensure VIN is treated as string and stripped of spaces
+            clean_vin = str(self.vin).strip() if self.vin else uuid.uuid4().hex
+            vin_segment = clean_vin[-4:] if len(clean_vin) >= 4 else clean_vin
+            
+            # Safety: Prevent crash if model is empty
+            model_name = str(self.model).upper() if self.model else "CAR"
+            prefix = "YAR" if "YARIS" in model_name else "CAM"
+            
             self.stock_number = f"{prefix}-{self.year}-{vin_segment}".upper()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.stock_number} - {self.model}"
 
-# --- 2. SALVAGED USED PARTS (The "Child" of DonorCar) ---
+# --- 2. SALVAGED USED PARTS ---
 class InventoryItem(models.Model):
     donor_car = models.ForeignKey(DonorCar, on_delete=models.CASCADE, related_name='parts', null=True, blank=True)
     part_name = models.CharField(max_length=100)
     category = models.CharField(max_length=50)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
-    # --- GRADING & CONDITION ---
     GRADING_CHOICES = [
         ('A', 'Grade A - Excellent/Low KM'),
         ('B', 'Grade B - Good/Minor Wear'),
@@ -48,7 +51,6 @@ class InventoryItem(models.Model):
     grading = models.CharField(max_length=1, choices=GRADING_CHOICES, default='A')
     condition_notes = models.TextField(blank=True, null=True)
     
-    # --- USAGE & STATUS (Phase 6 Logic) ---
     USAGE_CHOICES = [
         ('Sale', 'For Sale (Retail)'),
         ('Internal', 'Internal Use Only'),
@@ -63,14 +65,11 @@ class InventoryItem(models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Available')
 
-    # --- QR & LABELING ---
-    # label_id is auto-generated to match the QR sticker: STOCK-PARTNAME
     label_id = models.CharField(max_length=100, unique=True, blank=True, null=True, editable=False)
     location = models.CharField(max_length=100, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.label_id and self.donor_car:
-            # Create a clean label ID for the QR code: YAR-2012-V123-ALTERNATOR
             clean_part_name = self.part_name.replace(" ", "").upper()
             self.label_id = f"{self.donor_car.stock_number}-{clean_part_name}"
         super().save(*args, **kwargs)
@@ -96,7 +95,6 @@ class AftermarketPart(models.Model):
 class ProductImage(models.Model):
     inventory_item = models.ForeignKey(InventoryItem, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
     aftermarket_part = models.ForeignKey(AftermarketPart, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
-    
     image = models.ImageField(upload_to='inventory_photos/')
     is_main = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
