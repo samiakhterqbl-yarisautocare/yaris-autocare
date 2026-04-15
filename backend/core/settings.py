@@ -3,21 +3,17 @@ import dj_database_url
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load variables from .env file
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-7h2l)j!7(m%@s&hr=!+he9t$ih_*je)f1ecakl5k(p2@w^&9@!')
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS for Railway and Vercel
-ALLOWED_HOSTS = ['yaris-autocare-production.up.railway.app', 'yaris-autocare.vercel.app', 'localhost', '127.0.0.1']
+# 1. FIXED: Added '*' to ALLOWED_HOSTS to prevent connection rejection
+ALLOWED_HOSTS = ['yaris-autocare-production.up.railway.app', 'yaris-autocare.vercel.app', 'localhost', '127.0.0.1', '*']
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -25,20 +21,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third party apps
     'rest_framework',
     'corsheaders',
-    'storages',  # AWS S3
-    
-    # Custom Apps
+    'storages',
     'inventory',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # MUST stay at the very top
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Handles the "No directory at staticfiles" warning
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -67,7 +59,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# --- DATABASE CONFIGURATION (RAILWAY READY) ---
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),
@@ -76,7 +67,6 @@ DATABASES = {
     )
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -84,18 +74,19 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Australia/Hobart' 
+TIME_ZONE = 'Australia/Hobart'
 USE_I18N = True
 USE_TZ = True
 
-# --- STATIC & MEDIA FILES ---
+# --- STATIC & MEDIA ---
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# 2. FIXED: WhiteNoise needs to be told not to crash if the folder is missing during build
+WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- AWS S3 CONFIGURATION ---
+# --- AWS S3 ---
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
@@ -107,23 +98,24 @@ if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = None
-    AWS_QUERYSTRING_AUTH = False  
+    AWS_QUERYSTRING_AUTH = False
 else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- CORS & SECURITY SETTINGS ---
+# --- 3. FIXED: SECURITY & CORS ---
 CORS_ALLOW_ALL_ORIGINS = True 
 CORS_ALLOW_CREDENTIALS = True
 
+# Added wildcard to trust any Vercel preview link for testing
 CSRF_TRUSTED_ORIGINS = [
     'https://yaris-autocare-production.up.railway.app',
-    'https://yaris-autocare.vercel.app'
+    'https://yaris-autocare.vercel.app',
+    'https://*.vercel.app' 
 ]
 
-# Ensure secure cookies for HTTPS (Railway uses HTTPS)
 if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
