@@ -2,10 +2,11 @@ import React, { useState, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Scissors, Package, Wrench, 
-  ShoppingCart, Menu, X, ChevronRight, AlertTriangle, Settings, ExternalLink
+  ShoppingCart, Menu, X, ChevronRight, AlertTriangle, 
+  Settings, ExternalLink, Car // Added Car icon to imports to fix the crash
 } from 'lucide-react';
 
-// Lazy Load All Modules (Ensure these filenames match your actual files EXACTLY)
+// Lazy Load All Modules
 const HomePage = lazy(() => import('./HomePage'));
 const AftermarketModule = lazy(() => import('./AftermarketModule'));
 const AftermarketDetailPage = lazy(() => import('./AftermarketDetailPage'));
@@ -17,7 +18,6 @@ const SalesModule = lazy(() => import('./SalesModule'));
 const UsedPartsModule = lazy(() => import('./UsedPartsModule'));
 const UsedPartAddPage = lazy(() => import('./UsedPartAddPage'));
 const UsedPartDetailPage = lazy(() => import('./UsedPartDetailPage'));
-// Added missing imports that were used in your routes:
 const InventoryMasterModule = lazy(() => import('./InventoryMasterModule')); 
 const DonorCarDetailView = lazy(() => import('./DonorCarDetailView'));
 
@@ -64,6 +64,7 @@ export default function App() {
             <NavItem to="/aftermarket" icon={<Wrench size={20}/>} label="Aftermarket" />
             <NavItem to="/low-stock" icon={<AlertTriangle size={20}/>} label="Low Stock" />
             <NavItem to="/dismantle" icon={<Scissors size={20}/>} label="Dismantle Yard" />
+            {/* Phase 6: Yard Master Link */}
             <NavItem to="/yard-master" icon={<Car size={20}/>} label="Yard Master" />
             <NavItem to="/sales" icon={<ShoppingCart size={20}/>} label="Sales & POS" />
           </nav>
