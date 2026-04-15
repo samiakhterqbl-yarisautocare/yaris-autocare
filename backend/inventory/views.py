@@ -7,15 +7,32 @@ from django.utils import timezone
 from .models import *
 from .serializers import *
 
-# --- 1. DONOR CAR REGISTRY ---
+# --- 1. DONOR CAR REGISTRY (UPDATED FOR PHOTOS & REGO) ---
 
 class DonorCarListCreateView(generics.ListCreateAPIView):
-    """ Handles Phase 1: Creating the Donor Car Profile """
+    """ Handles Phase 1: Creating the Donor Car Profile with S3 Photos """
     queryset = DonorCar.objects.all().order_by('-date_added')
     serializer_class = DonorCarSerializer
 
+    def create(self, request, *args, **kwargs):
+        # We handle FormData manually to extract images
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            donor_car = serializer.save()
+            
+            # Extract images sent from the "ADD CAR PHOTOS" button
+            images = request.FILES.getlist('images')
+            for img in images:
+                ProductImage.objects.create(
+                    donor_car=donor_car, # Ensure your ProductImage model has this field
+                    image=img,
+                    is_main=(images.index(img) == 0) # Set first photo as main
+                )
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """ Handles Phase 6: Viewing specific car status and its parts """
     queryset = DonorCar.objects.all()
     serializer_class = DonorCarSerializer
 
@@ -26,7 +43,6 @@ class UsedPartListCreateView(generics.ListCreateAPIView):
     serializer_class = InventoryItemSerializer
 
 class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """ Handles Phase 4: The Deep-Dive (Updating photos, price, grading) """
     queryset = InventoryItem.objects.all()
     serializer_class = InventoryItemSerializer
 
@@ -41,10 +57,9 @@ class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
 # --- 3. DISMANTLE ENGINE (PHASE 2: BULK CREATION) ---
 
 class BulkDismantleView(APIView):
-    """ Converts the Checklist selections into individual Database Parts """
     def post(self, request):
         car_id = request.data.get('car_id')
-        parts = request.data.get('parts', [])  # Expected: [{part_name, category}]
+        parts = request.data.get('parts', [])
         
         try:
             car = DonorCar.objects.get(id=car_id)
@@ -62,23 +77,21 @@ class BulkDismantleView(APIView):
             
             return Response({
                 "status": "Success",
-                "message": f"Successfully generated {len(parts)} part labels for Stock# {car.stock_number}",
+                "message": f"Successfully generated {len(parts)} labels for {car.stock_number}",
                 "parts": created_parts
             }, status=status.HTTP_201_CREATED)
             
         except DonorCar.DoesNotExist:
             return Response({"error": "Donor Car not found"}, status=status.HTTP_404_NOT_FOUND)
 
-# --- 4. GLOBAL SEARCH & FILTERING (PHASE 6) ---
+# --- 4. GLOBAL SEARCH & FILTERING ---
 
 class GlobalSearchView(APIView):
-    """ The search engine for parts across VIN, Stock#, and Name """
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
             return Response({"used": [], "aftermarket": []})
 
-        # Search in Used Parts (InventoryItem)
         used_parts = InventoryItem.objects.filter(
             Q(part_name__icontains=query) | 
             Q(label_id__icontains=query) | 
@@ -86,7 +99,6 @@ class GlobalSearchView(APIView):
             Q(donor_car__vin__icontains=query)
         ).distinct()[:50] 
 
-        # Search in Aftermarket
         new_parts = AftermarketPart.objects.filter(
             Q(part_name__icontains=query) | 
             Q(sku__icontains=query)
@@ -100,13 +112,11 @@ class GlobalSearchView(APIView):
 # --- 5. SALES & INVOICING ---
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
-    """ Handles Invoicing and GST calculations for Launceston operations """
     queryset = Invoice.objects.all().order_by('-date')
     serializer_class = InvoiceSerializer
 
     def perform_create(self, serializer):
         total = self.request.data.get('total_amount', 0)
-        # Australian GST calculation (1/11th of total)
         gst = float(total) / 11 
         inv_no = f"INV-{timezone.now().strftime('%Y%m')}-{Invoice.objects.count() + 1000}"
         
@@ -115,7 +125,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
             gst_amount=round(gst, 2)
         )
 
-# --- 6. BUSINESS INTELLIGENCE & IMAGES ---
+# --- 6. BUSINESS INTELLIGENCE ---
 
 class BusinessSummaryView(APIView):
     def get(self, request):
@@ -136,11 +146,10 @@ class ImageUploadView(generics.CreateAPIView):
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
 
-# --- 7. IMAGE LOGIC (FIXES RAILWAY CRASH) ---
+# --- 7. IMAGE LOGIC ---
 
 @api_view(['POST'])
 def set_main_image(request, image_id):
-    """ Sets a specific image as 'is_main' and resets others for that part """
     try:
         image = ProductImage.objects.get(id=image_id)
         part = image.inventory_item 
