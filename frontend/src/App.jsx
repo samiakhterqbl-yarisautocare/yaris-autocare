@@ -64,6 +64,7 @@ export default function App() {
             <NavItem to="/aftermarket" icon={<Wrench size={20}/>} label="Aftermarket" />
             <NavItem to="/low-stock" icon={<AlertTriangle size={20}/>} label="Low Stock" />
             <NavItem to="/dismantle" icon={<Scissors size={20}/>} label="Dismantle Yard" />
+            <NavItem to="/yard-master" icon={<Car size={20}/>} label="Yard Master" />
             <NavItem to="/sales" icon={<ShoppingCart size={20}/>} label="Sales & POS" />
           </nav>
 
