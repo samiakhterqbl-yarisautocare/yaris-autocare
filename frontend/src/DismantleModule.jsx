@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import { Search, PlusCircle, Scissors, Printer, CheckCircle, Package, ArrowLeft, RefreshCw, Plus } from 'lucide-react';
+import { Search, PlusCircle, Scissors, Printer, CheckCircle, Package, ArrowLeft, RefreshCw, Plus, Camera, X } from 'lucide-react';
 import QRCode from 'react-qr-code';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const COLORS = { primary: '#ef4444', dark: '#0f172a', border: '#e2e8f0', bg: '#f8fafc' };
 
+// --- PART CATEGORIES & ITEMS ---
 const CATEGORY_MAP = {
   "Front Body": ["Front Bumper", "Bonnet", "Grille", "Headlight Left", "Headlight Right", "Front Fog Light L", "Front Fog Light R", "Front Guard L", "Front Guard R", "Radiator Support"],
   "Engine Bay": ["Engine Assembly", "Alternator", "Starter Motor", "AC Compressor", "Radiator", "Condenser", "Radiator Fan Assembly", "Air Cleaner Box", "Throttle Body"],
@@ -23,22 +24,53 @@ export default function DismantleModule() {
   const [carData, setCarData] = useState(null);
   const [selectedParts, setSelectedParts] = useState([]); 
   const [activeTab, setActiveTab] = useState(CATEGORIES[0]);
-  const [customPartName, setCustomPartName] = useState('');
-  const [carForm, setCarForm] = useState({ make: 'Toyota', model: '', year: '', color: '', vin: '', rego: '', notes: '' });
+  const [imageFiles, setImageFiles] = useState([]); // Store files for upload
+  const fileInputRef = useRef(null);
+  const [carForm, setCarForm] = useState({ 
+    make: 'Toyota', model: '', year: '', color: '', vin: '', rego: '', notes: '' 
+  });
 
+  // --- IMAGE HANDLING ---
+  const handleImageSelect = (e) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setImageFiles([...imageFiles, ...newFiles]);
+    }
+  };
+
+  const removeImage = (index) => {
+    setImageFiles(imageFiles.filter((_, i) => i !== index));
+  };
+
+  // --- REGISTER CAR & UPLOAD IMAGES ---
   const handleCreateCar = async () => {
-    if (!carForm.model || !carForm.year || !carForm.vin) return alert("Model, Year, and VIN are compulsory!");
+    if (!carForm.make || !carForm.model || !carForm.year || !carForm.vin) {
+      return alert("Make, Model, Year, and VIN are compulsory!");
+    }
+    if (imageFiles.length === 0) {
+      return alert("At least one car photo is required for the audit!");
+    }
+    
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/api/donor-cars/`, carForm);
+      // 1. Create FormData for the car data and images
+      const formData = new FormData();
+      Object.keys(carForm).forEach(key => formData.append(key, carForm[key]));
+      imageFiles.forEach(file => formData.append('images', file)); // Add multiple images
+
+      // 2. Post to backend (Backend needs to handle multi-part/form-data)
+      const res = await axios.post(`${API_URL}/api/donor-cars/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       setCarData(res.data);
       setPhase('checklist');
     } catch (err) { 
       console.error(err);
-      alert("Registration failed. Usually due to a missing 'rego' column in the DB. Ensure you run migrate --run-syncdb."); 
+      alert("Registration failed. This is likely because the backend isn't set up to process FormData yet."); 
     } finally { setLoading(false); }
   };
 
+  // --- PART SELECTION ---
   const togglePart = (name, category = activeTab) => {
     const exists = selectedParts.find(p => p.name === name);
     if (exists) {
@@ -48,8 +80,9 @@ export default function DismantleModule() {
     }
   };
 
+  // --- BULK CREATE USED PARTS ---
   const handleFinalizeDismantle = async () => {
-    if (selectedParts.length === 0) return alert("Select at least one part!");
+    if (selectedParts.length === 0) return alert("Select at least one part to label!");
     setLoading(true);
     try {
       const payload = { car_id: carData.id, parts: selectedParts.map(p => ({ part_name: p.name, category: p.category })) };
@@ -59,52 +92,93 @@ export default function DismantleModule() {
     finally { setLoading(false); }
   };
 
+  // --- VIEW 1: PHASE DECISION (INITIAL) ---
   if (phase === 'decision') return (
     <div style={{padding: '40px'}}>
       <h2 style={{fontSize: '28px', fontWeight: '900'}}>Dismantle Yard Registry</h2>
       <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px'}}>
-        <button onClick={() => setPhase('registry')} style={{padding: '60px', borderRadius: '20px', border: `1px solid ${COLORS.border}`, cursor: 'pointer', backgroundColor: '#fff'}}>
+        <button onClick={() => setPhase('registry')} style={{padding: '60px', borderRadius: '20px', border: `1px solid ${COLORS.border}`, cursor: 'pointer', backgroundColor: '#fff', textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
           <PlusCircle size={40} color={COLORS.primary} />
-          <div style={{fontWeight: '900', marginTop: '10px'}}>REGISTER NEW DONOR</div>
+          <div style={{fontWeight: '900', marginTop: '10px', fontSize: '18px'}}>REGISTER NEW DONOR</div>
+          <p style={{margin: 0, fontSize: '14px', color: '#64748b'}}>Photograph, Audit, and Harvest</p>
         </button>
       </div>
     </div>
   );
 
+  // --- VIEW 2: PHASE REGISTRY (THE CORRECT, COMPLETE FORM) ---
   if (phase === 'registry') return (
     <div style={{padding: '40px'}}>
-      <button onClick={() => setPhase('decision')} style={{border: 'none', background: 'none', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px'}}><ArrowLeft size={16}/> BACK</button>
-      <div style={{backgroundColor: '#fff', padding: '40px', borderRadius: '20px', marginTop: '20px', border: `1px solid ${COLORS.border}`}}>
-        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+      <button onClick={() => setPhase('decision')} style={{border: 'none', background: 'none', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '15px'}}><ArrowLeft size={16}/> BACK</button>
+      <div style={{backgroundColor: '#fff', padding: '40px', borderRadius: '20px', border: `1px solid ${COLORS.border}`}}>
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px'}}>
+          
+          {/* CAR DETAILS */}
+          <div>
+            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>MAKE *</label>
+            <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.make} onChange={e => setCarForm({...carForm, make: e.target.value})} placeholder="e.g. Toyota"/>
+          </div>
           <div>
             <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>MODEL *</label>
             <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.model} onChange={e => setCarForm({...carForm, model: e.target.value})} placeholder="e.g. Yaris"/>
           </div>
           <div>
-            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>VIN *</label>
-            <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.vin} onChange={e => setCarForm({...carForm, vin: e.target.value})} placeholder="17 Digit VIN"/>
+            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>YEAR *</label>
+            <input type="number" style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.year} onChange={e => setCarForm({...carForm, year: e.target.value})} placeholder="e.g. 2012"/>
           </div>
           <div>
-            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>YEAR *</label>
-            <input type="number" style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.year} onChange={e => setCarForm({...carForm, year: e.target.value})} placeholder="2012"/>
+            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>VIN (17 Digits) *</label>
+            <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.vin} onChange={e => setCarForm({...carForm, vin: e.target.value.toUpperCase()})} placeholder="Compulsory Audit VIN"/>
           </div>
           <div>
             <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>REGO</label>
-            <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.rego} onChange={e => setCarForm({...carForm, rego: e.target.value})} placeholder="EHG432"/>
+            <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.rego} onChange={e => setCarForm({...carForm, rego: e.target.value.toUpperCase()})} placeholder="EHG432"/>
+          </div>
+          <div>
+            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>COLOR</label>
+            <input style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px'}} value={carForm.color} onChange={e => setCarForm({...carForm, color: e.target.value})} placeholder="e.g. Silver"/>
+          </div>
+          <div style={{gridColumn: '1 / -1'}}>
+            <label style={{fontSize: '12px', fontWeight: '800', color: '#64748b'}}>NOTES (Condition summary for the yard)</label>
+            <textarea style={{width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.border}`, marginTop: '5px', height: '100px'}} value={carForm.notes} onChange={e => setCarForm({...carForm, notes: e.target.value})} placeholder="Rear-end damage. Front half perfectly usable."/>
+          </div>
+
+          {/* IMAGE AUDIT UPLOAD (AWS S3) */}
+          <div style={{gridColumn: '1 / -1', marginTop: '20px'}}>
+            <label style={{fontSize: '14px', fontWeight: '900', color: '#0f172a'}}>CAR PHOTO AUDIT (Required for S3 Gallery)</label>
+            <button 
+              onClick={() => fileInputRef.current.click()} 
+              style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 25px', borderRadius: '8px', backgroundColor: '#f1f5f9', border: `1px solid ${COLORS.border}`, fontWeight: '700', cursor: 'pointer', marginTop: '10px'}}
+            >
+              <Camera size={18} /> ADD CAR PHOTOS
+            </button>
+            <input type="file" multiple ref={fileInputRef} style={{display: 'none'}} onChange={handleImageSelect} accept="image/*" />
+            
+            {/* Image Preview Grid */}
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginTop: '15px'}}>
+              {imageFiles.map((file, index) => (
+                <div key={index} style={{position: 'relative', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${COLORS.border}`}}>
+                  <img src={URL.createObjectURL(file)} alt="car preview" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                  <button onClick={() => removeImage(index)} style={{position: 'absolute', top: '5px', right: '5px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '10px'}}>X</button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-        <button onClick={handleCreateCar} disabled={loading} style={{marginTop: '30px', backgroundColor: COLORS.dark, color: '#fff', padding: '15px 30px', borderRadius: '10px', border: 'none', fontWeight: '800', cursor: 'pointer'}}>
-          {loading ? "PROCESSING..." : "REGISTER & HARVEST"}
+        
+        <button onClick={handleCreateCar} disabled={loading} style={{marginTop: '30px', backgroundColor: COLORS.dark, color: '#fff', padding: '15px 40px', borderRadius: '10px', border: 'none', fontWeight: '900', fontSize: '16px', cursor: 'pointer'}}>
+          {loading ? "REGISTERING DONOR..." : "REGISTER & HARVEST"}
         </button>
       </div>
     </div>
   );
 
+  // --- VIEW 3: PHASE CHECKLIST (PART HARVESTING) ---
   if (phase === 'checklist') return (
     <div style={{padding: '40px'}}>
        <div style={{backgroundColor: COLORS.dark, color: '#fff', padding: '30px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <div>
-          <h2 style={{margin: 0}}>{carData.year} {carData.model}</h2>
+          <h2 style={{margin: 0}}>{carData.year} {carData.make} {carData.model}</h2>
           <span style={{opacity: 0.7}}>VIN: {carData.vin} | Stock: {carData.stock_number}</span>
         </div>
         <button onClick={handleFinalizeDismantle} style={{backgroundColor: COLORS.primary, color: '#fff', padding: '12px 25px', borderRadius: '10px', border: 'none', fontWeight: '900', cursor: 'pointer'}}>FINALIZE & PRINT ({selectedParts.length})</button>
@@ -128,6 +202,7 @@ export default function DismantleModule() {
     </div>
   );
 
+  // --- VIEW 4: PHASE LABELS (PRINTING) ---
   if (phase === 'labels') return (
     <div style={{padding: '40px'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '20px'}}>
@@ -144,7 +219,7 @@ export default function DismantleModule() {
             <div>
               <div style={{fontSize: '14px', fontWeight: '900'}}>{carData.stock_number}</div>
               <div style={{fontSize: '16px', fontWeight: '900', borderBottom: '1px solid #000'}}>{p.name}</div>
-              <div style={{fontSize: '12px', fontWeight: '700'}}>{carData.year} {carData.model}</div>
+              <div style={{fontSize: '12px', fontWeight: '700'}}>{carData.year} {carData.make} {carData.model}</div>
             </div>
           </div>
         ))}
