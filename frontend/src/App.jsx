@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import { 
   LayoutDashboard, Scissors, Package, Wrench, 
   ShoppingCart, Menu, X, ChevronRight, AlertTriangle, 
-  Settings, ExternalLink, Car // Added Car icon to imports to fix the crash
+  Settings, ExternalLink, Car 
 } from 'lucide-react';
 
 // Lazy Load All Modules
@@ -64,13 +64,12 @@ export default function App() {
             <NavItem to="/aftermarket" icon={<Wrench size={20}/>} label="Aftermarket" />
             <NavItem to="/low-stock" icon={<AlertTriangle size={20}/>} label="Low Stock" />
             <NavItem to="/dismantle" icon={<Scissors size={20}/>} label="Dismantle Yard" />
-            {/* Phase 6: Yard Master Link */}
             <NavItem to="/yard-master" icon={<Car size={20}/>} label="Yard Master" />
             <NavItem to="/sales" icon={<ShoppingCart size={20}/>} label="Sales & POS" />
           </nav>
 
           <div style={{ padding: '15px', borderTop: '1px solid #334155', backgroundColor: '#161e2b' }}>
-            <a href={DJANGO_ADMIN_URL} target="_blank" rel="noopener noreferrer" style={adminLinkStyle}>
+            <a href={DJANGO_ADMIN_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#94a3b8', textDecoration: 'none', fontSize: '12px', fontWeight: '800' }}>
               <Settings size={16} />
               <span style={{ flex: 1 }}>SYSTEM ADMIN</span>
               <ExternalLink size={12} opacity={0.5} />
@@ -78,7 +77,7 @@ export default function App() {
           </div>
         </aside>
 
-        {/* VIEWPORT */}
+        {/* VIEWPORT CONTENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
           <header style={{ height: '64px', backgroundColor: '#fff', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
             <button onClick={() => setIsOpen(!isOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -135,5 +134,3 @@ const NavItem = ({ to, icon, label }) => {
     </Link>
   );
 };
-
-const adminLinkStyle = { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#94a3b8', textDecoration: 'none', fontSize: '12px', fontWeight: '800' };
