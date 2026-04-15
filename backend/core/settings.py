@@ -6,12 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-7h2l)j!7(m%@s&hr=!+he9t$ih_*je)f1ecakl5k(p2@w^&9@!')
-
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# 1. FIXED: Added '*' to ALLOWED_HOSTS to prevent connection rejection
+# ALLOWED_HOSTS - Added '*' to ensure no connection is blocked
 ALLOWED_HOSTS = ['yaris-autocare-production.up.railway.app', 'yaris-autocare.vercel.app', 'localhost', '127.0.0.1', '*']
 
 INSTALLED_APPS = [
@@ -30,7 +28,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Handles the "No directory at staticfiles" warning
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,14 +77,12 @@ TIME_ZONE = 'Australia/Hobart'
 USE_I18N = True
 USE_TZ = True
 
-# --- STATIC & MEDIA ---
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# 2. FIXED: WhiteNoise needs to be told not to crash if the folder is missing during build
 WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- AWS S3 ---
+# AWS S3
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
@@ -105,15 +101,13 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- 3. FIXED: SECURITY & CORS ---
+# CORS & CSRF - This is the bridge between Vercel and Railway
 CORS_ALLOW_ALL_ORIGINS = True 
 CORS_ALLOW_CREDENTIALS = True
-
-# Added wildcard to trust any Vercel preview link for testing
 CSRF_TRUSTED_ORIGINS = [
     'https://yaris-autocare-production.up.railway.app',
     'https://yaris-autocare.vercel.app',
-    'https://*.vercel.app' 
+    'https://*.vercel.app'
 ]
 
 if not DEBUG:
