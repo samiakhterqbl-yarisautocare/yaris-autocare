@@ -2,17 +2,20 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework.parsers import MultiPartParser, FormParser # ADDED
 from django.db.models import Sum, F, Q
 from django.utils import timezone
 from .models import *
 from .serializers import *
 
-# --- 1. DONOR CAR REGISTRY (UPDATED FOR S3 PHOTOS) ---
+# --- 1. DONOR CAR REGISTRY ---
 
 class DonorCarListCreateView(generics.ListCreateAPIView):
     """ Handles Phase 1: Creating the Donor Car Profile with S3 Photos """
     queryset = DonorCar.objects.all().order_by('-date_added')
     serializer_class = DonorCarSerializer
+    # FIXED: Added parsers so request.FILES actually works
+    parser_classes = (MultiPartParser, FormParser)
 
     def create(self, request, *args, **kwargs):
         # We handle FormData manually to extract images
@@ -33,9 +36,9 @@ class DonorCarListCreateView(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """ View specific car status and its parts """
     queryset = DonorCar.objects.all()
     serializer_class = DonorCarSerializer
+    parser_classes = (MultiPartParser, FormParser) # Added for updates
 
 # --- 2. INVENTORY: USED & AFTERMARKET ---
 
@@ -86,10 +89,9 @@ class BulkDismantleView(APIView):
         except DonorCar.DoesNotExist:
             return Response({"error": "Donor Car not found"}, status=status.HTTP_404_NOT_FOUND)
 
-# --- 4. GLOBAL SEARCH & FILTERING ---
+# --- 4. GLOBAL SEARCH ---
 
 class GlobalSearchView(APIView):
-    """ The search engine for parts across VIN, Stock#, and Name """
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
@@ -115,7 +117,6 @@ class GlobalSearchView(APIView):
 # --- 5. SALES & INVOICING ---
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
-    """ Handles Invoicing and GST calculations """
     queryset = Invoice.objects.all().order_by('-date')
     serializer_class = InvoiceSerializer
 
@@ -129,7 +130,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
             gst_amount=round(gst, 2)
         )
 
-# --- 6. BUSINESS INTELLIGENCE ---
+# --- 6. BUSINESS SUMMARY ---
 
 class BusinessSummaryView(APIView):
     def get(self, request):
@@ -149,12 +150,12 @@ class LowStockListView(generics.ListAPIView):
 class ImageUploadView(generics.CreateAPIView):
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
+    parser_classes = (MultiPartParser, FormParser) # Added for S3 uploads
 
 # --- 7. IMAGE LOGIC ---
 
 @api_view(['POST'])
 def set_main_image(request, image_id):
-    """ Updates is_main flag for a specific image """
     try:
         image = ProductImage.objects.get(id=image_id)
         part = image.inventory_item 
