@@ -115,7 +115,8 @@ else:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- CORS & SECURITY SETTINGS ---
-CORS_ALLOW_ALL_ORIGINS = True  # Safest for initial deployment sync
+CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
     'https://yaris-autocare-production.up.railway.app',
@@ -125,7 +126,5 @@ CSRF_TRUSTED_ORIGINS = [
 # Ensure secure cookies for HTTPS (Railway uses HTTPS)
 if not DEBUG:
     CSRF_COOKIE_SECURE = True
-
-CORS_ALLOW_CREDENTIALS = True
     SESSION_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
