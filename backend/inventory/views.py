@@ -7,7 +7,7 @@ from django.utils import timezone
 from .models import *
 from .serializers import *
 
-# --- 1. DONOR CAR REGISTRY (UPDATED FOR PHOTOS & REGO) ---
+# --- 1. DONOR CAR REGISTRY (UPDATED FOR S3 PHOTOS) ---
 
 class DonorCarListCreateView(generics.ListCreateAPIView):
     """ Handles Phase 1: Creating the Donor Car Profile with S3 Photos """
@@ -20,19 +20,20 @@ class DonorCarListCreateView(generics.ListCreateAPIView):
         if serializer.is_valid():
             donor_car = serializer.save()
             
-            # Extract images sent from the "ADD CAR PHOTOS" button
+            # Extract images sent from the terminal's "ADD CAR PHOTOS" button
             images = request.FILES.getlist('images')
-            for img in images:
+            for index, img in enumerate(images):
                 ProductImage.objects.create(
-                    donor_car=donor_car, # Ensure your ProductImage model has this field
+                    donor_car=donor_car,
                     image=img,
-                    is_main=(images.index(img) == 0) # Set first photo as main
+                    is_main=(index == 0) # Automatically set first photo as main
                 )
             
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """ View specific car status and its parts """
     queryset = DonorCar.objects.all()
     serializer_class = DonorCarSerializer
 
@@ -57,6 +58,7 @@ class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
 # --- 3. DISMANTLE ENGINE (PHASE 2: BULK CREATION) ---
 
 class BulkDismantleView(APIView):
+    """ Converts checklist selections into individual Part items """
     def post(self, request):
         car_id = request.data.get('car_id')
         parts = request.data.get('parts', [])
@@ -87,6 +89,7 @@ class BulkDismantleView(APIView):
 # --- 4. GLOBAL SEARCH & FILTERING ---
 
 class GlobalSearchView(APIView):
+    """ The search engine for parts across VIN, Stock#, and Name """
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
@@ -112,6 +115,7 @@ class GlobalSearchView(APIView):
 # --- 5. SALES & INVOICING ---
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
+    """ Handles Invoicing and GST calculations """
     queryset = Invoice.objects.all().order_by('-date')
     serializer_class = InvoiceSerializer
 
@@ -150,6 +154,7 @@ class ImageUploadView(generics.CreateAPIView):
 
 @api_view(['POST'])
 def set_main_image(request, image_id):
+    """ Updates is_main flag for a specific image """
     try:
         image = ProductImage.objects.get(id=image_id)
         part = image.inventory_item 
