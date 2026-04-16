@@ -1,7 +1,6 @@
 from django.db import models
 import uuid
 
-# --- 1. DONOR CARS ---
 class DonorCar(models.Model):
     make = models.CharField(max_length=50, default="Toyota")
     model = models.CharField(max_length=50)
@@ -11,13 +10,13 @@ class DonorCar(models.Model):
     rego = models.CharField(max_length=20, blank=True, null=True) 
     color = models.CharField(max_length=30, blank=True, null=True)
     
-    # These match the columns in your image_428b55.png to prevent crashes
+    # Ghost Fields added to match existing DB columns and prevent 500 errors
     transmission = models.CharField(max_length=50, blank=True, null=True)
     engine_number = models.CharField(max_length=50, blank=True, null=True)
     write_off_status = models.CharField(max_length=50, blank=True, null=True)
     
     notes = models.TextField(blank=True, null=True)
-    salvage_checklist = models.JSONField(default=dict, blank=True) 
+    salvage_checklist = models.JSONField(default=dict, blank=True, null=True) 
     date_added = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -28,7 +27,6 @@ class DonorCar(models.Model):
             self.stock_number = f"{prefix}-{self.year}-{vin_segment}".upper()
         super().save(*args, **kwargs)
 
-# --- 2. SALVAGED USED PARTS ---
 class InventoryItem(models.Model):
     donor_car = models.ForeignKey(DonorCar, on_delete=models.CASCADE, related_name='parts', null=True, blank=True)
     part_name = models.CharField(max_length=100)
@@ -47,7 +45,6 @@ class InventoryItem(models.Model):
             self.label_id = f"{self.donor_car.stock_number}-{clean_part_name}"
         super().save(*args, **kwargs)
 
-# --- 3. AFTERMARKET NEW PARTS ---
 class AftermarketPart(models.Model):
     part_name = models.CharField(max_length=200)
     sku = models.CharField(max_length=50, unique=True)
@@ -58,7 +55,6 @@ class AftermarketPart(models.Model):
     location = models.CharField(max_length=100)
     status = models.CharField(max_length=20, default='Available')
 
-# --- 4. AWS S3 IMAGE GALLERY ---
 class ProductImage(models.Model):
     donor_car = models.ForeignKey(DonorCar, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
     inventory_item = models.ForeignKey(InventoryItem, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
@@ -67,7 +63,6 @@ class ProductImage(models.Model):
     is_main = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-# --- 5. SALES & INVOICING ---
 class Invoice(models.Model):
     invoice_number = models.CharField(max_length=20, unique=True)
     customer_name = models.CharField(max_length=200)
@@ -76,4 +71,3 @@ class Invoice(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     date = models.DateTimeField(auto_now_add=True)
-    pdf_invoice = models.FileField(upload_to='invoices/', null=True, blank=True)
