@@ -56,7 +56,7 @@ export default function DismantleModule() {
       setPhase('checklist');
     } catch (err) { 
       console.error("Backend Error:", err.response?.data);
-      alert("Error: " + JSON.stringify(err.response?.data || "Server Connection Failed")); 
+      alert("Registration Error: v1.2 Failed to sync. Check console for details."); 
     } finally { setLoading(false); }
   };
 
