@@ -24,32 +24,5 @@ class DonorCarSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DonorCar
-        fields = [
-            'id', 'make', 'model', 'year', 'stock_number', 'vin', 
-            'rego', 'color', 'transmission', 'engine_number', 
-            'write_off_status', 'notes', 'salvage_checklist', 
-            'date_added', 'parts', 'parts_count', 'images'
-        ]
-        read_only_fields = ['stock_number', 'date_added']
-
-class AftermarketPartSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, read_only=True)
-    is_low_stock = serializers.SerializerMethodField()
-
-    class Meta:
-        model = AftermarketPart
         fields = '__all__'
-
-    def get_is_low_stock(self, obj):
-        return obj.quantity <= obj.min_stock_level
-
-class InvoiceSerializer(serializers.ModelSerializer):
-    formatted_date = serializers.DateTimeField(format="%d %B %Y", source='date', read_only=True)
-    class Meta:
-        model = Invoice
-        fields = [
-            'id', 'invoice_number', 'customer_name', 'customer_phone', 
-            'items', 'total_amount', 'gst_amount', 'date', 
-            'formatted_date', 'pdf_invoice'
-        ]
-        read_only_fields = ['invoice_number', 'gst_amount', 'pdf_invoice']
+        read_only_fields = ['stock_number', 'date_added']
