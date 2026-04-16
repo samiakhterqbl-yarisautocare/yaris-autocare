@@ -19,19 +19,18 @@ class DonorCarListCreateView(generics.ListCreateAPIView):
         if serializer.is_valid():
             donor_car = serializer.save()
             
-            # Match the 'images' key used in DismantleModule.jsx
+            # Match 'images' key from DismantleModule.jsx
             images = request.FILES.getlist('images')
             for index, img in enumerate(images):
                 ProductImage.objects.create(
-                    donor_car=None, # To be linked via inventory_item if needed later
+                    donor_car=donor_car, # Fixed: Now correctly linking images to the car
                     image=img,
                     is_main=(index == 0)
                 )
-            # If you specifically want images linked to the DonorCar model, 
-            # ensure your model has a ForeignKey for it. 
-            # For now, this saves them to S3 as requested.
             
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # Printing errors to Railway logs helps debugging
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -133,8 +132,11 @@ class ImageUploadView(generics.CreateAPIView):
 def set_main_image(request, image_id):
     try:
         image = ProductImage.objects.get(id=image_id)
-        if image.inventory_item:
-            ProductImage.objects.filter(inventory_item=image.inventory_item).update(is_main=False)
+        # Check either donor_car or inventory_item
+        target = image.inventory_item or image.donor_car
+        if target:
+            filter_kwargs = {'inventory_item': image.inventory_item} if image.inventory_item else {'donor_car': image.donor_car}
+            ProductImage.objects.filter(**filter_kwargs).update(is_main=False)
             image.is_main = True
             image.save()
             return Response({"status": "Success"})
