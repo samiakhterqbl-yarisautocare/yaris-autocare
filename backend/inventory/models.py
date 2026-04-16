@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 
+# --- 1. DONOR CARS ---
 class DonorCar(models.Model):
     make = models.CharField(max_length=50, default="Toyota")
     model = models.CharField(max_length=50)
@@ -15,11 +16,13 @@ class DonorCar(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.stock_number:
-            clean_vin = str(self.vin).strip()[-4:] if self.vin else "0000"
+            clean_vin = str(self.vin).strip()
+            vin_segment = clean_vin[-4:] if len(clean_vin) >= 4 else clean_vin
             prefix = "YAR" if "YARIS" in str(self.model).upper() else "CAM"
-            self.stock_number = f"{prefix}-{self.year}-{clean_vin}".upper()
+            self.stock_number = f"{prefix}-{self.year}-{vin_segment}".upper()
         super().save(*args, **kwargs)
 
+# --- 2. SALVAGED USED PARTS ---
 class InventoryItem(models.Model):
     donor_car = models.ForeignKey(DonorCar, on_delete=models.CASCADE, related_name='parts', null=True, blank=True)
     part_name = models.CharField(max_length=100)
@@ -34,10 +37,11 @@ class InventoryItem(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.label_id and self.donor_car:
-            clean_name = self.part_name.replace(" ", "").upper()
-            self.label_id = f"{self.donor_car.stock_number}-{clean_name}"
+            clean_part_name = self.part_name.replace(" ", "").upper()
+            self.label_id = f"{self.donor_car.stock_number}-{clean_part_name}"
         super().save(*args, **kwargs)
 
+# --- 3. AFTERMARKET NEW PARTS ---
 class AftermarketPart(models.Model):
     part_name = models.CharField(max_length=200)
     sku = models.CharField(max_length=50, unique=True)
@@ -48,13 +52,17 @@ class AftermarketPart(models.Model):
     location = models.CharField(max_length=100)
     status = models.CharField(max_length=20, default='Available')
 
+# --- 4. AWS S3 IMAGE GALLERY ---
 class ProductImage(models.Model):
+    # Added donor_car link to handle Phase 1 audit photos
+    donor_car = models.ForeignKey(DonorCar, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
     inventory_item = models.ForeignKey(InventoryItem, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
     aftermarket_part = models.ForeignKey(AftermarketPart, related_name='images', on_delete=models.CASCADE, null=True, blank=True)
     image = models.ImageField(upload_to='inventory_photos/')
     is_main = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+# --- 5. SALES & INVOICING ---
 class Invoice(models.Model):
     invoice_number = models.CharField(max_length=20, unique=True)
     customer_name = models.CharField(max_length=200)
