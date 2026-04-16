@@ -1,5 +1,3 @@
-# Generated manually to sync current models with existing migrations
-
 from django.db import migrations, models
 
 
