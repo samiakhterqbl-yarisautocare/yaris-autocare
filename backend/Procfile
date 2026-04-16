@@ -1,1 +1,0 @@
-web: pwd && ls -la && python -V && which python && python -u manage.py showmigrations && python -u manage.py migrate --verbosity 3 && python -c "import core.wsgi; print('WSGI_IMPORT_OK')" && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --access-logfile - --error-logfile - --log-level debug
