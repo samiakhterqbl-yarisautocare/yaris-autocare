@@ -44,7 +44,6 @@ export default function DismantleModule() {
     setLoading(true);
     try {
       const formData = new FormData();
-      // Only append fields that exist in the Backend Serializer
       Object.keys(carForm).forEach(key => {
         if (carForm[key]) formData.append(key, carForm[key]);
       });
@@ -57,7 +56,7 @@ export default function DismantleModule() {
       setPhase('checklist');
     } catch (err) { 
       console.error("Backend Error:", err.response?.data);
-      alert("Error: Database rejected the request. Ensure VIN is 17 chars and Railway command is updated."); 
+      alert("Error: " + JSON.stringify(err.response?.data || "Server Connection Failed")); 
     } finally { setLoading(false); }
   };
 
@@ -81,8 +80,11 @@ export default function DismantleModule() {
 
   if (phase === 'decision') return (
     <div style={{padding: '40px'}}>
-      <h2 style={{fontSize: '28px', fontWeight: '900'}}>Dismantle Yard Registry</h2>
-      <button onClick={() => setPhase('registry')} style={{padding: '40px', borderRadius: '20px', border: `1px solid ${COLORS.border}`, cursor: 'pointer', backgroundColor: '#fff', textAlign: 'left'}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <h2 style={{fontSize: '28px', fontWeight: '900'}}>Dismantle Yard Registry</h2>
+        <span style={{fontSize: '12px', color: '#94a3b8', fontWeight: 'bold', backgroundColor: '#f1f5f9', padding: '4px 10px', borderRadius: '20px'}}>v1.2 - PROD</span>
+      </div>
+      <button onClick={() => setPhase('registry')} style={{marginTop: '20px', padding: '40px', borderRadius: '20px', border: `1px solid ${COLORS.border}`, cursor: 'pointer', backgroundColor: '#fff', textAlign: 'left'}}>
         <PlusCircle size={40} color={COLORS.primary} />
         <div style={{fontWeight: '900', marginTop: '10px', fontSize: '18px'}}>REGISTER NEW DONOR</div>
       </button>
@@ -94,8 +96,8 @@ export default function DismantleModule() {
       <button onClick={() => setPhase('decision')} style={{border: 'none', background: 'none', cursor: 'pointer', fontWeight: '800', marginBottom: '15px'}}><ArrowLeft size={16}/> BACK</button>
       <div style={{backgroundColor: '#fff', padding: '40px', borderRadius: '20px', border: `1px solid ${COLORS.border}`}}>
         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px'}}>
-          <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.make} onChange={e => setCarForm({...carForm, make: e.target.value})} placeholder="Make (e.g. Toyota)"/>
-          <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.model} onChange={e => setCarForm({...carForm, model: e.target.value})} placeholder="Model (e.g. Yaris)"/>
+          <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.make} onChange={e => setCarForm({...carForm, make: e.target.value})} placeholder="Make"/>
+          <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.model} onChange={e => setCarForm({...carForm, model: e.target.value})} placeholder="Model"/>
           <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.year} onChange={e => setCarForm({...carForm, year: e.target.value})} placeholder="Year"/>
           <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.vin} onChange={e => setCarForm({...carForm, vin: e.target.value.toUpperCase()})} placeholder="VIN (17 chars)"/>
           <input style={{padding: '12px', borderRadius: '8px', border: `1px solid ${COLORS.border}`}} value={carForm.rego} onChange={e => setCarForm({...carForm, rego: e.target.value.toUpperCase()})} placeholder="Rego"/>
@@ -108,7 +110,7 @@ export default function DismantleModule() {
           </div>
         </div>
         <button onClick={handleCreateCar} disabled={loading} style={{marginTop: '20px', backgroundColor: COLORS.dark, color: '#fff', padding: '12px 30px', borderRadius: '8px', border: 'none', fontWeight: '800', cursor: 'pointer'}}>
-          {loading ? "SAVING TO SYSTEM..." : "REGISTER & HARVEST"}
+          {loading ? "SAVING..." : "REGISTER & HARVEST"}
         </button>
       </div>
     </div>
