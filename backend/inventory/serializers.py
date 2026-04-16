@@ -23,7 +23,12 @@ class DonorCarSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DonorCar
-        fields = ['id', 'make', 'model', 'year', 'stock_number', 'vin', 'rego', 'color', 'notes', 'salvage_checklist', 'date_added', 'parts', 'parts_count']
+        fields = [
+            'id', 'make', 'model', 'year', 'stock_number', 'vin', 
+            'rego', 'color', 'notes', 'salvage_checklist', 
+            'date_added', 'parts', 'parts_count'
+        ]
+        # stock_number MUST be read_only to avoid 500 errors during creation
         read_only_fields = ['stock_number', 'date_added']
 
 class AftermarketPartSerializer(serializers.ModelSerializer):
@@ -41,5 +46,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
     formatted_date = serializers.DateTimeField(format="%d %B %Y", source='date', read_only=True)
     class Meta:
         model = Invoice
-        fields = ['id', 'invoice_number', 'customer_name', 'customer_phone', 'items', 'total_amount', 'gst_amount', 'date', 'formatted_date', 'pdf_invoice']
+        fields = [
+            'id', 'invoice_number', 'customer_name', 'customer_phone', 
+            'items', 'total_amount', 'gst_amount', 'date', 
+            'formatted_date', 'pdf_invoice'
+        ]
         read_only_fields = ['invoice_number', 'gst_amount', 'pdf_invoice']
