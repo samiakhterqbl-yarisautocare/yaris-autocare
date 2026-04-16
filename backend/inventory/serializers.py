@@ -20,15 +20,16 @@ class InventoryItemSerializer(serializers.ModelSerializer):
 class DonorCarSerializer(serializers.ModelSerializer):
     parts = InventoryItemSerializer(many=True, read_only=True)
     parts_count = serializers.IntegerField(source='parts.count', read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = DonorCar
         fields = [
             'id', 'make', 'model', 'year', 'stock_number', 'vin', 
-            'rego', 'color', 'notes', 'salvage_checklist', 
-            'date_added', 'parts', 'parts_count'
+            'rego', 'color', 'transmission', 'engine_number', 
+            'write_off_status', 'notes', 'salvage_checklist', 
+            'date_added', 'parts', 'parts_count', 'images'
         ]
-        # stock_number MUST be read_only to avoid 500 errors during creation
         read_only_fields = ['stock_number', 'date_added']
 
 class AftermarketPartSerializer(serializers.ModelSerializer):
