@@ -28,14 +28,13 @@ export default function UsedPartLabelPage() {
     }
   };
 
-  const qrValue = useMemo(() => {
-    if (!part) return '';
-    return part.qr_code_value || part.label_id || part.sku || `USED-PART-${part.id}`;
-  }, [part]);
+  const listingUrl = useMemo(() => {
+    return `${window.location.origin}/used-parts/${id}`;
+  }, [id]);
 
   const qrImageUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrValue)}`;
-  }, [qrValue]);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(listingUrl)}`;
+  }, [listingUrl]);
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
   if (!part) return <div style={{ padding: 30 }}>Label not found</div>;
@@ -71,6 +70,10 @@ export default function UsedPartLabelPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div style={urlNote}>
+        QR opens: {listingUrl}
       </div>
 
       <style>{`
@@ -211,4 +214,11 @@ const qrImg = {
   height: '62px',
   objectFit: 'contain',
   display: 'block',
+};
+
+const urlNote = {
+  marginTop: '14px',
+  fontSize: '13px',
+  fontWeight: '700',
+  color: '#475569',
 };
