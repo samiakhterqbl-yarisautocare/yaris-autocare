@@ -3,9 +3,19 @@ from .models import DonorCar, InventoryItem, AftermarketPart, ProductImage, Invo
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductImage
         fields = ['id', 'image', 'is_main', 'created_at']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class InventoryItemSerializer(serializers.ModelSerializer):
