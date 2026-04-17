@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import QRCode from 'react-qr-code';
 import { ArrowLeft, Printer } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -34,10 +33,9 @@ export default function UsedPartLabelPage() {
     return part.qr_code_value || part.label_id || part.sku || `USED-PART-${part.id}`;
   }, [part]);
 
-  const mainImage = useMemo(() => {
-    if (!part?.images?.length) return null;
-    return part.images.find((i) => i.is_main)?.image || part.images[0]?.image || null;
-  }, [part]);
+  const qrImageUrl = useMemo(() => {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrValue)}`;
+  }, [qrValue]);
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
   if (!part) return <div style={{ padding: 30 }}>Label not found</div>;
@@ -69,18 +67,11 @@ export default function UsedPartLabelPage() {
 
           <div style={right}>
             <div style={qrWrap}>
-              <QRCode value={qrValue} size={62} />
+              <img src={qrImageUrl} alt="QR Code" style={qrImg} />
             </div>
           </div>
         </div>
       </div>
-
-      {mainImage && (
-        <div style={previewNote}>
-          <img src={mainImage} alt="" style={thumb} />
-          <span>Main image preview</span>
-        </div>
-      )}
 
       <style>{`
         @media print {
@@ -164,7 +155,6 @@ const labelBox = {
   alignItems: 'stretch',
   padding: '2mm',
   fontFamily: 'Arial, sans-serif',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
 };
 
 const left = {
@@ -216,19 +206,9 @@ const qrWrap = {
   padding: '1mm',
 };
 
-const previewNote = {
-  marginTop: '16px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  color: '#64748b',
-  fontWeight: '700',
-};
-
-const thumb = {
-  width: '48px',
-  height: '48px',
-  objectFit: 'cover',
-  borderRadius: '10px',
-  border: '1px solid #e2e8f0',
+const qrImg = {
+  width: '62px',
+  height: '62px',
+  objectFit: 'contain',
+  display: 'block',
 };
