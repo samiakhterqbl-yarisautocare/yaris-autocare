@@ -46,6 +46,15 @@ export default function UsedPartDetailPage() {
     return part.images.find((i) => i.is_main)?.image || part.images[0]?.image || null;
   }, [part]);
 
+  const qrValue = useMemo(() => {
+    if (!part) return '';
+    return part.qr_code_value || part.label_id || part.sku || `USED-PART-${part.id}`;
+  }, [part]);
+
+  const qrImageUrl = useMemo(() => {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrValue)}`;
+  }, [qrValue]);
+
   const handleDownloadPdf = () => {
     if (!part) return;
 
@@ -60,8 +69,6 @@ export default function UsedPartDetailPage() {
           )
           .join('')
       : '<div style="color:#64748b;">No photos uploaded</div>';
-
-    const qrValue = part.qr_code_value || part.label_id || part.sku || `USED-PART-${part.id}`;
 
     const html = `
       <html>
@@ -242,8 +249,6 @@ export default function UsedPartDetailPage() {
   if (loading) return <div style={page}>Loading...</div>;
   if (!part) return <div style={page}>Not found</div>;
 
-  const qrValue = part.qr_code_value || part.label_id || part.sku || `USED-PART-${part.id}`;
-
   return (
     <div style={page}>
       <button onClick={() => navigate('/used-parts')} style={backBtn}>
@@ -354,7 +359,12 @@ export default function UsedPartDetailPage() {
             {part.images?.length ? (
               <div style={galleryGrid}>
                 {part.images.map((img) => (
-                  <div key={img.id} style={galleryCard}>
+                  <div
+                    key={img.id}
+                    style={galleryCard}
+                    onClick={() => window.open(img.image, '_blank')}
+                    title="Click to view full image"
+                  >
                     <img src={img.image} alt="" style={galleryImage} />
                     {img.is_main && <div style={mainTag}>MAIN</div>}
                   </div>
@@ -380,7 +390,9 @@ export default function UsedPartDetailPage() {
 
           <Section icon={<Printer size={18} />} title="QR Preview">
             <div style={qrCard}>
-              <div style={qrPlaceholder}>QR will show on label page</div>
+              <div style={qrImageWrap}>
+                <img src={qrImageUrl} alt="QR Code" style={qrImage} />
+              </div>
               <div style={qrText}>{qrValue}</div>
             </div>
           </Section>
@@ -577,6 +589,7 @@ const galleryCard = {
   overflow: 'hidden',
   border: '1px solid #e2e8f0',
   height: '150px',
+  cursor: 'pointer',
 };
 const galleryImage = { width: '100%', height: '100%', objectFit: 'cover' };
 const mainTag = {
@@ -628,19 +641,17 @@ const qrCard = {
   border: '1px solid #e2e8f0',
   background: '#fafafa',
 };
-const qrPlaceholder = {
-  width: '172px',
-  height: '172px',
-  borderRadius: '16px',
-  border: '2px dashed #cbd5e1',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#64748b',
-  fontWeight: '700',
-  textAlign: 'center',
-  padding: '12px',
+const qrImageWrap = {
   background: '#fff',
+  padding: '12px',
+  borderRadius: '16px',
+  border: '1px solid #e2e8f0',
+};
+const qrImage = {
+  width: '180px',
+  height: '180px',
+  objectFit: 'contain',
+  display: 'block',
 };
 const qrText = {
   fontWeight: '700',
