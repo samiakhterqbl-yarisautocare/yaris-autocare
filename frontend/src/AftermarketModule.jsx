@@ -1,136 +1,781 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, MapPin, Truck, DollarSign, History, 
-  ClipboardList, Info, AlertCircle, Edit2 
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import {
+  Plus,
+  Search,
+  X,
+  Eye,
+  Pencil,
+  Package,
+  AlertTriangle,
+  MapPin,
+  Tag,
+  Layers,
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 
-const COLORS = { 
-  primary: '#ef4444', 
-  primarySoft: '#fef2f2', 
-  dark: '#0f172a', 
-  border: '#e2e8f0', 
-  bg: '#f8fafc', 
+const API_URL = 'https://yaris-autocare-production.up.railway.app';
+
+const COLORS = {
+  primary: '#ef4444',
+  dark: '#0f172a',
+  border: '#e2e8f0',
+  bg: '#f8fafc',
   slate: '#64748b',
-  lightText: '#94a3b8' 
+  success: '#166534',
+  successBg: '#dcfce7',
+  warning: '#92400e',
+  warningBg: '#fef3c7',
+  danger: '#991b1b',
+  dangerBg: '#fee2e2',
+  white: '#ffffff'
 };
 
-const AftermarketDetailPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+const CATEGORY_OPTIONS = [
+  'All Categories',
+  'Oil Filters',
+  'Air Filters',
+  'Cabin Filters',
+  'Fuel Filters',
+  'Brake Pads',
+  'Brake Rotors',
+  'Spark Plugs',
+  'Ignition Coils',
+  'Wiper Blades',
+  'Bulbs',
+  'Sensors',
+  'Suspension',
+  'Cooling',
+  'Belts',
+  'Batteries',
+  'Fluids',
+  'Accessories',
+  'Other'
+];
 
-  // Mock data - In the future, this will be fetched from your database
-  const product = {
-    id: id,
-    name: 'Oil Filter - Yaris 2011-2014',
-    sku: 'OF-TY-01',
-    description: 'High-efficiency replacement oil filter designed for Toyota Yaris engines. Provides superior filtration and protection against engine wear. Recommended replacement every 10,000km.',
-    specs: {
-      "Thread Size": "3/4-16",
-      "Outside Diameter": "65mm",
-      "Height": "75mm",
-      "Compatible Models": "Toyota Yaris (NCP130, NCP131)",
-      "Warranty": "12 Months / 20,000km"
-    },
-    qty: 4,
-    min_stock: 5,
-    cost: 8.50,
-    price: 25.00,
-    loc: 'Shelf A1',
-    supplier: 'Repco'
+const STATUS_OPTIONS = [
+  'All Statuses',
+  'Available',
+  'Out of Stock',
+  'Inactive'
+];
+
+const SORT_OPTIONS = [
+  { value: 'name_asc', label: 'Name A-Z' },
+  { value: 'name_desc', label: 'Name Z-A' },
+  { value: 'qty_low_high', label: 'Qty Low-High' },
+  { value: 'qty_high_low', label: 'Qty High-Low' },
+  { value: 'price_low_high', label: 'Price Low-High' },
+  { value: 'price_high_low', label: 'Price High-Low' },
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' }
+];
+
+const AftermarketModule = () => {
+  const navigate = useNavigate();
+  const [stock, setStock] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
+  const [statusFilter, setStatusFilter] = useState('All Statuses');
+  const [supplierFilter, setSupplierFilter] = useState('All Suppliers');
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('name_asc');
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/api/aftermarket/`);
+      const items = Array.isArray(response.data)
+        ? response.data
+        : response.data?.results || [];
+      setStock(items);
+    } catch (error) {
+      console.error('Failed to load aftermarket inventory:', error);
+      alert('Failed to load aftermarket inventory.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const supplierOptions = useMemo(() => {
+    const uniqueSuppliers = Array.from(
+      new Set(
+        stock
+          .map((item) => item.supplier)
+          .filter((value) => value && String(value).trim() !== '')
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    return ['All Suppliers', ...uniqueSuppliers];
+  }, [stock]);
+
+  const stats = useMemo(() => {
+    const totalItems = stock.length;
+    const totalQty = stock.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    const lowStockCount = stock.filter(
+      (item) => (Number(item.quantity) || 0) <= (Number(item.min_stock_level) || 0)
+    ).length;
+    const outOfStockCount = stock.filter((item) => (Number(item.quantity) || 0) <= 0).length;
+
+    return { totalItems, totalQty, lowStockCount, outOfStockCount };
+  }, [stock]);
+
+  const filteredStock = useMemo(() => {
+    let items = [...stock];
+
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      items = items.filter((item) =>
+        [
+          item.part_name,
+          item.sku,
+          item.label_id,
+          item.category,
+          item.location,
+          item.supplier,
+          item.description
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(term))
+      );
+    }
+
+    if (categoryFilter !== 'All Categories') {
+      items = items.filter((item) => item.category === categoryFilter);
+    }
+
+    if (statusFilter !== 'All Statuses') {
+      items = items.filter((item) => item.status === statusFilter);
+    }
+
+    if (supplierFilter !== 'All Suppliers') {
+      items = items.filter((item) => item.supplier === supplierFilter);
+    }
+
+    if (lowStockOnly) {
+      items = items.filter(
+        (item) => (Number(item.quantity) || 0) <= (Number(item.min_stock_level) || 0)
+      );
+    }
+
+    switch (sortBy) {
+      case 'name_desc':
+        items.sort((a, b) => (b.part_name || '').localeCompare(a.part_name || ''));
+        break;
+      case 'qty_low_high':
+        items.sort((a, b) => (Number(a.quantity) || 0) - (Number(b.quantity) || 0));
+        break;
+      case 'qty_high_low':
+        items.sort((a, b) => (Number(b.quantity) || 0) - (Number(a.quantity) || 0));
+        break;
+      case 'price_low_high':
+        items.sort((a, b) => (Number(a.sale_price) || 0) - (Number(b.sale_price) || 0));
+        break;
+      case 'price_high_low':
+        items.sort((a, b) => (Number(b.sale_price) || 0) - (Number(a.sale_price) || 0));
+        break;
+      case 'newest':
+        items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        break;
+      case 'oldest':
+        items.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+        break;
+      case 'name_asc':
+      default:
+        items.sort((a, b) => (a.part_name || '').localeCompare(b.part_name || ''));
+        break;
+    }
+
+    return items;
+  }, [stock, searchTerm, categoryFilter, statusFilter, supplierFilter, lowStockOnly, sortBy]);
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('All Categories');
+    setStatusFilter('All Statuses');
+    setSupplierFilter('All Suppliers');
+    setLowStockOnly(false);
+    setSortBy('name_asc');
+  };
+
+  const getStatusBadge = (item) => {
+    const qty = Number(item.quantity) || 0;
+    const min = Number(item.min_stock_level) || 0;
+
+    if (qty <= 0) {
+      return { label: 'Out of Stock', bg: COLORS.dangerBg, color: COLORS.danger };
+    }
+    if (qty <= min) {
+      return { label: 'Low Stock', bg: COLORS.warningBg, color: COLORS.warning };
+    }
+    return { label: item.status || 'Available', bg: COLORS.successBg, color: COLORS.success };
+  };
+
+  const getMainImage = (item) => {
+    if (!Array.isArray(item.images) || item.images.length === 0) return null;
+    return item.images.find((img) => img.is_main) || item.images[0];
   };
 
   return (
-    <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto', backgroundColor: COLORS.bg, minHeight: '100vh' }}>
-      
-      {/* HEADER ACTIONS */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-        <button 
-          onClick={() => navigate(-1)} 
-          style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate, cursor: 'pointer', fontWeight: '700' }}
-        >
-          <ArrowLeft size={18} /> BACK TO INVENTORY
-        </button>
-        
-        <button 
-          onClick={() => navigate(`/aftermarket/edit/${id}`)} 
-          style={{ backgroundColor: COLORS.dark, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <Edit2 size={16} /> EDIT PRODUCT
-        </button>
+    <div style={pageStyle}>
+      <div style={headerStyle}>
+        <div>
+          <h1 style={titleStyle}>Aftermarket Inventory</h1>
+          <p style={subtitleStyle}>
+            Manage categories, stock levels, pricing, suppliers, and product details
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={fetchInventory} style={secondaryBtn}>
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+          <button onClick={() => navigate('/aftermarket/new')} style={primaryBtn}>
+            <Plus size={18} />
+            New Product
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '40px' }}>
-        
-        {/* LEFT COLUMN: IMAGES & DESCRIPTION */}
-        <div>
-          <div style={{ backgroundColor: '#fff', borderRadius: '20px', border: `1px solid ${COLORS.border}`, height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '25px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-             <div style={{ color: '#cbd5e1', textAlign: 'center' }}>
-               <History size={64} />
-               <p style={{ fontWeight: '600', marginTop: '10px' }}>Product Images Gallery</p>
-             </div>
-          </div>
+      <div style={statsGrid}>
+        <StatCard label="Total Products" value={stats.totalItems} icon={<Package size={20} />} />
+        <StatCard label="Total Quantity" value={stats.totalQty} icon={<Layers size={20} />} />
+        <StatCard
+          label="Low Stock Items"
+          value={stats.lowStockCount}
+          icon={<AlertTriangle size={20} />}
+          accent="warning"
+        />
+        <StatCard
+          label="Out of Stock"
+          value={stats.outOfStockCount}
+          icon={<Tag size={20} />}
+          accent="danger"
+        />
+      </div>
 
-          <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '20px', border: `1px solid ${COLORS.border}` }}>
-            <h3 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px', fontWeight: '800' }}>
-              <ClipboardList size={20} color={COLORS.primary} /> Product Description
-            </h3>
-            <p style={{ margin: 0, fontSize: '15px', color: '#475569', lineHeight: '1.7' }}>
-              {product.description}
-            </p>
-          </div>
+      <div style={filterCard}>
+        <div style={searchWrap}>
+          <Search size={18} style={searchIcon} />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by product, SKU, label ID, category, supplier, description, or location"
+            style={searchInput}
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} style={clearBtn}>
+              <X size={16} />
+            </button>
+          )}
         </div>
 
-        {/* RIGHT COLUMN: DATA & STATUS */}
-        <div>
-          <div style={{ marginBottom: '30px' }}>
-            <h1 style={{ margin: 0, fontSize: '36px', fontWeight: '900', color: COLORS.dark }}>{product.name}</h1>
-            <div style={{ display: 'inline-block', backgroundColor: COLORS.primarySoft, color: COLORS.primary, padding: '6px 14px', borderRadius: '8px', fontWeight: '800', marginTop: '10px', fontSize: '14px' }}>
-              SKU: {product.sku}
-            </div>
-          </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
-             <DetailBox label="LOCATION" value={product.loc} icon={<MapPin size={16} />} />
-             <DetailBox label="SUPPLIER" value={product.supplier} icon={<Truck size={16} />} />
-             <DetailBox label="COST PRICE" value={`$${product.cost.toFixed(2)}`} icon={<DollarSign size={16} />} />
-             <DetailBox label="SALE PRICE" value={`$${product.price.toFixed(2)}`} icon={<DollarSign size={16} />} />
-          </div>
+        <div style={filtersGrid}>
+          <FilterSelect
+            label="Category"
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            options={CATEGORY_OPTIONS}
+          />
+          <FilterSelect
+            label="Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={STATUS_OPTIONS}
+          />
+          <FilterSelect
+            label="Supplier"
+            value={supplierFilter}
+            onChange={setSupplierFilter}
+            options={supplierOptions}
+          />
+          <FilterSelect
+            label="Sort By"
+            value={sortBy}
+            onChange={setSortBy}
+            options={SORT_OPTIONS.map((x) => x.value)}
+            labelsMap={Object.fromEntries(SORT_OPTIONS.map((x) => [x.value, x.label]))}
+          />
+        </div>
 
-          <div style={{ backgroundColor: COLORS.dark, padding: '30px', borderRadius: '24px', color: '#fff', marginBottom: '30px', textAlign: 'center' }}>
-             <h4 style={{ margin: 0, fontSize: '12px', color: COLORS.lightText, letterSpacing: '0.1em' }}>CURRENT STOCK STATUS</h4>
-             <div style={{ fontSize: '38px', fontWeight: '900', margin: '10px 0' }}>{product.qty} UNITS</div>
-             {product.qty <= product.min_stock && (
-               <div style={{ color: COLORS.primary, fontWeight: '800', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                 <AlertCircle size={16} /> LOW STOCK ALERT ACTIVE
-               </div>
-             )}
-          </div>
+        <div style={filterFooter}>
+          <label style={checkboxWrap}>
+            <input
+              type="checkbox"
+              checked={lowStockOnly}
+              onChange={(e) => setLowStockOnly(e.target.checked)}
+            />
+            <span>Show only low stock items</span>
+          </label>
 
-          <div style={{ backgroundColor: '#fff', borderRadius: '20px', border: `1px solid ${COLORS.border}`, overflow: 'hidden' }}>
-            <div style={{ padding: '15px 20px', backgroundColor: '#f1f5f9', borderBottom: `1px solid ${COLORS.border}`, fontWeight: '800', fontSize: '13px', color: COLORS.dark }}>
-              TECHNICAL SPECIFICATIONS
-            </div>
-            {Object.entries(product.specs).map(([key, val], index) => (
-              <div key={key} style={{ display: 'flex', padding: '14px 20px', borderBottom: index === Object.entries(product.specs).length - 1 ? 'none' : `1px solid #f1f5f9`, fontSize: '14px' }}>
-                <div style={{ flex: 1, fontWeight: '700', color: COLORS.slate }}>{key}</div>
-                <div style={{ flex: 1.5, color: COLORS.dark, fontWeight: '500' }}>{val}</div>
+          <button onClick={resetFilters} style={secondaryBtnSmall}>
+            Reset Filters
+          </button>
+        </div>
+      </div>
+
+      <div style={tableCard}>
+        <div style={tableHeader}>
+          <div style={{ width: '88px' }}>Image</div>
+          <div style={{ flex: 2.4 }}>Product</div>
+          <div style={{ flex: 1.1 }}>Category</div>
+          <div style={{ flex: 1 }}>Supplier</div>
+          <div style={{ flex: 0.9 }}>Qty</div>
+          <div style={{ flex: 1 }}>Price</div>
+          <div style={{ flex: 1 }}>Status</div>
+          <div style={{ width: '190px', textAlign: 'right' }}>Actions</div>
+        </div>
+
+        {loading ? (
+          <div style={emptyState}>Loading inventory...</div>
+        ) : filteredStock.length === 0 ? (
+          <div style={emptyState}>No products found for the selected filters.</div>
+        ) : (
+          filteredStock.map((item) => {
+            const badge = getStatusBadge(item);
+            const mainImage = getMainImage(item);
+
+            return (
+              <div key={item.id} style={tableRow}>
+                <div style={{ width: '88px' }}>
+                  <div style={thumbBox}>
+                    {mainImage?.image ? (
+                      <img
+                        src={mainImage.image}
+                        alt={item.part_name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <Package size={18} color={COLORS.slate} />
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ flex: 2.4, minWidth: 0 }}>
+                  <div style={productName}>{item.part_name}</div>
+                  <div style={subRow}>SKU: {item.sku || '-'}</div>
+                  <div style={subRow}>Label: {item.label_id || '-'}</div>
+                  <div style={subRow}>
+                    <MapPin size={12} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                    {item.location || 'No location'}
+                  </div>
+                </div>
+
+                <div style={{ flex: 1.1 }}>
+                  <div style={cellText}>{item.category || '-'}</div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={cellText}>{item.supplier || '-'}</div>
+                </div>
+
+                <div style={{ flex: 0.9 }}>
+                  <div
+                    style={{
+                      ...qtyBadge,
+                      color:
+                        (Number(item.quantity) || 0) <= (Number(item.min_stock_level) || 0)
+                          ? COLORS.primary
+                          : COLORS.dark
+                    }}
+                  >
+                    {item.quantity ?? 0}
+                  </div>
+                  <div style={tinyNote}>Min {item.min_stock_level ?? 0}</div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={priceText}>${Number(item.sale_price || 0).toFixed(2)}</div>
+                  <div style={tinyNote}>Cost ${Number(item.cost_price || 0).toFixed(2)}</div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '7px 10px',
+                      borderRadius: '999px',
+                      backgroundColor: badge.bg,
+                      color: badge.color,
+                      fontSize: '11px',
+                      fontWeight: '800'
+                    }}
+                  >
+                    {badge.label}
+                  </span>
+                </div>
+
+                <div style={{ width: '190px', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    <button
+                      onClick={() => navigate(`/aftermarket/${item.id}`)}
+                      style={actionBtn}
+                    >
+                      <Eye size={14} />
+                      View
+                    </button>
+                    <button
+                      onClick={() => navigate(`/aftermarket/edit/${item.id}`)}
+                      style={actionBtnDark}
+                    >
+                      <Pencil size={14} />
+                      Edit
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
 };
 
-const DetailBox = ({ label, value, icon }) => (
-  <div style={{ padding: '18px', backgroundColor: '#fff', borderRadius: '15px', border: `1px solid ${COLORS.border}` }}>
-    <div style={{ fontSize: '10px', fontWeight: '800', color: COLORS.slate, marginBottom: '8px', letterSpacing: '0.05em' }}>{label}</div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', color: COLORS.dark, fontSize: '15px' }}>
-      {React.cloneElement(icon, { color: COLORS.primary, size: 16 })} {value}
+const StatCard = ({ label, value, icon, accent = 'default' }) => {
+  const accentMap = {
+    default: { bg: '#fff', color: COLORS.dark, iconBg: '#fee2e2', iconColor: COLORS.primary },
+    warning: { bg: '#fff', color: COLORS.dark, iconBg: '#fef3c7', iconColor: '#92400e' },
+    danger: { bg: '#fff', color: COLORS.dark, iconBg: '#fee2e2', iconColor: '#991b1b' }
+  };
+
+  const style = accentMap[accent] || accentMap.default;
+
+  return (
+    <div style={statCard}>
+      <div style={{ ...statIconWrap, backgroundColor: style.iconBg, color: style.iconColor }}>
+        {icon}
+      </div>
+      <div>
+        <div style={statLabel}>{label}</div>
+        <div style={statValue}>{value}</div>
+      </div>
     </div>
+  );
+};
+
+const FilterSelect = ({ label, value, onChange, options, labelsMap = {} }) => (
+  <div>
+    <label style={filterLabel}>{label}</label>
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {labelsMap[option] || option}
+        </option>
+      ))}
+    </select>
   </div>
 );
 
-export default AftermarketDetailPage;
+const pageStyle = {
+  padding: '28px',
+  backgroundColor: COLORS.bg,
+  minHeight: '100vh'
+};
+
+const headerStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: '20px',
+  marginBottom: '24px'
+};
+
+const titleStyle = {
+  margin: 0,
+  fontSize: '30px',
+  fontWeight: '900',
+  color: COLORS.dark,
+  letterSpacing: '-0.6px'
+};
+
+const subtitleStyle = {
+  margin: '6px 0 0 0',
+  fontSize: '14px',
+  color: COLORS.slate
+};
+
+const statsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: '16px',
+  marginBottom: '20px'
+};
+
+const statCard = {
+  backgroundColor: '#fff',
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '20px',
+  padding: '18px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '14px'
+};
+
+const statIconWrap = {
+  width: '46px',
+  height: '46px',
+  borderRadius: '14px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+};
+
+const statLabel = {
+  fontSize: '12px',
+  color: COLORS.slate,
+  fontWeight: '700',
+  marginBottom: '4px'
+};
+
+const statValue = {
+  fontSize: '24px',
+  color: COLORS.dark,
+  fontWeight: '900'
+};
+
+const filterCard = {
+  backgroundColor: '#fff',
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '22px',
+  padding: '20px',
+  marginBottom: '20px'
+};
+
+const searchWrap = {
+  position: 'relative',
+  marginBottom: '18px'
+};
+
+const searchIcon = {
+  position: 'absolute',
+  left: '16px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  color: COLORS.slate
+};
+
+const searchInput = {
+  width: '100%',
+  padding: '15px 44px 15px 48px',
+  borderRadius: '14px',
+  border: `1px solid ${COLORS.border}`,
+  outline: 'none',
+  fontSize: '14px',
+  boxSizing: 'border-box'
+};
+
+const clearBtn = {
+  position: 'absolute',
+  right: '12px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  border: 'none',
+  background: 'none',
+  cursor: 'pointer',
+  color: COLORS.slate
+};
+
+const filtersGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: '14px',
+  marginBottom: '14px'
+};
+
+const filterLabel = {
+  display: 'block',
+  marginBottom: '7px',
+  fontSize: '11px',
+  fontWeight: '800',
+  color: COLORS.slate,
+  textTransform: 'uppercase'
+};
+
+const selectStyle = {
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: '12px',
+  border: `1px solid ${COLORS.border}`,
+  outline: 'none',
+  fontSize: '14px',
+  backgroundColor: '#fff'
+};
+
+const filterFooter = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between'
+};
+
+const checkboxWrap = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  fontSize: '14px',
+  color: COLORS.dark,
+  fontWeight: '600'
+};
+
+const tableCard = {
+  backgroundColor: '#fff',
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '22px',
+  overflow: 'hidden'
+};
+
+const tableHeader = {
+  display: 'flex',
+  gap: '12px',
+  padding: '16px 18px',
+  backgroundColor: COLORS.dark,
+  color: '#fff',
+  fontSize: '11px',
+  fontWeight: '900',
+  textTransform: 'uppercase',
+  letterSpacing: '0.4px'
+};
+
+const tableRow = {
+  display: 'flex',
+  gap: '12px',
+  padding: '16px 18px',
+  borderBottom: `1px solid ${COLORS.border}`,
+  alignItems: 'center'
+};
+
+const thumbBox = {
+  width: '62px',
+  height: '62px',
+  borderRadius: '14px',
+  border: `1px solid ${COLORS.border}`,
+  backgroundColor: '#f1f5f9',
+  overflow: 'hidden',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+};
+
+const productName = {
+  fontSize: '15px',
+  fontWeight: '900',
+  color: COLORS.dark,
+  marginBottom: '4px'
+};
+
+const subRow = {
+  fontSize: '12px',
+  color: COLORS.slate,
+  marginBottom: '2px',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
+};
+
+const cellText = {
+  fontSize: '13px',
+  fontWeight: '700',
+  color: COLORS.dark
+};
+
+const qtyBadge = {
+  fontSize: '20px',
+  fontWeight: '900',
+  lineHeight: 1.1
+};
+
+const tinyNote = {
+  fontSize: '11px',
+  color: COLORS.slate,
+  marginTop: '4px'
+};
+
+const priceText = {
+  fontSize: '16px',
+  fontWeight: '900',
+  color: COLORS.dark
+};
+
+const actionBtn = {
+  border: `1px solid ${COLORS.border}`,
+  backgroundColor: '#fff',
+  color: COLORS.dark,
+  padding: '9px 12px',
+  borderRadius: '10px',
+  fontSize: '12px',
+  fontWeight: '800',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px'
+};
+
+const actionBtnDark = {
+  border: 'none',
+  backgroundColor: COLORS.dark,
+  color: '#fff',
+  padding: '9px 12px',
+  borderRadius: '10px',
+  fontSize: '12px',
+  fontWeight: '800',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px'
+};
+
+const primaryBtn = {
+  border: 'none',
+  backgroundColor: COLORS.primary,
+  color: '#fff',
+  padding: '12px 18px',
+  borderRadius: '12px',
+  fontSize: '14px',
+  fontWeight: '900',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px'
+};
+
+const secondaryBtn = {
+  border: `1px solid ${COLORS.border}`,
+  backgroundColor: '#fff',
+  color: COLORS.dark,
+  padding: '12px 16px',
+  borderRadius: '12px',
+  fontSize: '14px',
+  fontWeight: '800',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px'
+};
+
+const secondaryBtnSmall = {
+  border: `1px solid ${COLORS.border}`,
+  backgroundColor: '#fff',
+  color: COLORS.dark,
+  padding: '10px 14px',
+  borderRadius: '10px',
+  fontSize: '12px',
+  fontWeight: '800',
+  cursor: 'pointer'
+};
+
+const emptyState = {
+  padding: '40px',
+  textAlign: 'center',
+  color: COLORS.slate,
+  fontWeight: '600'
+};
+
+export default AftermarketModule;
