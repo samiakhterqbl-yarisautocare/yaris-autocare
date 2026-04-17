@@ -66,11 +66,66 @@ class AftermarketListCreateView(generics.ListCreateAPIView):
     serializer_class = AftermarketPartSerializer
     parser_classes = (MultiPartParser, FormParser)
 
+    def get_queryset(self):
+        queryset = AftermarketPart.objects.all().order_by('category', 'part_name')
+        category = self.request.query_params.get('category')
+        search = self.request.query_params.get('search')
+
+        if category and category != 'All':
+            queryset = queryset.filter(category=category)
+
+        if search:
+            queryset = queryset.filter(
+                Q(part_name__icontains=search) |
+                Q(sku__icontains=search) |
+                Q(label_id__icontains=search) |
+                Q(location__icontains=search) |
+                Q(supplier__icontains=search) |
+                Q(description__icontains=search)
+            )
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        aftermarket_part = serializer.save()
+
+        images = request.FILES.getlist('images')
+        for index, img in enumerate(images):
+            ProductImage.objects.create(
+                aftermarket_part=aftermarket_part,
+                image=img,
+                is_main=(index == 0),
+            )
+
+        return Response(
+            AftermarketPartSerializer(aftermarket_part).data,
+            status=status.HTTP_201_CREATED
+        )
+
 
 class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AftermarketPart.objects.all()
     serializer_class = AftermarketPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        aftermarket_part = serializer.save()
+
+        images = request.FILES.getlist('images')
+        for index, img in enumerate(images):
+            ProductImage.objects.create(
+                aftermarket_part=aftermarket_part,
+                image=img,
+                is_main=(index == 0 and not aftermarket_part.images.filter(is_main=True).exists()),
+            )
+
+        return Response(AftermarketPartSerializer(aftermarket_part).data)
 
 
 class BulkDismantleView(APIView):
@@ -79,24 +134,15 @@ class BulkDismantleView(APIView):
         parts = request.data.get('parts', [])
 
         if not car_id:
-            return Response(
-                {"error": "car_id is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "car_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not isinstance(parts, list):
-            return Response(
-                {"error": "parts must be a list"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "parts must be a list"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             car = DonorCar.objects.get(id=car_id)
         except DonorCar.DoesNotExist:
-            return Response(
-                {"error": "Donor Car not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Donor Car not found"}, status=status.HTTP_404_NOT_FOUND)
 
         created_parts = []
 
@@ -163,8 +209,12 @@ class GlobalSearchView(APIView):
         aftermarket_parts = AftermarketPart.objects.filter(
             Q(part_name__icontains=query) |
             Q(sku__icontains=query) |
+            Q(label_id__icontains=query) |
             Q(location__icontains=query) |
-            Q(status__icontains=query)
+            Q(status__icontains=query) |
+            Q(category__icontains=query) |
+            Q(description__icontains=query) |
+            Q(supplier__icontains=query)
         ).distinct()[:50]
 
         return Response({
@@ -237,33 +287,18 @@ def set_main_image(request, image_id):
         image = ProductImage.objects.get(id=image_id)
 
         if image.inventory_item:
-            ProductImage.objects.filter(
-                inventory_item=image.inventory_item
-            ).update(is_main=False)
+            ProductImage.objects.filter(inventory_item=image.inventory_item).update(is_main=False)
         elif image.donor_car:
-            ProductImage.objects.filter(
-                donor_car=image.donor_car
-            ).update(is_main=False)
+            ProductImage.objects.filter(donor_car=image.donor_car).update(is_main=False)
         elif image.aftermarket_part:
-            ProductImage.objects.filter(
-                aftermarket_part=image.aftermarket_part
-            ).update(is_main=False)
+            ProductImage.objects.filter(aftermarket_part=image.aftermarket_part).update(is_main=False)
         else:
-            return Response(
-                {"error": "Image is not linked to any item"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Image is not linked to any item"}, status=status.HTTP_400_BAD_REQUEST)
 
         image.is_main = True
         image.save()
 
-        return Response({
-            "status": "Success",
-            "message": "Main image updated",
-        })
+        return Response({"status": "Success", "message": "Main image updated"})
 
     except ProductImage.DoesNotExist:
-        return Response(
-            {"error": "Image not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND)

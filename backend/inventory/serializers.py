@@ -26,6 +26,7 @@ class AftermarketPartSerializer(serializers.ModelSerializer):
     class Meta:
         model = AftermarketPart
         fields = '__all__'
+        read_only_fields = ['sku', 'label_id', 'created_at']
 
 
 class DonorCarSerializer(serializers.ModelSerializer):
