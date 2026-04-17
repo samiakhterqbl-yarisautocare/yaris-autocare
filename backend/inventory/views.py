@@ -22,6 +22,11 @@ class DonorCarListCreateView(generics.ListCreateAPIView):
     serializer_class = DonorCarSerializer
     parser_classes = (MultiPartParser, FormParser)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -36,8 +41,12 @@ class DonorCarListCreateView(generics.ListCreateAPIView):
             )
 
         headers = self.get_success_headers(serializer.data)
+        response_serializer = DonorCarSerializer(
+            donor_car,
+            context={'request': request}
+        )
         return Response(
-            DonorCarSerializer(donor_car).data,
+            response_serializer.data,
             status=status.HTTP_201_CREATED,
             headers=headers,
         )
@@ -48,11 +57,21 @@ class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DonorCarSerializer
     parser_classes = (MultiPartParser, FormParser)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
 
 class UsedPartListCreateView(generics.ListCreateAPIView):
     queryset = InventoryItem.objects.select_related('donor_car').all().order_by('-id')
     serializer_class = InventoryItemSerializer
     parser_classes = (MultiPartParser, FormParser)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -60,11 +79,21 @@ class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = InventoryItemSerializer
     parser_classes = (MultiPartParser, FormParser)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
 
 class AftermarketListCreateView(generics.ListCreateAPIView):
     queryset = AftermarketPart.objects.all().order_by('-id')
     serializer_class = AftermarketPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def get_queryset(self):
         queryset = AftermarketPart.objects.all().order_by('category', 'part_name')
@@ -99,8 +128,12 @@ class AftermarketListCreateView(generics.ListCreateAPIView):
                 is_main=(index == 0),
             )
 
+        response_serializer = AftermarketPartSerializer(
+            aftermarket_part,
+            context={'request': request}
+        )
         return Response(
-            AftermarketPartSerializer(aftermarket_part).data,
+            response_serializer.data,
             status=status.HTTP_201_CREATED
         )
 
@@ -109,6 +142,11 @@ class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AftermarketPart.objects.all()
     serializer_class = AftermarketPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -125,7 +163,11 @@ class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
                 is_main=(index == 0 and not aftermarket_part.images.filter(is_main=True).exists()),
             )
 
-        return Response(AftermarketPartSerializer(aftermarket_part).data)
+        response_serializer = AftermarketPartSerializer(
+            aftermarket_part,
+            context={'request': request}
+        )
+        return Response(response_serializer.data)
 
 
 class BulkDismantleView(APIView):
@@ -177,7 +219,9 @@ class BulkDismantleView(APIView):
                 status=part_status,
                 location=location,
             )
-            created_parts.append(InventoryItemSerializer(item).data)
+            created_parts.append(
+                InventoryItemSerializer(item, context={'request': request}).data
+            )
 
         return Response(
             {
@@ -218,8 +262,16 @@ class GlobalSearchView(APIView):
         ).distinct()[:50]
 
         return Response({
-            "used": InventoryItemSerializer(used_parts, many=True).data,
-            "aftermarket": AftermarketPartSerializer(aftermarket_parts, many=True).data,
+            "used": InventoryItemSerializer(
+                used_parts,
+                many=True,
+                context={'request': request}
+            ).data,
+            "aftermarket": AftermarketPartSerializer(
+                aftermarket_parts,
+                many=True,
+                context={'request': request}
+            ).data,
         })
 
 
@@ -269,6 +321,11 @@ class BusinessSummaryView(APIView):
 class LowStockListView(generics.ListAPIView):
     serializer_class = AftermarketPartSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def get_queryset(self):
         return AftermarketPart.objects.filter(
             quantity__lte=F('min_stock_level')
@@ -279,6 +336,11 @@ class ImageUploadView(generics.CreateAPIView):
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
     parser_classes = (MultiPartParser, FormParser)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 @api_view(['POST'])
