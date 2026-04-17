@@ -26,7 +26,7 @@ const AftermarketModule = () => {
   // --- FETCH DATA FROM RAILWAY ---
   const fetchInventory = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/parts/`);
+      const response = await axios.get(`${API_URL}/api/aftermarket/`);
       setStock(response.data);
     } catch (error) {
       console.error("Failed to load inventory:", error);
