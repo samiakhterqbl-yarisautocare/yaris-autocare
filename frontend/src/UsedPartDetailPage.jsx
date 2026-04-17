@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Image as ImageIcon,
   FolderCog,
+  Link as LinkIcon,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -46,14 +47,13 @@ export default function UsedPartDetailPage() {
     return part.images.find((i) => i.is_main)?.image || part.images[0]?.image || null;
   }, [part]);
 
-  const qrValue = useMemo(() => {
-    if (!part) return '';
-    return part.qr_code_value || part.label_id || part.sku || `USED-PART-${part.id}`;
-  }, [part]);
+  const listingUrl = useMemo(() => {
+    return `${window.location.origin}/used-parts/${id}`;
+  }, [id]);
 
   const qrImageUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrValue)}`;
-  }, [qrValue]);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(listingUrl)}`;
+  }, [listingUrl]);
 
   const handleDownloadPdf = () => {
     if (!part) return;
@@ -149,8 +149,8 @@ export default function UsedPartDetailPage() {
               <div class="sub">${part.part_name}</div>
             </div>
             <div>
-              <strong>QR Value:</strong><br/>
-              ${qrValue}
+              <strong>Listing URL:</strong><br/>
+              ${listingUrl}
             </div>
           </div>
 
@@ -207,7 +207,7 @@ export default function UsedPartDetailPage() {
             <div class="grid">
               <div class="item"><strong>SKU</strong><div>${part.sku || '-'}</div></div>
               <div class="item"><strong>Label ID</strong><div>${part.label_id || '-'}</div></div>
-              <div class="item"><strong>QR Value</strong><div>${part.qr_code_value || '-'}</div></div>
+              <div class="item"><strong>Listing URL</strong><div>${listingUrl}</div></div>
               <div class="item"><strong>Created</strong><div>${part.created_at ? new Date(part.created_at).toLocaleString() : '-'}</div></div>
               <div class="item"><strong>Updated</strong><div>${part.updated_at ? new Date(part.updated_at).toLocaleString() : '-'}</div></div>
               <div class="item"><strong>Sold At</strong><div>${part.sold_at ? new Date(part.sold_at).toLocaleString() : '-'}</div></div>
@@ -290,6 +290,7 @@ export default function UsedPartDetailPage() {
               <MetaChip icon={<ClipboardList size={14} />} text={`Label: ${part.label_id || '-'}`} />
               <MetaChip icon={<MapPin size={14} />} text={`Location: ${part.location || '-'}`} />
               <MetaChip icon={<ShieldCheck size={14} />} text={`Grade: ${part.grade || '-'}`} />
+              <MetaChip icon={<LinkIcon size={14} />} text="QR opens listing page" />
             </div>
           </div>
         </div>
@@ -381,7 +382,7 @@ export default function UsedPartDetailPage() {
             <div style={stackInfo}>
               <StackItem label="SKU" value={part.sku} />
               <StackItem label="Label ID" value={part.label_id} />
-              <StackItem label="QR Value" value={part.qr_code_value} />
+              <StackItem label="Listing URL" value={listingUrl} />
               <StackItem label="Created" value={part.created_at ? new Date(part.created_at).toLocaleString() : '-'} />
               <StackItem label="Updated" value={part.updated_at ? new Date(part.updated_at).toLocaleString() : '-'} />
               <StackItem label="Sold At" value={part.sold_at ? new Date(part.sold_at).toLocaleString() : '-'} />
@@ -393,7 +394,7 @@ export default function UsedPartDetailPage() {
               <div style={qrImageWrap}>
                 <img src={qrImageUrl} alt="QR Code" style={qrImage} />
               </div>
-              <div style={qrText}>{qrValue}</div>
+              <div style={qrText}>{listingUrl}</div>
             </div>
           </Section>
         </div>
