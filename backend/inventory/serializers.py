@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import DonorCar, InventoryItem, AftermarketPart, ProductImage, Invoice
+from .models import DonorCar, InventoryItem, UsedPart, AftermarketPart, ProductImage, Invoice
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -28,6 +28,15 @@ class InventoryItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = InventoryItem
         fields = '__all__'
+
+
+class UsedPartSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = UsedPart
+        fields = '__all__'
+        read_only_fields = ['sku', 'label_id', 'qr_code_value', 'sold_at', 'created_at', 'updated_at']
 
 
 class AftermarketPartSerializer(serializers.ModelSerializer):

@@ -7,10 +7,11 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import DonorCar, InventoryItem, AftermarketPart, ProductImage, Invoice
+from .models import DonorCar, InventoryItem, UsedPart, AftermarketPart, ProductImage, Invoice
 from .serializers import (
     DonorCarSerializer,
     InventoryItemSerializer,
+    UsedPartSerializer,
     AftermarketPartSerializer,
     ProductImageSerializer,
     InvoiceSerializer,
@@ -64,25 +65,127 @@ class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class UsedPartListCreateView(generics.ListCreateAPIView):
-    queryset = InventoryItem.objects.select_related('donor_car').all().order_by('-id')
-    serializer_class = InventoryItemSerializer
+    queryset = UsedPart.objects.all().order_by('-id')
+    serializer_class = UsedPartSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    def get_queryset(self):
+        queryset = UsedPart.objects.all().order_by('-id')
+
+        category = self.request.query_params.get('category')
+        search = self.request.query_params.get('search')
+        sale_status = self.request.query_params.get('sale_status')
+        usage_type = self.request.query_params.get('usage_type')
+        condition = self.request.query_params.get('condition')
+        grade = self.request.query_params.get('grade')
+        make = self.request.query_params.get('make')
+        model = self.request.query_params.get('model')
+        location = self.request.query_params.get('location')
+
+        if category and category != 'All':
+            queryset = queryset.filter(category=category)
+
+        if sale_status and sale_status != 'All':
+            queryset = queryset.filter(sale_status=sale_status)
+
+        if usage_type and usage_type != 'All':
+            queryset = queryset.filter(usage_type=usage_type)
+
+        if condition and condition != 'All':
+            queryset = queryset.filter(condition=condition)
+
+        if grade and grade != 'All':
+            queryset = queryset.filter(grade=grade)
+
+        if make:
+            queryset = queryset.filter(make__icontains=make)
+
+        if model:
+            queryset = queryset.filter(model__icontains=model)
+
+        if location:
+            queryset = queryset.filter(location__icontains=location)
+
+        if search:
+            queryset = queryset.filter(
+                Q(part_name__icontains=search) |
+                Q(part_number__icontains=search) |
+                Q(category__icontains=search) |
+                Q(subcategory__icontains=search) |
+                Q(make__icontains=search) |
+                Q(model__icontains=search) |
+                Q(variant__icontains=search) |
+                Q(description__icontains=search) |
+                Q(condition_notes__icontains=search) |
+                Q(public_notes__icontains=search) |
+                Q(internal_notes__icontains=search) |
+                Q(sku__icontains=search) |
+                Q(label_id__icontains=search) |
+                Q(qr_code_value__icontains=search) |
+                Q(location__icontains=search) |
+                Q(shelf_code__icontains=search)
+            ).distinct()
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        used_part = serializer.save()
+
+        images = request.FILES.getlist('images')
+        for index, img in enumerate(images):
+            ProductImage.objects.create(
+                used_part=used_part,
+                image=img,
+                is_main=(index == 0),
+            )
+
+        response_serializer = UsedPartSerializer(
+            used_part,
+            context={'request': request}
+        )
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED
+        )
 
 
 class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = InventoryItem.objects.select_related('donor_car').all()
-    serializer_class = InventoryItemSerializer
+    queryset = UsedPart.objects.all()
+    serializer_class = UsedPartSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        used_part = serializer.save()
+
+        images = request.FILES.getlist('images')
+        for index, img in enumerate(images):
+            ProductImage.objects.create(
+                used_part=used_part,
+                image=img,
+                is_main=(index == 0 and not used_part.images.filter(is_main=True).exists()),
+            )
+
+        response_serializer = UsedPartSerializer(
+            used_part,
+            context={'request': request}
+        )
+        return Response(response_serializer.data)
 
 
 class AftermarketListCreateView(generics.ListCreateAPIView):
@@ -240,14 +343,20 @@ class GlobalSearchView(APIView):
         if not query:
             return Response({"used": [], "aftermarket": []})
 
-        used_parts = InventoryItem.objects.select_related('donor_car').filter(
+        used_parts = UsedPart.objects.filter(
             Q(part_name__icontains=query) |
-            Q(label_id__icontains=query) |
+            Q(part_number__icontains=query) |
             Q(category__icontains=query) |
+            Q(subcategory__icontains=query) |
+            Q(make__icontains=query) |
+            Q(model__icontains=query) |
+            Q(variant__icontains=query) |
+            Q(description__icontains=query) |
+            Q(sku__icontains=query) |
+            Q(label_id__icontains=query) |
+            Q(qr_code_value__icontains=query) |
             Q(location__icontains=query) |
-            Q(donor_car__stock_number__icontains=query) |
-            Q(donor_car__vin__icontains=query) |
-            Q(donor_car__rego__icontains=query)
+            Q(shelf_code__icontains=query)
         ).distinct()[:50]
 
         aftermarket_parts = AftermarketPart.objects.filter(
@@ -262,7 +371,7 @@ class GlobalSearchView(APIView):
         ).distinct()[:50]
 
         return Response({
-            "used": InventoryItemSerializer(
+            "used": UsedPartSerializer(
                 used_parts,
                 many=True,
                 context={'request': request}
@@ -293,7 +402,7 @@ class BusinessSummaryView(APIView):
     def get(self, request):
         try:
             revenue = Invoice.objects.aggregate(total=Sum('total_amount'))['total'] or 0
-            used_parts_count = InventoryItem.objects.count()
+            used_parts_count = UsedPart.objects.count()
             aftermarket_count = AftermarketPart.objects.count()
             low_stock_alerts = AftermarketPart.objects.filter(
                 quantity__lte=F('min_stock_level')
@@ -348,7 +457,9 @@ def set_main_image(request, image_id):
     try:
         image = ProductImage.objects.get(id=image_id)
 
-        if image.inventory_item:
+        if image.used_part:
+            ProductImage.objects.filter(used_part=image.used_part).update(is_main=False)
+        elif image.inventory_item:
             ProductImage.objects.filter(inventory_item=image.inventory_item).update(is_main=False)
         elif image.donor_car:
             ProductImage.objects.filter(donor_car=image.donor_car).update(is_main=False)
