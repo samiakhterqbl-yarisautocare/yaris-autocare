@@ -19,6 +19,7 @@ const UsedPartsModule = lazy(() => import('./UsedPartsModule'));
 const UsedPartAddPage = lazy(() => import('./UsedPartAddPage'));
 const UsedPartDetailPage = lazy(() => import('./UsedPartDetailPage'));
 const UsedPartEditPage = lazy(() => import('./UsedPartEditPage'));
+const UsedPartLabelPage = lazy(() => import('./UsedPartLabelPage'));
 const InventoryMasterModule = lazy(() => import('./InventoryMasterModule'));
 const DonorCarDetailView = lazy(() => import('./DonorCarDetailView'));
 
@@ -109,6 +110,7 @@ export default function App() {
                 <Route path="/used-parts/add" element={<UsedPartAddPage />} />
                 <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
                 <Route path="/used-parts/:id/edit" element={<UsedPartEditPage />} />
+                <Route path="/used-parts/:id/label" element={<UsedPartLabelPage />} />
 
                 <Route path="/aftermarket" element={<AftermarketModule />} />
                 <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
