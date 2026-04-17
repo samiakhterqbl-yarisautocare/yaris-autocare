@@ -18,6 +18,14 @@ import {
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
+const resolveImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  return `${API_URL}${imageUrl}`;
+};
+
 const COLORS = {
   primary: '#ef4444',
   dark: '#0f172a',
@@ -307,6 +315,7 @@ const AftermarketEditPage = () => {
                 Product Gallery
               </h4>
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 style={addPhotoBtn}
               >
@@ -328,13 +337,14 @@ const AftermarketEditPage = () => {
                   }}
                 >
                   <img
-                    src={img.image}
+                    src={resolveImageUrl(img.image)}
                     alt="existing"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   {mainPhotoId === `existing-${img.id}` && <div style={mainBadge}>MAIN</div>}
                   <div style={thumbOverlay}>
                     <button
+                      type="button"
                       onClick={() => setMainPhotoId(`existing-${img.id}`)}
                       style={actionIcon}
                     >
@@ -344,6 +354,7 @@ const AftermarketEditPage = () => {
                       />
                     </button>
                     <button
+                      type="button"
                       onClick={() => deleteExistingPhoto(img.id)}
                       style={actionIcon}
                     >
@@ -371,10 +382,10 @@ const AftermarketEditPage = () => {
                   />
                   {mainPhotoId === img.id && <div style={mainBadge}>MAIN</div>}
                   <div style={thumbOverlay}>
-                    <button onClick={() => setMainPhotoId(img.id)} style={actionIcon}>
+                    <button type="button" onClick={() => setMainPhotoId(img.id)} style={actionIcon}>
                       <Star size={13} fill={mainPhotoId === img.id ? COLORS.primary : 'none'} />
                     </button>
-                    <button onClick={() => deleteNewPhoto(img.id)} style={actionIcon}>
+                    <button type="button" onClick={() => deleteNewPhoto(img.id)} style={actionIcon}>
                       <Trash2 size={13} />
                     </button>
                   </div>
