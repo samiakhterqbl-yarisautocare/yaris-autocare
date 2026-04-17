@@ -1,53 +1,111 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  ArrowLeft,
+  Save,
+  X,
   MapPin,
   Truck,
   DollarSign,
-  ClipboardList,
-  AlertCircle,
-  Edit2,
   Tag,
+  Camera,
+  Trash2,
+  Star,
+  AlertCircle,
   Layers,
-  Package,
-  Calendar
+  Barcode
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const COLORS = {
   primary: '#ef4444',
-  primarySoft: '#fef2f2',
   dark: '#0f172a',
   border: '#e2e8f0',
   bg: '#f8fafc',
   slate: '#64748b',
-  lightText: '#94a3b8'
+  white: '#ffffff'
 };
 
-const AftermarketDetailPage = () => {
+const CATEGORY_OPTIONS = [
+  'Oil Filters',
+  'Air Filters',
+  'Cabin Filters',
+  'Fuel Filters',
+  'Brake Pads',
+  'Brake Rotors',
+  'Spark Plugs',
+  'Ignition Coils',
+  'Wiper Blades',
+  'Bulbs',
+  'Sensors',
+  'Suspension',
+  'Cooling',
+  'Belts',
+  'Batteries',
+  'Fluids',
+  'Accessories',
+  'Other'
+];
+
+const STATUS_OPTIONS = ['Available', 'Out of Stock', 'Inactive'];
+
+const AftermarketEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(null);
+  const fileInputRef = useRef(null);
+
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [existingImages, setExistingImages] = useState([]);
+  const [newImages, setNewImages] = useState([]);
+  const [mainPhotoId, setMainPhotoId] = useState(null);
+
+  const [formData, setFormData] = useState({
+    part_name: '',
+    category: 'Other',
+    description: '',
+    quantity: 0,
+    min_stock_level: 5,
+    cost_price: '',
+    sale_price: '',
+    location: '',
+    supplier: '',
+    status: 'Available',
+    sku: '',
+    label_id: ''
+  });
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
         const response = await axios.get(`${API_URL}/api/aftermarket/${id}/`);
-        setProduct(response.data);
+        const data = response.data;
 
-        if (response.data?.images?.length) {
-          const main = response.data.images.find((img) => img.is_main) || response.data.images[0];
-          setSelectedImage(main);
-        }
+        setFormData({
+          part_name: data.part_name || '',
+          category: data.category || 'Other',
+          description: data.description || '',
+          quantity: data.quantity ?? 0,
+          min_stock_level: data.min_stock_level ?? 5,
+          cost_price: data.cost_price ?? '',
+          sale_price: data.sale_price ?? '',
+          location: data.location || '',
+          supplier: data.supplier || '',
+          status: data.status || 'Available',
+          sku: data.sku || '',
+          label_id: data.label_id || ''
+        });
+
+        const imgs = Array.isArray(data.images) ? data.images : [];
+        setExistingImages(imgs);
+
+        const main = imgs.find((img) => img.is_main) || imgs[0] || null;
+        setMainPhotoId(main ? `existing-${main.id}` : null);
       } catch (error) {
-        console.error('Failed to load product:', error);
-        alert('Failed to load product details.');
+        console.error('Failed to load product for edit:', error);
+        alert('Failed to load product.');
       } finally {
         setLoading(false);
       }
@@ -56,168 +114,402 @@ const AftermarketDetailPage = () => {
     fetchProduct();
   }, [id]);
 
-  const stockState = useMemo(() => {
-    if (!product) return null;
-    const qty = Number(product.quantity) || 0;
-    const min = Number(product.min_stock_level) || 0;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    if (qty <= 0) return { label: 'Out of Stock', color: '#991b1b', bg: '#fee2e2' };
-    if (qty <= min) return { label: 'Low Stock', color: '#92400e', bg: '#fef3c7' };
-    return { label: product.status || 'Available', color: '#166534', bg: '#dcfce7' };
-  }, [product]);
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    const mapped = files.map((file) => ({
+      id: `new-${Math.random().toString(36).slice(2, 11)}`,
+      file,
+      url: URL.createObjectURL(file)
+    }));
+
+    const updated = [...newImages, ...mapped];
+    setNewImages(updated);
+
+    if (!mainPhotoId && updated.length > 0) {
+      setMainPhotoId(updated[0].id);
+    }
+  };
+
+  const deleteExistingPhoto = (imageId) => {
+    const updated = existingImages.filter((img) => img.id !== imageId);
+    setExistingImages(updated);
+
+    if (mainPhotoId === `existing-${imageId}`) {
+      const nextExisting = updated[0];
+      const nextNew = newImages[0];
+      setMainPhotoId(
+        nextExisting ? `existing-${nextExisting.id}` : nextNew ? nextNew.id : null
+      );
+    }
+  };
+
+  const deleteNewPhoto = (imageId) => {
+    const updated = newImages.filter((img) => img.id !== imageId);
+    setNewImages(updated);
+
+    if (mainPhotoId === imageId) {
+      const nextExisting = existingImages[0];
+      const nextNew = updated[0];
+      setMainPhotoId(
+        nextExisting ? `existing-${nextExisting.id}` : nextNew ? nextNew.id : null
+      );
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.part_name.trim()) {
+      alert('Product name is required.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const payload = new FormData();
+      payload.append('part_name', formData.part_name.trim());
+      payload.append('category', formData.category || 'Other');
+      payload.append('description', formData.description || '');
+      payload.append('quantity', String(parseInt(formData.quantity, 10) || 0));
+      payload.append('min_stock_level', String(parseInt(formData.min_stock_level, 10) || 5));
+      payload.append('cost_price', String(parseFloat(formData.cost_price) || 0));
+      payload.append('sale_price', String(parseFloat(formData.sale_price) || 0));
+      payload.append('location', formData.location || '');
+      payload.append('supplier', formData.supplier || '');
+      payload.append('status', formData.status || 'Available');
+
+      existingImages.forEach((img) => {
+        payload.append('existing_image_ids', String(img.id));
+      });
+
+      newImages.forEach((img) => {
+        payload.append('images', img.file);
+      });
+
+      if (mainPhotoId) {
+        payload.append('main_photo_id', mainPhotoId);
+      }
+
+      const response = await axios.patch(`${API_URL}/api/aftermarket/${id}/`, payload, {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+
+      if (response.status === 200) {
+        alert('Product updated successfully.');
+        navigate(`/aftermarket/${id}`);
+      }
+    } catch (error) {
+      console.error('Update failed:', error.response?.data || error.message);
+      alert('Error: ' + JSON.stringify(error.response?.data || 'Update failed'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
-    return <div style={loadingStyle}>Loading product details...</div>;
-  }
-
-  if (!product) {
-    return <div style={loadingStyle}>Product not found.</div>;
+    return <div style={loadingStyle}>Loading product for edit...</div>;
   }
 
   return (
     <div style={pageStyle}>
-      <div style={headerRow}>
-        <button onClick={() => navigate('/aftermarket')} style={backBtn}>
-          <ArrowLeft size={18} />
-          Back to Inventory
-        </button>
+      <div style={headerStyle}>
+        <div>
+          <h2 style={titleStyle}>Edit Product</h2>
+          <p style={subtitleStyle}>
+            SKU: <span style={{ color: COLORS.primary, fontWeight: '900' }}>{formData.sku}</span>
+          </p>
+        </div>
 
-        <button onClick={() => navigate(`/aftermarket/edit/${id}`)} style={editBtn}>
-          <Edit2 size={16} />
-          Edit Product
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => navigate(-1)} style={secondaryBtn}>
+            <X size={18} />
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving} style={primaryBtn}>
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
-      <div style={mainGrid}>
-        <div>
-          <div style={mainImageCard}>
-            {selectedImage?.image ? (
-              <img
-                src={selectedImage.image}
-                alt={product.part_name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      <div style={gridStyle}>
+        <div style={columnStyle}>
+          <div style={cardStyle}>
+            <h4 style={sectionTitle}>General Information</h4>
+
+            <div style={inputGroup}>
+              <label style={labelStyle}>Product Name</label>
+              <input
+                name="part_name"
+                value={formData.part_name}
+                onChange={handleChange}
+                style={inputStyle}
               />
-            ) : (
-              <div style={{ color: '#cbd5e1', textAlign: 'center' }}>
-                <Package size={64} />
-                <p style={{ fontWeight: '700', marginTop: '10px' }}>No product image</p>
+            </div>
+
+            <div style={inputGroup}>
+              <label style={labelStyle}>Category</label>
+              <div style={iconInput}>
+                <Layers size={16} color={COLORS.slate} />
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  style={bareInput}
+                >
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+            </div>
+
+            <div style={inputGroup}>
+              <label style={labelStyle}>Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                style={{ ...inputStyle, height: '110px', resize: 'none' }}
+              />
+            </div>
+
+            <div style={twoColGrid}>
+              <div style={inputGroup}>
+                <label style={labelStyle}>SKU</label>
+                <div style={iconInput}>
+                  <Barcode size={16} color={COLORS.slate} />
+                  <input value={formData.sku} disabled style={{ ...bareInput, color: COLORS.slate }} />
+                </div>
+              </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>Label ID</label>
+                <div style={iconInput}>
+                  <Tag size={16} color={COLORS.slate} />
+                  <input value={formData.label_id} disabled style={{ ...bareInput, color: COLORS.slate }} />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {Array.isArray(product.images) && product.images.length > 0 && (
-            <div style={thumbStrip}>
-              {product.images.map((img) => (
-                <button
-                  key={img.id}
-                  onClick={() => setSelectedImage(img)}
+          <div style={cardStyle}>
+            <div style={galleryHeader}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: COLORS.dark }}>
+                Product Gallery
+              </h4>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={addPhotoBtn}
+              >
+                <Camera size={14} />
+                Add Photos
+              </button>
+            </div>
+
+            <div style={galleryGrid}>
+              {existingImages.map((img) => (
+                <div
+                  key={`existing-${img.id}`}
                   style={{
-                    ...thumbBtn,
+                    ...thumbWrapper,
                     border:
-                      selectedImage?.id === img.id
+                      mainPhotoId === `existing-${img.id}`
                         ? `2px solid ${COLORS.primary}`
                         : `1px solid ${COLORS.border}`
                   }}
                 >
                   <img
                     src={img.image}
-                    alt="thumb"
+                    alt="existing"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                </button>
+                  {mainPhotoId === `existing-${img.id}` && <div style={mainBadge}>MAIN</div>}
+                  <div style={thumbOverlay}>
+                    <button
+                      onClick={() => setMainPhotoId(`existing-${img.id}`)}
+                      style={actionIcon}
+                    >
+                      <Star
+                        size={13}
+                        fill={mainPhotoId === `existing-${img.id}` ? COLORS.primary : 'none'}
+                      />
+                    </button>
+                    <button
+                      onClick={() => deleteExistingPhoto(img.id)}
+                      style={actionIcon}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
               ))}
-            </div>
-          )}
 
-          <div style={cardStyle}>
-            <h3 style={sectionTitle}>
-              <ClipboardList size={20} color={COLORS.primary} />
-              Product Description
-            </h3>
-            <p style={descriptionStyle}>
-              {product.description || 'No description available for this product.'}
-            </p>
+              {newImages.map((img) => (
+                <div
+                  key={img.id}
+                  style={{
+                    ...thumbWrapper,
+                    border:
+                      mainPhotoId === img.id
+                        ? `2px solid ${COLORS.primary}`
+                        : `1px solid ${COLORS.border}`
+                  }}
+                >
+                  <img
+                    src={img.url}
+                    alt="new"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  {mainPhotoId === img.id && <div style={mainBadge}>MAIN</div>}
+                  <div style={thumbOverlay}>
+                    <button onClick={() => setMainPhotoId(img.id)} style={actionIcon}>
+                      <Star size={13} fill={mainPhotoId === img.id ? COLORS.primary : 'none'} />
+                    </button>
+                    <button onClick={() => deleteNewPhoto(img.id)} style={actionIcon}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div onClick={() => fileInputRef.current?.click()} style={uploadPlaceholder}>
+                <Camera size={24} />
+                <span style={{ marginTop: '6px', fontSize: '11px', fontWeight: '800' }}>
+                  ADD PHOTO
+                </span>
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handlePhotoUpload}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div>
-          <div style={{ marginBottom: '24px' }}>
-            <h1 style={productTitle}>{product.part_name}</h1>
-            <div style={chipRow}>
-              <span style={chip}>SKU: {product.sku || '-'}</span>
-              <span style={chip}>Label ID: {product.label_id || '-'}</span>
+        <div style={columnStyle}>
+          <div style={cardStyle}>
+            <h4 style={sectionTitle}>
+              <AlertCircle size={16} />
+              Stock Control
+            </h4>
+
+            <div style={twoColGrid}>
+              <div style={inputGroup}>
+                <label style={labelStyle}>Quantity</label>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>Min Stock Alert</label>
+                <input
+                  type="number"
+                  name="min_stock_level"
+                  value={formData.min_stock_level}
+                  onChange={handleChange}
+                  style={inputStyle}
+                />
+              </div>
             </div>
-          </div>
 
-          <div style={infoGrid}>
-            <DetailBox label="Category" value={product.category || '-'} icon={<Layers size={16} />} />
-            <DetailBox label="Supplier" value={product.supplier || '-'} icon={<Truck size={16} />} />
-            <DetailBox label="Location" value={product.location || '-'} icon={<MapPin size={16} />} />
-            <DetailBox label="Status" value={product.status || '-'} icon={<Tag size={16} />} />
-            <DetailBox
-              label="Cost Price"
-              value={`$${Number(product.cost_price || 0).toFixed(2)}`}
-              icon={<DollarSign size={16} />}
-            />
-            <DetailBox
-              label="Sale Price"
-              value={`$${Number(product.sale_price || 0).toFixed(2)}`}
-              icon={<DollarSign size={16} />}
-            />
-            <DetailBox
-              label="Created"
-              value={
-                product.created_at
-                  ? new Date(product.created_at).toLocaleDateString()
-                  : '-'
-              }
-              icon={<Calendar size={16} />}
-            />
-            <DetailBox
-              label="Minimum Stock"
-              value={String(product.min_stock_level ?? 0)}
-              icon={<AlertCircle size={16} />}
-            />
-          </div>
+            <div style={inputGroup}>
+              <label style={labelStyle}>Warehouse Location</label>
+              <div style={iconInput}>
+                <MapPin size={16} />
+                <input
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  style={bareInput}
+                />
+              </div>
+            </div>
 
-          <div style={stockCard}>
-            <h4 style={stockLabel}>Current Stock</h4>
-            <div style={stockValue}>{product.quantity ?? 0} Units</div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: stockState.bg,
-                color: stockState.color,
-                borderRadius: '999px',
-                padding: '8px 12px',
-                fontWeight: '800',
-                fontSize: '13px'
-              }}
-            >
-              <AlertCircle size={14} />
-              {stockState.label}
+            <div style={inputGroup}>
+              <label style={labelStyle}>Status</label>
+              <div style={iconInput}>
+                <Tag size={16} />
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  style={bareInput}
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
           <div style={cardStyle}>
-            <h3 style={sectionTitle}>Inventory Notes</h3>
-            <div style={noteRow}>
-              <div style={noteLabel}>Reorder Alert Level</div>
-              <div style={noteValue}>{product.min_stock_level ?? 0}</div>
+            <h4 style={sectionTitle}>
+              <DollarSign size={16} />
+              Pricing & Supplier
+            </h4>
+
+            <div style={inputGroup}>
+              <label style={labelStyle}>Supplier</label>
+              <div style={iconInput}>
+                <Truck size={16} />
+                <input
+                  name="supplier"
+                  value={formData.supplier}
+                  onChange={handleChange}
+                  style={bareInput}
+                />
+              </div>
             </div>
-            <div style={noteRow}>
-              <div style={noteLabel}>Available Quantity</div>
-              <div style={noteValue}>{product.quantity ?? 0}</div>
+
+            <div style={inputGroup}>
+              <label style={labelStyle}>Cost Price</label>
+              <div style={iconInput}>
+                <DollarSign size={16} />
+                <input
+                  type="number"
+                  step="0.01"
+                  name="cost_price"
+                  value={formData.cost_price}
+                  onChange={handleChange}
+                  style={bareInput}
+                />
+              </div>
             </div>
-            <div style={noteRow}>
-              <div style={noteLabel}>Category</div>
-              <div style={noteValue}>{product.category || '-'}</div>
-            </div>
-            <div style={noteRow}>
-              <div style={noteLabel}>Supplier</div>
-              <div style={noteValue}>{product.supplier || '-'}</div>
+
+            <div style={inputGroup}>
+              <label style={labelStyle}>Sale Price</label>
+              <div style={iconInput}>
+                <Tag size={16} color={COLORS.primary} />
+                <input
+                  type="number"
+                  step="0.01"
+                  name="sale_price"
+                  value={formData.sale_price}
+                  onChange={handleChange}
+                  style={bareInput}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -226,47 +518,114 @@ const AftermarketDetailPage = () => {
   );
 };
 
-const DetailBox = ({ label, value, icon }) => (
-  <div style={detailBox}>
-    <div style={detailLabel}>{label}</div>
-    <div style={detailValue}>
-      {React.cloneElement(icon, { color: COLORS.primary, size: 16 })}
-      {value}
-    </div>
-  </div>
-);
-
 const pageStyle = {
-  padding: '30px',
-  maxWidth: '1300px',
+  padding: '32px',
+  maxWidth: '1200px',
   margin: '0 auto',
   backgroundColor: COLORS.bg,
   minHeight: '100vh'
 };
 
-const headerRow = {
+const headerStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  marginBottom: '24px'
+  marginBottom: '28px'
 };
 
-const backBtn = {
-  background: 'none',
+const titleStyle = {
+  margin: 0,
+  fontWeight: '900',
+  fontSize: '30px',
+  color: COLORS.dark
+};
+
+const subtitleStyle = {
+  color: COLORS.slate,
+  margin: '6px 0 0 0'
+};
+
+const gridStyle = {
+  display: 'grid',
+  gridTemplateColumns: '1.5fr 1fr',
+  gap: '28px'
+};
+
+const columnStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '24px'
+};
+
+const cardStyle = {
+  backgroundColor: '#fff',
+  padding: '24px',
+  borderRadius: '20px',
+  border: `1px solid ${COLORS.border}`,
+  boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+};
+
+const inputGroup = {
+  marginBottom: '18px'
+};
+
+const labelStyle = {
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: '800',
+  color: COLORS.slate,
+  marginBottom: '7px',
+  textTransform: 'uppercase'
+};
+
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '12px',
+  border: `1px solid ${COLORS.border}`,
+  outline: 'none',
+  fontSize: '14px',
+  boxSizing: 'border-box',
+  backgroundColor: COLORS.bg
+};
+
+const iconInput = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '0 12px',
+  borderRadius: '12px',
+  border: `1px solid ${COLORS.border}`,
+  backgroundColor: COLORS.bg
+};
+
+const bareInput = {
   border: 'none',
+  outline: 'none',
+  padding: '12px 0',
+  width: '100%',
+  fontSize: '14px',
+  background: 'transparent'
+};
+
+const sectionTitle = {
+  margin: '0 0 16px 0',
+  fontSize: '14px',
+  fontWeight: '900',
+  color: COLORS.dark,
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  color: COLORS.slate,
-  cursor: 'pointer',
-  fontWeight: '800'
+  borderBottom: `1px solid ${COLORS.border}`,
+  paddingBottom: '10px',
+  textTransform: 'uppercase'
 };
 
-const editBtn = {
-  backgroundColor: COLORS.dark,
+const primaryBtn = {
+  backgroundColor: COLORS.primary,
   color: '#fff',
   border: 'none',
-  padding: '11px 18px',
+  padding: '12px 22px',
   borderRadius: '12px',
   fontWeight: '900',
   cursor: 'pointer',
@@ -275,162 +634,102 @@ const editBtn = {
   gap: '8px'
 };
 
-const mainGrid = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1.1fr',
-  gap: '32px'
-};
-
-const mainImageCard = {
+const secondaryBtn = {
   backgroundColor: '#fff',
-  borderRadius: '22px',
+  color: COLORS.dark,
   border: `1px solid ${COLORS.border}`,
-  height: '420px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: '16px',
-  overflow: 'hidden'
-};
-
-const thumbStrip = {
-  display: 'flex',
-  gap: '10px',
-  marginBottom: '20px',
-  flexWrap: 'wrap'
-};
-
-const thumbBtn = {
-  width: '82px',
-  height: '82px',
+  padding: '12px 22px',
   borderRadius: '12px',
-  overflow: 'hidden',
+  fontWeight: '800',
   cursor: 'pointer',
-  backgroundColor: '#fff',
-  padding: 0
-};
-
-const cardStyle = {
-  backgroundColor: '#fff',
-  padding: '24px',
-  borderRadius: '20px',
-  border: `1px solid ${COLORS.border}`
-};
-
-const sectionTitle = {
-  margin: '0 0 14px 0',
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
-  fontSize: '18px',
-  fontWeight: '900',
-  color: COLORS.dark
+  gap: '8px'
 };
 
-const descriptionStyle = {
-  margin: 0,
-  fontSize: '15px',
-  color: '#475569',
-  lineHeight: 1.7
-};
-
-const productTitle = {
-  margin: 0,
-  fontSize: '34px',
-  fontWeight: '900',
-  color: COLORS.dark,
-  letterSpacing: '-0.8px'
-};
-
-const chipRow = {
-  display: 'flex',
-  gap: '10px',
-  flexWrap: 'wrap',
-  marginTop: '12px'
-};
-
-const chip = {
-  display: 'inline-block',
-  backgroundColor: COLORS.primarySoft,
-  color: COLORS.primary,
-  padding: '7px 12px',
-  borderRadius: '10px',
-  fontWeight: '800',
-  fontSize: '13px'
-};
-
-const infoGrid = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '14px',
-  marginBottom: '24px'
-};
-
-const detailBox = {
-  padding: '18px',
-  backgroundColor: '#fff',
-  borderRadius: '16px',
-  border: `1px solid ${COLORS.border}`
-};
-
-const detailLabel = {
-  fontSize: '11px',
-  fontWeight: '800',
-  color: COLORS.slate,
-  marginBottom: '8px',
-  textTransform: 'uppercase'
-};
-
-const detailValue = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  fontWeight: '800',
-  color: COLORS.dark,
-  fontSize: '15px'
-};
-
-const stockCard = {
-  backgroundColor: COLORS.dark,
-  padding: '28px',
-  borderRadius: '24px',
-  color: '#fff',
-  marginBottom: '24px',
-  textAlign: 'center'
-};
-
-const stockLabel = {
-  margin: 0,
-  fontSize: '12px',
-  color: COLORS.lightText,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase'
-};
-
-const stockValue = {
-  fontSize: '40px',
-  fontWeight: '900',
-  margin: '10px 0 14px 0'
-};
-
-const noteRow = {
+const galleryHeader = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: '12px',
-  padding: '12px 0',
-  borderBottom: `1px solid ${COLORS.border}`
+  alignItems: 'center',
+  marginBottom: '14px'
 };
 
-const noteLabel = {
-  fontSize: '14px',
+const addPhotoBtn = {
+  fontSize: '12px',
+  color: COLORS.primary,
+  background: 'none',
+  border: 'none',
+  fontWeight: '900',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px'
+};
+
+const galleryGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+  gap: '14px'
+};
+
+const thumbWrapper = {
+  position: 'relative',
+  height: '120px',
+  borderRadius: '14px',
+  overflow: 'hidden',
+  backgroundColor: COLORS.bg
+};
+
+const thumbOverlay = {
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  height: '36px',
+  backgroundColor: 'rgba(15, 23, 42, 0.82)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '10px'
+};
+
+const actionIcon = {
+  background: 'none',
+  border: 'none',
+  color: '#fff',
+  cursor: 'pointer',
+  padding: '5px'
+};
+
+const mainBadge = {
+  position: 'absolute',
+  top: '8px',
+  left: '8px',
+  backgroundColor: COLORS.primary,
+  color: '#fff',
+  fontSize: '9px',
+  fontWeight: '900',
+  padding: '3px 8px',
+  borderRadius: '5px'
+};
+
+const uploadPlaceholder = {
+  border: `2px dashed ${COLORS.border}`,
+  borderRadius: '14px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
   color: COLORS.slate,
-  fontWeight: '700'
+  height: '120px',
+  backgroundColor: '#fff'
 };
 
-const noteValue = {
-  fontSize: '14px',
-  color: COLORS.dark,
-  fontWeight: '800'
+const twoColGrid = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '14px'
 };
 
 const loadingStyle = {
@@ -440,4 +739,4 @@ const loadingStyle = {
   fontWeight: '700'
 };
 
-export default AftermarketDetailPage;
+export default AftermarketEditPage;
