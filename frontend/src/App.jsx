@@ -99,6 +99,7 @@ export default function App() {
                 <Route path="/used-parts" element={<UsedPartsModule />} />
                 <Route path="/used-parts/add" element={<UsedPartAddPage />} />
                 <Route path="/used-parts/:id" element={<UsedPartDetailPage />} />
+                <Route path="/used-parts/:id/edit" element={<UsedPartEditPage />} />
                 <Route path="/aftermarket" element={<AftermarketModule />} />
                 <Route path="/aftermarket/new" element={<AftermarketNewPage />} />
                 <Route path="/aftermarket/edit/:id" element={<AftermarketEditPage />} />
