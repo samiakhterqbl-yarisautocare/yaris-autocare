@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import QRCode from 'react-qr-code';
 import {
   ArrowLeft,
   Edit,
@@ -229,6 +228,10 @@ export default function UsedPartDetailPage() {
     `;
 
     const win = window.open('', '_blank');
+    if (!win) {
+      alert('Popup blocked. Please allow popups for PDF preview.');
+      return;
+    }
     win.document.open();
     win.document.write(html);
     win.document.close();
@@ -377,9 +380,7 @@ export default function UsedPartDetailPage() {
 
           <Section icon={<Printer size={18} />} title="QR Preview">
             <div style={qrCard}>
-              <div style={qrWrap}>
-                <QRCode value={qrValue} size={140} />
-              </div>
+              <div style={qrPlaceholder}>QR will show on label page</div>
               <div style={qrText}>{qrValue}</div>
             </div>
           </Section>
@@ -432,10 +433,7 @@ function MetaChip({ icon, text }) {
   );
 }
 
-const page = {
-  padding: '32px',
-};
-
+const page = { padding: '32px' };
 const backBtn = {
   marginBottom: '18px',
   background: 'none',
@@ -447,7 +445,6 @@ const backBtn = {
   alignItems: 'center',
   gap: '8px',
 };
-
 const heroCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
@@ -459,14 +456,7 @@ const heroCard = {
   flexWrap: 'wrap',
   marginBottom: '24px',
 };
-
-const heroLeft = {
-  display: 'flex',
-  gap: '20px',
-  flexWrap: 'wrap',
-  flex: 1,
-};
-
+const heroLeft = { display: 'flex', gap: '20px', flexWrap: 'wrap', flex: 1 };
 const mainImageWrap = {
   width: '220px',
   height: '220px',
@@ -476,13 +466,7 @@ const mainImageWrap = {
   background: '#f8fafc',
   flexShrink: 0,
 };
-
-const mainImageStyle = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-};
-
+const mainImageStyle = { width: '100%', height: '100%', objectFit: 'cover' };
 const imagePlaceholder = {
   width: '100%',
   height: '100%',
@@ -491,19 +475,8 @@ const imagePlaceholder = {
   justifyContent: 'center',
   color: '#94a3b8',
 };
-
-const heroInfo = {
-  flex: 1,
-  minWidth: '280px',
-};
-
-const badgeRow = {
-  display: 'flex',
-  gap: '10px',
-  flexWrap: 'wrap',
-  marginBottom: '14px',
-};
-
+const heroInfo = { flex: 1, minWidth: '280px' };
+const badgeRow = { display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' };
 const categoryBadge = {
   padding: '7px 12px',
   borderRadius: '999px',
@@ -512,7 +485,6 @@ const categoryBadge = {
   fontWeight: '800',
   fontSize: '12px',
 };
-
 const statusBadge = {
   padding: '7px 12px',
   borderRadius: '999px',
@@ -521,27 +493,9 @@ const statusBadge = {
   fontWeight: '800',
   fontSize: '12px',
 };
-
-const title = {
-  margin: 0,
-  fontSize: '34px',
-  fontWeight: '900',
-  color: '#0f172a',
-};
-
-const subtitle = {
-  color: '#64748b',
-  marginTop: '8px',
-  fontWeight: '600',
-};
-
-const heroMetaGrid = {
-  display: 'flex',
-  gap: '12px',
-  flexWrap: 'wrap',
-  marginTop: '18px',
-};
-
+const title = { margin: 0, fontSize: '34px', fontWeight: '900', color: '#0f172a' };
+const subtitle = { color: '#64748b', marginTop: '8px', fontWeight: '600' };
+const heroMetaGrid = { display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '18px' };
 const metaChip = {
   display: 'flex',
   alignItems: 'center',
@@ -554,14 +508,7 @@ const metaChip = {
   fontWeight: '700',
   fontSize: '13px',
 };
-
-const heroActions = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-  minWidth: '180px',
-};
-
+const heroActions = { display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '180px' };
 const actionBtnBase = {
   padding: '14px 16px',
   borderRadius: '14px',
@@ -574,54 +521,19 @@ const actionBtnBase = {
   justifyContent: 'center',
   gap: '8px',
 };
-
-const darkBtn = {
-  ...actionBtnBase,
-  background: '#0f172a',
-};
-
-const greenBtn = {
-  ...actionBtnBase,
-  background: '#16a34a',
-};
-
-const redBtn = {
-  ...actionBtnBase,
-  background: '#ef4444',
-};
-
-const contentGrid = {
-  display: 'grid',
-  gridTemplateColumns: '1.5fr 1fr',
-  gap: '24px',
-};
-
-const leftColumn = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-};
-
-const rightColumn = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-};
-
+const darkBtn = { ...actionBtnBase, background: '#0f172a' };
+const greenBtn = { ...actionBtnBase, background: '#16a34a' };
+const redBtn = { ...actionBtnBase, background: '#ef4444' };
+const contentGrid = { display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' };
+const leftColumn = { display: 'flex', flexDirection: 'column', gap: '24px' };
+const rightColumn = { display: 'flex', flexDirection: 'column', gap: '24px' };
 const sectionCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
   borderRadius: '24px',
   padding: '24px',
 };
-
-const sectionHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  marginBottom: '18px',
-};
-
+const sectionHeader = { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' };
 const sectionIcon = {
   width: '40px',
   height: '40px',
@@ -632,32 +544,15 @@ const sectionIcon = {
   alignItems: 'center',
   justifyContent: 'center',
 };
-
-const sectionTitle = {
-  margin: 0,
-  fontSize: '18px',
-  fontWeight: '900',
-  color: '#0f172a',
-};
-
-const infoGrid = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '14px',
-};
-
+const sectionTitle = { margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' };
+const infoGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' };
 const infoCard = {
   padding: '14px',
   borderRadius: '16px',
   border: '1px solid #e2e8f0',
   background: '#fafafa',
 };
-
-const infoCardWide = {
-  ...infoCard,
-  gridColumn: '1 / -1',
-};
-
+const infoCardWide = { ...infoCard, gridColumn: '1 / -1' };
 const infoLabel = {
   fontSize: '12px',
   fontWeight: '800',
@@ -665,20 +560,17 @@ const infoLabel = {
   marginBottom: '6px',
   textTransform: 'uppercase',
 };
-
 const infoValue = {
   fontSize: '14px',
   fontWeight: '700',
   color: '#0f172a',
   wordBreak: 'break-word',
 };
-
 const galleryGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
   gap: '14px',
 };
-
 const galleryCard = {
   position: 'relative',
   borderRadius: '16px',
@@ -686,13 +578,7 @@ const galleryCard = {
   border: '1px solid #e2e8f0',
   height: '150px',
 };
-
-const galleryImage = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-};
-
+const galleryImage = { width: '100%', height: '100%', objectFit: 'cover' };
 const mainTag = {
   position: 'absolute',
   top: '8px',
@@ -704,7 +590,6 @@ const mainTag = {
   fontSize: '11px',
   fontWeight: '800',
 };
-
 const emptyBox = {
   padding: '24px',
   borderRadius: '16px',
@@ -713,20 +598,13 @@ const emptyBox = {
   color: '#94a3b8',
   fontWeight: '700',
 };
-
-const stackInfo = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-};
-
+const stackInfo = { display: 'flex', flexDirection: 'column', gap: '12px' };
 const stackItem = {
   padding: '14px',
   borderRadius: '14px',
   border: '1px solid #e2e8f0',
   background: '#fafafa',
 };
-
 const stackLabel = {
   fontSize: '12px',
   fontWeight: '800',
@@ -734,14 +612,12 @@ const stackLabel = {
   marginBottom: '6px',
   textTransform: 'uppercase',
 };
-
 const stackValue = {
   fontSize: '14px',
   fontWeight: '700',
   color: '#0f172a',
   wordBreak: 'break-word',
 };
-
 const qrCard = {
   display: 'flex',
   flexDirection: 'column',
@@ -752,13 +628,20 @@ const qrCard = {
   border: '1px solid #e2e8f0',
   background: '#fafafa',
 };
-
-const qrWrap = {
-  background: '#fff',
-  padding: '16px',
+const qrPlaceholder = {
+  width: '172px',
+  height: '172px',
   borderRadius: '16px',
+  border: '2px dashed #cbd5e1',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#64748b',
+  fontWeight: '700',
+  textAlign: 'center',
+  padding: '12px',
+  background: '#fff',
 };
-
 const qrText = {
   fontWeight: '700',
   color: '#334155',
