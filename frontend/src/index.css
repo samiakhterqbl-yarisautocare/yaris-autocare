@@ -6,28 +6,33 @@
   --text-main: #0f172a;
   --text-muted: #64748b;
   --accent: #ef4444;
-  
+
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--bg);
   color: var(--text-main);
-  /* Resetting the base font size for software density */
-  font-size: 14px; 
+  font-size: 14px;
 }
 
+html,
 body {
   margin: 0;
   padding: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden; /* Stops the body from scrolling so the app panels can scroll independently */
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body {
+  background-color: var(--bg);
 }
 
 #root {
-  width: 100% !important;   /* REMOVE the 1126px limit */
-  max-width: none !important; /* FORCES FULL WIDTH */
-  margin: 0 !important;      /* REMOVE the centering */
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
   padding: 0 !important;
-  text-align: left !important; /* Professional software is left-aligned, not centered */
+  text-align: left !important;
   display: block !important;
   min-height: 100vh;
 }
@@ -43,11 +48,11 @@ h1, h2, h3, h4 {
   color: var(--text-main);
 }
 
-button, input, textarea {
+button, input, textarea, select {
   font-family: inherit;
 }
 
-/* Scrollbar styling for that 'Software' look */
+/* Scrollbar styling for software look */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
