@@ -8,7 +8,6 @@ import {
   MapPin,
   Car,
   CalendarDays,
-  CreditCard,
   StickyNote,
   Wrench,
   Hash,
@@ -44,7 +43,7 @@ export default function InvoiceDetail() {
     if (invoice && shouldAutoPrint) {
       const timer = setTimeout(() => {
         window.print();
-      }, 600);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [invoice, shouldAutoPrint]);
@@ -64,15 +63,27 @@ export default function InvoiceDetail() {
     }
   };
 
+  const items = useMemo(() => {
+    if (!invoice?.items || !Array.isArray(invoice.items)) return [];
+    return invoice.items;
+  }, [invoice]);
+
+  const serviceDetail = invoice?.service_detail || null;
+
+  const documentLabel = useMemo(() => {
+    const notes = String(invoice?.notes || '').toUpperCase();
+    return notes.includes('DOCUMENT TYPE: QUOTE') ? 'QUOTE' : 'TAX INVOICE';
+  }, [invoice]);
+
   const serviceTemplateType = useMemo(() => {
-    if (!invoice) return '';
-    if (invoice.invoice_type !== 'SERVICING') return '';
+    if (!invoice || invoice.invoice_type !== 'SERVICING') return '';
 
-    const itemNames = (invoice.items || []).map((item) => (item.name || '').toLowerCase());
+    const itemNames = items.map((item) => (item.name || '').toLowerCase());
 
-    const majorChecklist = [
+    const majorTemplate = [
       'oil filter replacement',
       'engine oil change',
+      'new sumpplug washer',
       'new sump plug washer',
       'top-ups (brake, power steering, coolant & windscreen washer fluid)',
       'safety checks (underbody components, brakes, globes, horn & tyre pressure)',
@@ -94,17 +105,47 @@ export default function InvoiceDetail() {
       'check front brake pads & rotors',
     ];
 
-    const majorMatches = majorChecklist.filter((line) => itemNames.includes(line)).length;
+    const matches = majorTemplate.filter((line) => itemNames.includes(line)).length;
 
-    if (majorMatches >= 12) return 'Major Service';
-    if (majorMatches >= 5) return 'Regular Service';
+    if (matches >= 12) return 'Major Service';
+    if (matches >= 5) return 'Regular Service';
     return 'Custom Service';
+  }, [invoice, items]);
+
+  const showVehicleSection = useMemo(() => {
+    if (!invoice) return false;
+    if (invoice.invoice_type === 'USED_PART') return false;
+    return Boolean(
+      invoice.rego ||
+        invoice.make ||
+        invoice.model ||
+        invoice.year ||
+        invoice.vin ||
+        invoice.odometer
+    );
+  }, [invoice]);
+
+  const filteredNotes = useMemo(() => {
+    const raw = String(invoice?.notes || '').trim();
+    if (!raw) return '';
+
+    const lines = raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter(
+        (line) =>
+          !line.toUpperCase().startsWith('DOCUMENT TYPE:') &&
+          !line.toUpperCase().startsWith('SERVICE TYPE:')
+      );
+
+    return lines.join('\n\n');
   }, [invoice]);
 
   if (loading) {
     return (
       <div style={pageWrap}>
-        <div style={loadingCard}>Loading invoice...</div>
+        <div style={loadingCard}>Loading document...</div>
       </div>
     );
   }
@@ -120,13 +161,10 @@ export default function InvoiceDetail() {
   if (!invoice) {
     return (
       <div style={pageWrap}>
-        <div style={errorCard}>Invoice not found.</div>
+        <div style={errorCard}>Document not found.</div>
       </div>
     );
   }
-
-  const items = Array.isArray(invoice.items) ? invoice.items : [];
-  const serviceDetail = invoice.service_detail || null;
 
   return (
     <div style={pageWrap}>
@@ -146,7 +184,7 @@ export default function InvoiceDetail() {
           </button>
           <button type="button" style={printBtn} onClick={() => window.print()}>
             <Printer size={16} />
-            Print
+            Print / Save PDF
           </button>
         </div>
       </div>
@@ -157,23 +195,19 @@ export default function InvoiceDetail() {
             <div style={logoBox}>YA</div>
             <div>
               <h1 style={brandTitle}>YARIS AUTOCARE</h1>
-              <div style={brandSub}>
-                Parts • Mechanical Services • Diagnostics • Repairs
-              </div>
-              <div style={brandMeta}>
-                Pyramid Enterprises AU Pty Ltd
-              </div>
+              <div style={brandSub}>Car Rental • Mechanical Services • Auto Parts</div>
+              <div style={brandMeta}>Pyramid Enterprises AU Pty Ltd</div>
             </div>
           </div>
 
           <div style={invoiceMetaCard}>
             <div style={docBadge}>
               <Receipt size={15} />
-              <span>{formatInvoiceType(invoice.invoice_type)}</span>
+              <span>{documentLabel}</span>
             </div>
 
             <div style={metaRow}>
-              <span style={metaLabel}>Invoice No</span>
+              <span style={metaLabel}>Document No</span>
               <strong style={metaValue}>{invoice.invoice_number}</strong>
             </div>
             <div style={metaRow}>
@@ -185,6 +219,10 @@ export default function InvoiceDetail() {
               <strong style={metaValue}>{formatTime(invoice.created_at)}</strong>
             </div>
             <div style={metaRow}>
+              <span style={metaLabel}>Type</span>
+              <strong style={metaValue}>{formatInvoiceType(invoice.invoice_type)}</strong>
+            </div>
+            <div style={metaRowLast}>
               <span style={metaLabel}>Status</span>
               <span
                 style={{
@@ -209,20 +247,28 @@ export default function InvoiceDetail() {
           <div>www.yarisautocare.com.au</div>
         </div>
 
-        <div style={gridTwo}>
-          <InfoCard
-            title="Customer Details"
-            icon={<User size={16} color="#ef4444" />}
-          >
+        <div
+          style={{
+            ...gridTwo,
+            gridTemplateColumns: showVehicleSection
+              ? 'repeat(2, minmax(0, 1fr))'
+              : 'minmax(0, 1fr)',
+          }}
+        >
+          <InfoCard title="Customer Details" icon={<User size={16} color="#ef4444" />}>
             <DetailRow icon={<User size={14} />} label="Customer" value={invoice.customer_name || '-'} />
             <DetailRow icon={<Phone size={14} />} label="Phone" value={invoice.customer_phone || '-'} />
             <DetailRow icon={<Mail size={14} />} label="Email" value={invoice.customer_email || '-'} />
-            <DetailRow
-              icon={<Building2 size={14} />}
-              label="Company"
-              value={invoice.customer_company || '-'}
-            />
-            <DetailRow icon={<Hash size={14} />} label="ABN" value={invoice.customer_abn || '-'} />
+            {invoice.customer_company ? (
+              <DetailRow
+                icon={<Building2 size={14} />}
+                label="Company"
+                value={invoice.customer_company}
+              />
+            ) : null}
+            {invoice.customer_abn ? (
+              <DetailRow icon={<Hash size={14} />} label="ABN" value={invoice.customer_abn} />
+            ) : null}
             <DetailRow
               icon={<MapPin size={14} />}
               label="Address"
@@ -231,25 +277,26 @@ export default function InvoiceDetail() {
             />
           </InfoCard>
 
-          <InfoCard
-            title="Vehicle / Job Details"
-            icon={<Car size={16} color="#ef4444" />}
-          >
-            <DetailRow icon={<Car size={14} />} label="Rego" value={invoice.rego || '-'} />
-            <DetailRow icon={<Car size={14} />} label="Make" value={invoice.make || '-'} />
-            <DetailRow icon={<Car size={14} />} label="Model" value={invoice.model || '-'} />
-            <DetailRow
-              icon={<CalendarDays size={14} />}
-              label="Year"
-              value={invoice.year || '-'}
-            />
-            <DetailRow icon={<Hash size={14} />} label="VIN" value={invoice.vin || '-'} />
-            <DetailRow
-              icon={<Hash size={14} />}
-              label="Odometer"
-              value={invoice.odometer ? `${invoice.odometer} km` : '-'}
-            />
-          </InfoCard>
+          {showVehicleSection && (
+            <InfoCard title="Car Details" icon={<Car size={16} color="#ef4444" />}>
+              <DetailRow icon={<Car size={14} />} label="Rego" value={invoice.rego || '-'} />
+              <DetailRow icon={<Car size={14} />} label="Make" value={invoice.make || '-'} />
+              <DetailRow icon={<Car size={14} />} label="Model" value={invoice.model || '-'} />
+              {invoice.year ? (
+                <DetailRow
+                  icon={<CalendarDays size={14} />}
+                  label="Year"
+                  value={invoice.year}
+                />
+              ) : null}
+              <DetailRow icon={<Hash size={14} />} label="VIN" value={invoice.vin || '-'} />
+              <DetailRow
+                icon={<Hash size={14} />}
+                label="Odometer"
+                value={invoice.odometer ? `${invoice.odometer} km` : '-'}
+              />
+            </InfoCard>
+          )}
         </div>
 
         {invoice.invoice_type === 'SERVICING' && (
@@ -259,7 +306,7 @@ export default function InvoiceDetail() {
                 <Wrench size={18} color="#ef4444" />
                 <h2 style={sectionTitle}>Service Details</h2>
               </div>
-              <div style={serviceTypeBadge}>{serviceTemplateType}</div>
+              {!!serviceTemplateType && <div style={serviceTypeBadge}>{serviceTemplateType}</div>}
             </div>
 
             <div style={gridThree}>
@@ -279,28 +326,13 @@ export default function InvoiceDetail() {
                 title="Next Service Date"
                 value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
               />
-              <ServiceStat
-                title="Oil Grade"
-                value={serviceDetail?.oil_grade || '-'}
-              />
+              <ServiceStat title="Oil Grade" value={serviceDetail?.oil_grade || '-'} />
             </div>
 
-            {(serviceDetail?.service_notes || serviceDetail?.recommendations) && (
-              <div style={gridTwo} className="service-notes-grid">
-                <InfoCard
-                  title="Service Notes"
-                  icon={<StickyNote size={16} color="#ef4444" />}
-                  compact
-                >
-                  <div style={notesText}>{serviceDetail?.service_notes || '-'}</div>
-                </InfoCard>
-
-                <InfoCard
-                  title="Recommendations"
-                  icon={<FileText size={16} color="#ef4444" />}
-                  compact
-                >
-                  <div style={notesText}>{serviceDetail?.recommendations || '-'}</div>
+            {serviceDetail?.service_notes && (
+              <div style={{ marginTop: '20px' }}>
+                <InfoCard title="Service Notes" icon={<StickyNote size={16} color="#ef4444" />} compact>
+                  <div style={notesText}>{serviceDetail.service_notes}</div>
                 </InfoCard>
               </div>
             )}
@@ -312,7 +344,11 @@ export default function InvoiceDetail() {
             <div style={sectionHeadLeft}>
               <Receipt size={18} color="#ef4444" />
               <h2 style={sectionTitle}>
-                {invoice.invoice_type === 'SERVICING' ? 'Service Items / Checklist' : 'Invoice Items'}
+                {invoice.invoice_type === 'SERVICING'
+                  ? 'Service Details'
+                  : invoice.invoice_type === 'USED_PART'
+                  ? 'Parts Details'
+                  : 'Invoice Details'}
               </h2>
             </div>
           </div>
@@ -321,13 +357,13 @@ export default function InvoiceDetail() {
             <table style={itemsTable}>
               <thead>
                 <tr>
-                  <th style={th}>#</th>
-                  <th style={th}>Item / Description</th>
+                  <th style={thNo}>#</th>
+                  <th style={th}>Description</th>
                   <th style={th}>Type</th>
                   <th style={th}>Qty</th>
-                  <th style={th}>Unit Price</th>
+                  <th style={th}>Amount</th>
                   <th style={th}>Discount</th>
-                  <th style={th}>Line Total</th>
+                  <th style={th}>Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -340,8 +376,8 @@ export default function InvoiceDetail() {
                 ) : (
                   items.map((item, index) => (
                     <tr key={item.id || index} style={tr}>
-                      <td style={td}>{index + 1}</td>
-                      <td style={td}>
+                      <td style={tdNo}>{index + 1}</td>
+                      <td style={tdDescription}>
                         <div style={itemName}>{item.name || '-'}</div>
                         {item.description ? (
                           <div style={itemDescription}>{item.description}</div>
@@ -364,7 +400,7 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {invoice.notes && (
+        {filteredNotes && (
           <div style={notesBlock}>
             <div style={sectionHead}>
               <div style={sectionHeadLeft}>
@@ -372,7 +408,7 @@ export default function InvoiceDetail() {
                 <h2 style={sectionTitle}>Notes</h2>
               </div>
             </div>
-            <div style={notesText}>{invoice.notes}</div>
+            <div style={notesText}>{filteredNotes}</div>
           </div>
         )}
 
@@ -384,7 +420,7 @@ export default function InvoiceDetail() {
               <div style={footerText}>Account Name: Pyramid Enterprises AU Pty Ltd</div>
               <div style={footerText}>BSB: 013270</div>
               <div style={footerText}>Account No: 430088057</div>
-              <div style={footerText}>Please email remittance to info@yarisautocare.com.au</div>
+              <div style={footerText}>Please email the remittance to info@yarisautocare.com.au</div>
             </div>
           </div>
 
@@ -393,10 +429,7 @@ export default function InvoiceDetail() {
               <SummaryRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
               <SummaryRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
               <SummaryRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
-              <SummaryRow
-                label="Payment Method"
-                value={invoice.payment_method || '-'}
-              />
+              <SummaryRow label="Payment Method" value={invoice.payment_method || '-'} />
               <SummaryRowTotal label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
               <SummaryRowBalance label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} />
             </div>
@@ -414,12 +447,7 @@ export default function InvoiceDetail() {
 
 function InfoCard({ title, icon, children, compact = false }) {
   return (
-    <div
-      style={{
-        ...infoCard,
-        ...(compact ? compactInfoCard : {}),
-      }}
-    >
+    <div style={{ ...infoCard, ...(compact ? compactInfoCard : {}) }}>
       <div style={infoCardHeader}>
         <div style={sectionHeadLeft}>
           {icon}
@@ -438,7 +466,9 @@ function DetailRow({ icon, label, value, multiline = false }) {
         {icon}
         <span style={detailLabel}>{label}</span>
       </div>
-      <div style={{ ...detailValue, ...(multiline ? detailValueMultiline : {}) }}>{value}</div>
+      <div style={{ ...detailValue, ...(multiline ? detailValueMultiline : {}) }}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -490,6 +520,8 @@ function formatQty(value) {
 
 function formatInvoiceType(type) {
   if (!type) return 'Invoice';
+  if (type === 'USED_PART') return 'Parts Sale';
+  if (type === 'REPAIR') return 'Workshop Invoice';
   return type.replaceAll('_', ' ');
 }
 
@@ -520,7 +552,7 @@ const pageWrap = {
 };
 
 const topBar = {
-  maxWidth: '1200px',
+  maxWidth: '1180px',
   margin: '0 auto 18px',
   display: 'flex',
   justifyContent: 'space-between',
@@ -579,7 +611,7 @@ const printBtn = {
 };
 
 const invoicePaper = {
-  maxWidth: '1200px',
+  maxWidth: '1180px',
   margin: '0 auto',
   background: '#fff',
   borderRadius: '28px',
@@ -669,6 +701,14 @@ const metaRow = {
   borderBottom: '1px solid rgba(255,255,255,0.08)',
 };
 
+const metaRowLast = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '8px 0 0',
+};
+
 const metaLabel = {
   color: '#cbd5e1',
   fontSize: '13px',
@@ -693,7 +733,6 @@ const businessStrip = {
 
 const gridTwo = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   gap: '20px',
   padding: '24px 28px 0',
 };
@@ -765,6 +804,7 @@ const detailValue = {
 const detailValueMultiline = {
   textAlign: 'left',
   lineHeight: 1.6,
+  whiteSpace: 'pre-wrap',
 };
 
 const serviceSection = {
@@ -844,6 +884,19 @@ const itemsTable = {
   background: '#fff',
 };
 
+const thNo = {
+  textAlign: 'center',
+  width: '60px',
+  padding: '14px 16px',
+  fontSize: '12px',
+  fontWeight: 900,
+  color: '#64748b',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  borderBottom: '1px solid #e2e8f0',
+  background: '#f8fafc',
+};
+
 const th = {
   textAlign: 'left',
   padding: '14px 16px',
@@ -860,11 +913,27 @@ const tr = {
   borderBottom: '1px solid #eef2f7',
 };
 
+const tdNo = {
+  padding: '15px 16px',
+  fontSize: '14px',
+  color: '#0f172a',
+  textAlign: 'center',
+  verticalAlign: 'top',
+};
+
 const td = {
   padding: '15px 16px',
   fontSize: '14px',
   color: '#0f172a',
   verticalAlign: 'top',
+};
+
+const tdDescription = {
+  padding: '15px 16px',
+  fontSize: '14px',
+  color: '#0f172a',
+  verticalAlign: 'top',
+  minWidth: '280px',
 };
 
 const tdStrong = {
@@ -890,6 +959,7 @@ const itemDescription = {
   color: '#64748b',
   lineHeight: 1.5,
   fontSize: '13px',
+  whiteSpace: 'pre-wrap',
 };
 
 const smallBadge = {
@@ -1028,7 +1098,7 @@ const unpaidStyle = {
 };
 
 const loadingCard = {
-  maxWidth: '1200px',
+  maxWidth: '1180px',
   margin: '0 auto',
   background: '#fff',
   border: '1px solid #e2e8f0',
@@ -1040,7 +1110,7 @@ const loadingCard = {
 };
 
 const errorCard = {
-  maxWidth: '1200px',
+  maxWidth: '1180px',
   margin: '0 auto',
   background: '#fff1f2',
   border: '1px solid #fecdd3',
@@ -1051,36 +1121,48 @@ const errorCard = {
 };
 
 const printStyles = `
-  @media (max-width: 1024px) {
-    .service-notes-grid {
-      grid-template-columns: 1fr !important;
+  @media (max-width: 1100px) {
+    .print-area {
+      border-radius: 22px !important;
+    }
+  }
+
+  @media (max-width: 980px) {
+    .print-area {
+      border-radius: 18px !important;
     }
   }
 
   @media (max-width: 900px) {
-    .print-area {
-      border-radius: 20px !important;
-    }
-  }
-
-  @media (max-width: 860px) {
     .no-print {
       flex-direction: column !important;
       align-items: stretch !important;
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 860px) {
     .print-area {
       overflow: hidden !important;
     }
   }
 
   @media print {
-    body {
+    html, body {
+      width: 100%;
       background: #fff !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    body * {
+      visibility: hidden !important;
+    }
+
+    .print-area,
+    .print-area * {
+      visibility: visible !important;
     }
 
     .no-print {
@@ -1088,11 +1170,17 @@ const printStyles = `
     }
 
     .print-area {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
       border: none !important;
       box-shadow: none !important;
       border-radius: 0 !important;
+      overflow: visible !important;
+      background: #fff !important;
     }
 
     @page {
