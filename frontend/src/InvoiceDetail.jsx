@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
-  Receipt,
   User,
   Phone,
   Mail,
@@ -171,12 +170,10 @@ export default function InvoiceDetail() {
       <style>{printStyles}</style>
 
       <div style={topBar} className="no-print">
-        <div style={topBarLeft}>
-          <button type="button" style={backBtn} onClick={() => window.history.back()}>
-            <ArrowLeft size={16} />
-            Back
-          </button>
-        </div>
+        <button type="button" style={backBtn} onClick={() => window.history.back()}>
+          <ArrowLeft size={16} />
+          Back
+        </button>
 
         <div style={topBarRight}>
           <button type="button" style={secondaryBtn} onClick={fetchInvoice}>
@@ -189,320 +186,228 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <div style={invoicePaper} className="print-area">
-        <div style={invoiceHeader}>
-          <div style={brandBlock}>
-            <div style={logoBox}>YA</div>
-            <div>
-              <h1 style={brandTitle}>YARIS AUTOCARE</h1>
-              <div style={brandSub}>Car Rental • Mechanical Services • Auto Parts</div>
-              <div style={brandMeta}>Pyramid Enterprises AU Pty Ltd</div>
-            </div>
-          </div>
-
-          <div style={invoiceMetaCard}>
-            <div style={docBadge}>
-              <Receipt size={15} />
-              <span>{documentLabel}</span>
-            </div>
-
-            <div style={metaRow}>
-              <span style={metaLabel}>Document No</span>
-              <strong style={metaValue}>{invoice.invoice_number}</strong>
-            </div>
-            <div style={metaRow}>
-              <span style={metaLabel}>Date</span>
-              <strong style={metaValue}>{formatDate(invoice.created_at)}</strong>
-            </div>
-            <div style={metaRow}>
-              <span style={metaLabel}>Time</span>
-              <strong style={metaValue}>{formatTime(invoice.created_at)}</strong>
-            </div>
-            <div style={metaRow}>
-              <span style={metaLabel}>Type</span>
-              <strong style={metaValue}>{formatInvoiceType(invoice.invoice_type)}</strong>
-            </div>
-            <div style={metaRowLast}>
-              <span style={metaLabel}>Status</span>
-              <span
-                style={{
-                  ...statusBadge,
-                  ...(invoice.payment_status === 'PAID'
-                    ? paidStyle
-                    : invoice.payment_status === 'PARTIAL'
-                    ? partialStyle
-                    : unpaidStyle),
-                }}
-              >
-                {invoice.payment_status}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div style={businessStrip}>
-          <div>16 Legana Park Drive, Legana TAS 7277</div>
-          <div>0449 828 749</div>
-          <div>info@yarisautocare.com.au</div>
-          <div>www.yarisautocare.com.au</div>
-        </div>
-
-        <div
-          style={{
-            ...gridTwo,
-            gridTemplateColumns: showVehicleSection
-              ? 'repeat(2, minmax(0, 1fr))'
-              : 'minmax(0, 1fr)',
-          }}
-        >
-          <InfoCard title="Customer Details" icon={<User size={16} color="#ef4444" />}>
-            <DetailRow icon={<User size={14} />} label="Customer" value={invoice.customer_name || '-'} />
-            <DetailRow icon={<Phone size={14} />} label="Phone" value={invoice.customer_phone || '-'} />
-            <DetailRow icon={<Mail size={14} />} label="Email" value={invoice.customer_email || '-'} />
-            {invoice.customer_company ? (
-              <DetailRow
-                icon={<Building2 size={14} />}
-                label="Company"
-                value={invoice.customer_company}
-              />
-            ) : null}
-            {invoice.customer_abn ? (
-              <DetailRow icon={<Hash size={14} />} label="ABN" value={invoice.customer_abn} />
-            ) : null}
-            <DetailRow
-              icon={<MapPin size={14} />}
-              label="Address"
-              value={invoice.customer_address || '-'}
-              multiline
+      <div style={documentWrap} className="print-area">
+        {/* HEADER */}
+        <div style={headerWrap}>
+          <div style={logoArea}>
+            <img
+              src="/image.png"
+              alt="Yaris Autocare"
+              style={logoImage}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
             />
-          </InfoCard>
+            <div style={brandFallback}>YARIS <span style={{ color: '#d62828' }}>AUTOCARE</span></div>
+            <div style={operatedText}>Operated by Pyramid Enterprises AU Pty Ltd</div>
+            <div style={serviceLine}>Car Rental • Mechanical Services • Auto Parts</div>
+          </div>
+
+          <div style={contactStrip}>
+            <div style={contactCol}>
+              <div style={contactLabel}>Address:</div>
+              <div>16 Legana Park Drive, Legana TAS 7277</div>
+            </div>
+            <div style={contactColMiddle}>
+              <div style={contactLabel}>Phone:</div>
+              <div>0449 828 749</div>
+            </div>
+            <div style={contactColRight}>
+              <div>www.yarisautocare.com.au</div>
+            </div>
+          </div>
+
+          <div style={abnStrip}>
+            <span>ABN: 91 650 944 157</span>
+            <span>|</span>
+            <span>Accreditation No: 419296067</span>
+            <span>|</span>
+            <span>LMVT Licence: 6130</span>
+          </div>
+        </div>
+
+        {/* DOCUMENT META */}
+        <div style={documentMetaRow}>
+          <div style={docTypeTitle}>{documentLabel}</div>
+          <div style={metaBlock}>
+            <div><strong>Document No:</strong> {invoice.invoice_number}</div>
+            <div><strong>Date:</strong> {formatDate(invoice.created_at)}</div>
+            <div><strong>Time:</strong> {formatTime(invoice.created_at)}</div>
+            <div><strong>Type:</strong> {formatInvoiceType(invoice.invoice_type)}</div>
+          </div>
+        </div>
+
+        {/* CUSTOMER / VEHICLE */}
+        <div style={detailsGrid}>
+          <div>
+            <SectionTitle title="Customer Details" />
+            <SimpleRow label="Customer" value={invoice.customer_name || '-'} />
+            <SimpleRow label="Phone" value={invoice.customer_phone || '-'} />
+            <SimpleRow label="Email" value={invoice.customer_email || '-'} />
+            <SimpleRow label="Address" value={invoice.customer_address || '-'} multiline />
+          </div>
 
           {showVehicleSection && (
-            <InfoCard title="Car Details" icon={<Car size={16} color="#ef4444" />}>
-              <DetailRow icon={<Car size={14} />} label="Rego" value={invoice.rego || '-'} />
-              <DetailRow icon={<Car size={14} />} label="Make" value={invoice.make || '-'} />
-              <DetailRow icon={<Car size={14} />} label="Model" value={invoice.model || '-'} />
-              {invoice.year ? (
-                <DetailRow
-                  icon={<CalendarDays size={14} />}
-                  label="Year"
-                  value={invoice.year}
-                />
-              ) : null}
-              <DetailRow icon={<Hash size={14} />} label="VIN" value={invoice.vin || '-'} />
-              <DetailRow
-                icon={<Hash size={14} />}
+            <div>
+              <SectionTitle title="Car Details" />
+              <SimpleRow label="Rego" value={invoice.rego || '-'} />
+              <SimpleRow label="Make" value={invoice.make || '-'} />
+              <SimpleRow label="Model" value={invoice.model || '-'} />
+              <SimpleRow label="VIN" value={invoice.vin || '-'} />
+              <SimpleRow
                 label="Odometer"
                 value={invoice.odometer ? `${invoice.odometer} km` : '-'}
               />
-            </InfoCard>
+            </div>
           )}
         </div>
 
+        {/* SERVICE DETAILS */}
         {invoice.invoice_type === 'SERVICING' && (
-          <div style={serviceSection}>
-            <div style={sectionHead}>
-              <div style={sectionHeadLeft}>
-                <Wrench size={18} color="#ef4444" />
-                <h2 style={sectionTitle}>Service Details</h2>
-              </div>
-              {!!serviceTemplateType && <div style={serviceTypeBadge}>{serviceTemplateType}</div>}
-            </div>
-
-            <div style={gridThree}>
-              <ServiceStat
-                title="Service At KM"
-                value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'}
-              />
-              <ServiceStat
-                title="Next Service At KM"
-                value={
-                  serviceDetail?.next_service_at_km
-                    ? `${serviceDetail.next_service_at_km} km`
-                    : '-'
-                }
-              />
-              <ServiceStat
-                title="Next Service Date"
-                value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
-              />
-              <ServiceStat title="Oil Grade" value={serviceDetail?.oil_grade || '-'} />
+          <div style={sectionBlock}>
+            <SectionTitle title={`Service Details${serviceTemplateType ? ` - ${serviceTemplateType}` : ''}`} />
+            <div style={serviceGrid}>
+              <SimpleStat label="Service At KM" value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'} />
+              <SimpleStat label="Next Service At KM" value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'} />
+              <SimpleStat label="Next Service Date" value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'} />
             </div>
 
             {serviceDetail?.service_notes && (
-              <div style={{ marginTop: '20px' }}>
-                <InfoCard title="Service Notes" icon={<StickyNote size={16} color="#ef4444" />} compact>
-                  <div style={notesText}>{serviceDetail.service_notes}</div>
-                </InfoCard>
+              <div style={{ marginTop: '12px' }}>
+                <SectionTitle title="Service Notes" small />
+                <div style={notesBox}>{serviceDetail.service_notes}</div>
               </div>
             )}
           </div>
         )}
 
-        <div style={itemsSection}>
-          <div style={sectionHead}>
-            <div style={sectionHeadLeft}>
-              <Receipt size={18} color="#ef4444" />
-              <h2 style={sectionTitle}>
-                {invoice.invoice_type === 'SERVICING'
-                  ? 'Service Details'
-                  : invoice.invoice_type === 'USED_PART'
-                  ? 'Parts Details'
-                  : 'Invoice Details'}
-              </h2>
-            </div>
-          </div>
+        {/* ITEMS TABLE */}
+        <div style={sectionBlock}>
+          <SectionTitle
+            title={
+              invoice.invoice_type === 'SERVICING'
+                ? 'Service Details'
+                : invoice.invoice_type === 'USED_PART'
+                ? 'Parts Details'
+                : 'Invoice Details'
+            }
+          />
 
-          <div style={tableWrap}>
-            <table style={itemsTable}>
-              <thead>
+          <table style={table}>
+            <thead>
+              <tr>
+                <th style={thNo}>#</th>
+                <th style={thDesc}>Description</th>
+                <th style={th}>Type</th>
+                <th style={th}>Qty</th>
+                <th style={th}>Amount</th>
+                <th style={th}>Discount</th>
+                <th style={th}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
                 <tr>
-                  <th style={thNo}>#</th>
-                  <th style={th}>Description</th>
-                  <th style={th}>Type</th>
-                  <th style={th}>Qty</th>
-                  <th style={th}>Amount</th>
-                  <th style={th}>Discount</th>
-                  <th style={th}>Total</th>
+                  <td colSpan={7} style={emptyTd}>No items found.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr>
-                    <td style={tdEmpty} colSpan={7}>
-                      No items found.
+              ) : (
+                items.map((item, index) => (
+                  <tr key={item.id || index}>
+                    <td style={tdNo}>{index + 1}</td>
+                    <td style={tdDesc}>
+                      <div style={descMain}>{item.name || '-'}</div>
+                      {item.description ? <div style={descSub}>{item.description}</div> : null}
                     </td>
+                    <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
+                    <td style={td}>{formatQty(item.quantity)}</td>
+                    <td style={td}>${formatMoney(item.unit_price)}</td>
+                    <td style={td}>${formatMoney(item.discount)}</td>
+                    <td style={tdStrong}>${formatMoney(item.line_total)}</td>
                   </tr>
-                ) : (
-                  items.map((item, index) => (
-                    <tr key={item.id || index} style={tr}>
-                      <td style={tdNo}>{index + 1}</td>
-                      <td style={tdDescription}>
-                        <div style={itemName}>{item.name || '-'}</div>
-                        {item.description ? (
-                          <div style={itemDescription}>{item.description}</div>
-                        ) : null}
-                      </td>
-                      <td style={td}>
-                        <span style={smallBadge}>
-                          {formatSmallType(item.item_type || item.source_type || 'ITEM')}
-                        </span>
-                      </td>
-                      <td style={td}>{formatQty(item.quantity)}</td>
-                      <td style={td}>${formatMoney(item.unit_price)}</td>
-                      <td style={td}>${formatMoney(item.discount)}</td>
-                      <td style={tdStrong}>${formatMoney(item.line_total)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
+        {/* NOTES */}
         {filteredNotes && (
-          <div style={notesBlock}>
-            <div style={sectionHead}>
-              <div style={sectionHeadLeft}>
-                <StickyNote size={18} color="#ef4444" />
-                <h2 style={sectionTitle}>Notes</h2>
-              </div>
-            </div>
-            <div style={notesText}>{filteredNotes}</div>
+          <div style={sectionBlock}>
+            <SectionTitle title="Notes" />
+            <div style={notesBox}>{filteredNotes}</div>
           </div>
         )}
 
-        <div style={bottomArea}>
-          <div style={bottomLeft}>
-            <div style={footerCard}>
-              <div style={footerTitle}>Payment Details</div>
-              <div style={footerText}>Bank: ANZ Pty. Ltd.</div>
-              <div style={footerText}>Account Name: Pyramid Enterprises AU Pty Ltd</div>
-              <div style={footerText}>BSB: 013270</div>
-              <div style={footerText}>Account No: 430088057</div>
-              <div style={footerText}>Please email the remittance to info@yarisautocare.com.au</div>
-            </div>
+        {/* FOOTER */}
+        <div style={footerGrid}>
+          <div style={paymentBox}>
+            <div style={footerHeading}>Payment Details</div>
+            <div>Bank: ANZ Pty. Ltd.</div>
+            <div>Account Name: Pyramid Enterprises AU Pty Ltd</div>
+            <div>BSB: 013270</div>
+            <div>Account No: 430088057</div>
+            <div>Please email the remittance to info@yarisautocare.com.au</div>
           </div>
 
-          <div style={bottomRight}>
-            <div style={summaryCard}>
-              <SummaryRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
-              <SummaryRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
-              <SummaryRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
-              <SummaryRow label="Payment Method" value={invoice.payment_method || '-'} />
-              <SummaryRowTotal label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
-              <SummaryRowBalance label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} />
-            </div>
+          <div style={totalsBox}>
+            <TotalRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
+            <TotalRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
+            <TotalRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
+            <TotalRow label="Payment Method" value={invoice.payment_method || '-'} />
+            <TotalRowBig label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
+            <TotalRowBig label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} danger />
           </div>
-        </div>
-
-        <div style={printFooter}>
-          <div>Thank you for choosing Yaris Autocare.</div>
-          <div>This document was generated from the Yaris Autocare Inventory System.</div>
         </div>
       </div>
     </div>
   );
 }
 
-function InfoCard({ title, icon, children, compact = false }) {
+function SectionTitle({ title, small = false }) {
   return (
-    <div style={{ ...infoCard, ...(compact ? compactInfoCard : {}) }}>
-      <div style={infoCardHeader}>
-        <div style={sectionHeadLeft}>
-          {icon}
-          <h3 style={infoCardTitle}>{title}</h3>
-        </div>
-      </div>
-      {children}
+    <div
+      style={{
+        ...sectionTitleStyle,
+        ...(small ? { fontSize: '15px', marginBottom: '8px' } : {}),
+      }}
+    >
+      {title}
     </div>
   );
 }
 
-function DetailRow({ icon, label, value, multiline = false }) {
+function SimpleRow({ label, value, multiline = false }) {
   return (
-    <div style={{ ...detailRow, ...(multiline ? detailRowMultiline : {}) }}>
-      <div style={detailLabelWrap}>
-        {icon}
-        <span style={detailLabel}>{label}</span>
-      </div>
-      <div style={{ ...detailValue, ...(multiline ? detailValueMultiline : {}) }}>
+    <div style={{ ...simpleRow, ...(multiline ? { alignItems: 'start' } : {}) }}>
+      <div style={simpleLabel}>{label}</div>
+      <div style={{ ...simpleValue, ...(multiline ? { whiteSpace: 'pre-wrap' } : {}) }}>
         {value}
       </div>
     </div>
   );
 }
 
-function ServiceStat({ title, value }) {
+function SimpleStat({ label, value }) {
   return (
-    <div style={serviceStatCard}>
-      <div style={serviceStatTitle}>{title}</div>
-      <div style={serviceStatValue}>{value}</div>
+    <div style={statBox}>
+      <div style={statLabel}>{label}</div>
+      <div style={statValue}>{value}</div>
     </div>
   );
 }
 
-function SummaryRow({ label, value }) {
+function TotalRow({ label, value }) {
   return (
-    <div style={summaryRow}>
+    <div style={totalRow}>
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
   );
 }
 
-function SummaryRowTotal({ label, value }) {
+function TotalRowBig({ label, value, danger = false }) {
   return (
-    <div style={summaryRowTotal}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function SummaryRowBalance({ label, value }) {
-  return (
-    <div style={summaryRowBalance}>
+    <div style={{ ...totalRowBig, ...(danger ? { color: '#b91c1c' } : {}) }}>
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
@@ -546,25 +451,24 @@ function formatPlainDate(dateString) {
 }
 
 const pageWrap = {
-  background: '#f8fafc',
+  background: '#f3f4f6',
   minHeight: '100vh',
   padding: '24px',
 };
 
 const topBar = {
-  maxWidth: '1180px',
-  margin: '0 auto 18px',
+  maxWidth: '900px',
+  margin: '0 auto 16px',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  gap: '16px',
+  gap: '12px',
   flexWrap: 'wrap',
 };
 
 const topBarLeft = {
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
 };
 
 const topBarRight = {
@@ -578,22 +482,22 @@ const backBtn = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '8px',
-  border: '1px solid #dbe3ee',
+  border: '1px solid #d1d5db',
   background: '#fff',
-  color: '#0f172a',
-  borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
+  color: '#111827',
+  borderRadius: '10px',
+  padding: '10px 14px',
+  fontWeight: 700,
   cursor: 'pointer',
 };
 
 const secondaryBtn = {
-  border: '1px solid #dbe3ee',
+  border: '1px solid #d1d5db',
   background: '#fff',
-  color: '#0f172a',
-  borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
+  color: '#111827',
+  borderRadius: '10px',
+  padding: '10px 14px',
+  fontWeight: 700,
   cursor: 'pointer',
 };
 
@@ -602,547 +506,356 @@ const printBtn = {
   alignItems: 'center',
   gap: '8px',
   border: 'none',
-  background: '#ef4444',
+  background: '#d62828',
   color: '#fff',
-  borderRadius: '12px',
-  padding: '11px 16px',
-  fontWeight: 900,
+  borderRadius: '10px',
+  padding: '10px 14px',
+  fontWeight: 800,
   cursor: 'pointer',
 };
 
-const invoicePaper = {
-  maxWidth: '1180px',
+const documentWrap = {
+  maxWidth: '900px',
   margin: '0 auto',
   background: '#fff',
-  borderRadius: '28px',
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08)',
-  overflow: 'hidden',
+  padding: '26px 26px 32px',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
 };
 
-const invoiceHeader = {
-  display: 'grid',
-  gridTemplateColumns: '1.45fr 0.85fr',
-  gap: '18px',
-  padding: '28px',
-  background: 'linear-gradient(135deg, #0f172a 0%, #111827 55%, #1f2937 100%)',
-  color: '#fff',
+const headerWrap = {
+  textAlign: 'center',
+  marginBottom: '18px',
 };
 
-const brandBlock = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '18px',
-  minWidth: 0,
+const logoArea = {
+  textAlign: 'center',
 };
 
-const logoBox = {
-  width: '74px',
-  height: '74px',
-  borderRadius: '18px',
-  background: '#ef4444',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: 900,
-  fontSize: '28px',
-  letterSpacing: '0.04em',
-  flexShrink: 0,
+const logoImage = {
+  maxWidth: '100%',
+  width: '720px',
+  height: 'auto',
+  display: 'block',
+  margin: '0 auto',
 };
 
-const brandTitle = {
-  margin: 0,
+const brandFallback = {
   fontSize: '34px',
   fontWeight: 900,
-  lineHeight: 1,
+  color: '#111827',
 };
 
-const brandSub = {
-  marginTop: '8px',
-  color: '#cbd5e1',
+const operatedText = {
   fontSize: '14px',
-  fontWeight: 600,
-};
-
-const brandMeta = {
   marginTop: '6px',
-  color: '#94a3b8',
-  fontSize: '13px',
+  color: '#374151',
 };
 
-const invoiceMetaCard = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.09)',
-  borderRadius: '20px',
-  padding: '18px',
-  backdropFilter: 'blur(6px)',
+const serviceLine = {
+  fontSize: '15px',
+  marginTop: '8px',
+  color: '#374151',
 };
 
-const docBadge = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '8px',
-  background: '#ef4444',
-  color: '#fff',
-  borderRadius: '999px',
-  padding: '7px 12px',
-  fontSize: '12px',
-  fontWeight: 900,
-  textTransform: 'uppercase',
-  marginBottom: '14px',
-};
-
-const metaRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
+const contactStrip = {
+  marginTop: '14px',
+  borderTop: '2px solid #d62828',
+  borderBottom: '1px solid #d1d5db',
+  padding: '12px 10px',
+  display: 'grid',
+  gridTemplateColumns: '1.4fr 1fr 1fr',
   gap: '12px',
-  padding: '8px 0',
-  borderBottom: '1px solid rgba(255,255,255,0.08)',
-};
-
-const metaRowLast = {
-  display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
-  gap: '12px',
-  padding: '8px 0 0',
-};
-
-const metaLabel = {
-  color: '#cbd5e1',
-  fontSize: '13px',
-};
-
-const metaValue = {
-  color: '#fff',
+  textAlign: 'left',
   fontSize: '14px',
 };
 
-const businessStrip = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-  gap: '12px',
-  padding: '16px 28px',
-  background: '#fff5f5',
-  color: '#7f1d1d',
-  fontWeight: 700,
-  fontSize: '13px',
-  borderBottom: '1px solid #fecaca',
+const contactCol = {
+  borderRight: '1px solid #d1d5db',
+  paddingRight: '10px',
 };
 
-const gridTwo = {
-  display: 'grid',
-  gap: '20px',
-  padding: '24px 28px 0',
+const contactColMiddle = {
+  borderRight: '1px solid #d1d5db',
+  paddingRight: '10px',
 };
 
-const gridThree = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-  gap: '14px',
-  marginTop: '18px',
+const contactColRight = {
+  textAlign: 'left',
 };
 
-const infoCard = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '22px',
-  padding: '20px',
-};
-
-const compactInfoCard = {
-  padding: '18px',
-};
-
-const infoCardHeader = {
-  marginBottom: '14px',
-};
-
-const infoCardTitle = {
-  margin: 0,
-  fontSize: '18px',
-  fontWeight: 900,
-  color: '#0f172a',
-};
-
-const detailRow = {
-  display: 'grid',
-  gridTemplateColumns: '190px 1fr',
-  gap: '12px',
-  alignItems: 'center',
-  padding: '10px 0',
-  borderBottom: '1px solid #f1f5f9',
-};
-
-const detailRowMultiline = {
-  alignItems: 'start',
-};
-
-const detailLabelWrap = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  color: '#64748b',
-  fontSize: '13px',
+const contactLabel = {
   fontWeight: 800,
-  textTransform: 'uppercase',
+  display: 'inline',
+  marginRight: '6px',
+};
+
+const abnStrip = {
+  display: 'flex',
+  justifyContent: 'center',
+  gap: '10px',
+  flexWrap: 'wrap',
+  padding: '8px 0 0',
+  fontSize: '14px',
+  fontWeight: 700,
+  color: '#374151',
+};
+
+const documentMetaRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: '16px',
+  marginTop: '18px',
+  marginBottom: '18px',
+  flexWrap: 'wrap',
+};
+
+const docTypeTitle = {
+  fontSize: '28px',
+  fontWeight: 900,
+  color: '#111827',
   letterSpacing: '0.03em',
 };
 
-const detailLabel = {
-  lineHeight: 1.3,
-};
-
-const detailValue = {
-  color: '#111827',
-  fontWeight: 700,
+const metaBlock = {
   fontSize: '14px',
+  lineHeight: 1.8,
   textAlign: 'right',
-};
-
-const detailValueMultiline = {
-  textAlign: 'left',
-  lineHeight: 1.6,
-  whiteSpace: 'pre-wrap',
-};
-
-const serviceSection = {
-  padding: '24px 28px 0',
-};
-
-const sectionHead = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '12px',
-  flexWrap: 'wrap',
-  marginBottom: '14px',
-};
-
-const sectionHeadLeft = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-};
-
-const sectionTitle = {
-  margin: 0,
-  fontSize: '20px',
-  fontWeight: 900,
-  color: '#0f172a',
-};
-
-const serviceTypeBadge = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  padding: '8px 12px',
-  borderRadius: '999px',
-  background: '#111827',
-  color: '#fff',
-  fontWeight: 800,
-  fontSize: '12px',
-  textTransform: 'uppercase',
-};
-
-const serviceStatCard = {
-  border: '1px solid #e2e8f0',
-  borderRadius: '18px',
-  padding: '16px',
-  background: '#f8fafc',
-};
-
-const serviceStatTitle = {
-  fontSize: '12px',
-  color: '#64748b',
-  textTransform: 'uppercase',
-  fontWeight: 800,
-  letterSpacing: '0.04em',
-};
-
-const serviceStatValue = {
-  marginTop: '8px',
-  fontSize: '20px',
-  fontWeight: 900,
   color: '#111827',
 };
 
-const itemsSection = {
-  padding: '28px',
+const detailsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: '24px',
+  marginBottom: '18px',
 };
 
-const tableWrap = {
-  overflowX: 'auto',
-  border: '1px solid #e2e8f0',
-  borderRadius: '20px',
+const sectionBlock = {
+  marginBottom: '18px',
 };
 
-const itemsTable = {
+const sectionTitleStyle = {
+  fontSize: '18px',
+  fontWeight: 900,
+  color: '#111827',
+  marginBottom: '10px',
+  borderBottom: '1px solid #d1d5db',
+  paddingBottom: '6px',
+};
+
+const simpleRow = {
+  display: 'grid',
+  gridTemplateColumns: '140px 1fr',
+  gap: '10px',
+  padding: '7px 0',
+  borderBottom: '1px solid #f3f4f6',
+};
+
+const simpleLabel = {
+  fontWeight: 800,
+  color: '#374151',
+  textTransform: 'uppercase',
+  fontSize: '13px',
+};
+
+const simpleValue = {
+  color: '#111827',
+  fontSize: '14px',
+};
+
+const serviceGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: '12px',
+};
+
+const statBox = {
+  border: '1px solid #d1d5db',
+  padding: '12px',
+};
+
+const statLabel = {
+  fontSize: '12px',
+  fontWeight: 800,
+  color: '#6b7280',
+  textTransform: 'uppercase',
+};
+
+const statValue = {
+  marginTop: '6px',
+  fontSize: '16px',
+  fontWeight: 800,
+  color: '#111827',
+};
+
+const notesBox = {
+  border: '1px solid #d1d5db',
+  padding: '12px',
+  whiteSpace: 'pre-wrap',
+  lineHeight: 1.7,
+  fontSize: '14px',
+  color: '#111827',
+};
+
+const table = {
   width: '100%',
   borderCollapse: 'collapse',
-  minWidth: '860px',
-  background: '#fff',
+  border: '1px solid #d1d5db',
 };
 
 const thNo = {
+  border: '1px solid #d1d5db',
+  padding: '10px 8px',
   textAlign: 'center',
-  width: '60px',
-  padding: '14px 16px',
+  background: '#f3f4f6',
   fontSize: '12px',
-  fontWeight: 900,
-  color: '#64748b',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#f8fafc',
+  fontWeight: 800,
+  width: '50px',
+};
+
+const thDesc = {
+  border: '1px solid #d1d5db',
+  padding: '10px 8px',
+  textAlign: 'left',
+  background: '#f3f4f6',
+  fontSize: '12px',
+  fontWeight: 800,
 };
 
 const th = {
-  textAlign: 'left',
-  padding: '14px 16px',
+  border: '1px solid #d1d5db',
+  padding: '10px 8px',
+  textAlign: 'center',
+  background: '#f3f4f6',
   fontSize: '12px',
-  fontWeight: 900,
-  color: '#64748b',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  borderBottom: '1px solid #e2e8f0',
-  background: '#f8fafc',
-};
-
-const tr = {
-  borderBottom: '1px solid #eef2f7',
+  fontWeight: 800,
 };
 
 const tdNo = {
-  padding: '15px 16px',
-  fontSize: '14px',
-  color: '#0f172a',
+  border: '1px solid #d1d5db',
+  padding: '10px 8px',
   textAlign: 'center',
   verticalAlign: 'top',
+  fontSize: '14px',
 };
 
 const td = {
-  padding: '15px 16px',
-  fontSize: '14px',
-  color: '#0f172a',
+  border: '1px solid #d1d5db',
+  padding: '10px 8px',
+  textAlign: 'center',
   verticalAlign: 'top',
+  fontSize: '14px',
 };
 
-const tdDescription = {
-  padding: '15px 16px',
-  fontSize: '14px',
-  color: '#0f172a',
+const tdDesc = {
+  border: '1px solid #d1d5db',
+  padding: '10px 8px',
+  textAlign: 'left',
   verticalAlign: 'top',
-  minWidth: '280px',
+  fontSize: '14px',
 };
 
 const tdStrong = {
   ...td,
   fontWeight: 900,
-  color: '#111827',
 };
 
-const tdEmpty = {
-  padding: '24px 16px',
-  textAlign: 'center',
-  color: '#64748b',
-  fontWeight: 700,
-};
-
-const itemName = {
-  fontWeight: 800,
-  color: '#111827',
-};
-
-const itemDescription = {
-  marginTop: '4px',
-  color: '#64748b',
-  lineHeight: 1.5,
-  fontSize: '13px',
-  whiteSpace: 'pre-wrap',
-};
-
-const smallBadge = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  background: '#eff6ff',
-  color: '#1d4ed8',
-  fontSize: '11px',
-  fontWeight: 800,
-  textTransform: 'uppercase',
-};
-
-const notesBlock = {
-  padding: '0 28px 28px',
-};
-
-const notesText = {
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
-  borderRadius: '18px',
+const emptyTd = {
+  border: '1px solid #d1d5db',
   padding: '16px',
-  color: '#334155',
-  lineHeight: 1.7,
-  whiteSpace: 'pre-wrap',
-  fontSize: '14px',
+  textAlign: 'center',
+  color: '#6b7280',
 };
 
-const bottomArea = {
+const descMain = {
+  fontWeight: 800,
+  color: '#111827',
+};
+
+const descSub = {
+  marginTop: '4px',
+  color: '#4b5563',
+  whiteSpace: 'pre-wrap',
+  fontSize: '13px',
+};
+
+const footerGrid = {
   display: 'grid',
   gridTemplateColumns: '1.1fr 0.9fr',
   gap: '20px',
-  padding: '0 28px 28px',
+  marginTop: '24px',
 };
 
-const bottomLeft = {
-  minWidth: 0,
-};
-
-const bottomRight = {
-  minWidth: 0,
-};
-
-const footerCard = {
-  borderRadius: '22px',
-  padding: '20px',
-  background: '#111827',
+const paymentBox = {
+  background: '#0f172a',
   color: '#fff',
-  height: '100%',
-};
-
-const footerTitle = {
-  fontSize: '16px',
-  fontWeight: 900,
-  marginBottom: '10px',
-};
-
-const footerText = {
-  color: '#cbd5e1',
+  padding: '18px',
   lineHeight: 1.8,
   fontSize: '14px',
 };
 
-const summaryCard = {
-  borderRadius: '22px',
-  padding: '20px',
-  background: '#fff5f5',
-  border: '1px solid #fecaca',
+const footerHeading = {
+  fontSize: '18px',
+  fontWeight: 900,
+  marginBottom: '10px',
 };
 
-const summaryRow = {
+const totalsBox = {
+  border: '1px solid #fecaca',
+  background: '#fff5f5',
+  padding: '18px',
+};
+
+const totalRow = {
   display: 'flex',
   justifyContent: 'space-between',
   gap: '12px',
   padding: '10px 0',
   borderBottom: '1px solid #fee2e2',
-  color: '#334155',
   fontSize: '14px',
 };
 
-const summaryRowTotal = {
+const totalRowBig = {
   display: 'flex',
   justifyContent: 'space-between',
   gap: '12px',
-  padding: '16px 0 10px',
+  padding: '14px 0 6px',
+  fontSize: '18px',
+  fontWeight: 900,
   color: '#111827',
-  fontSize: '18px',
-  fontWeight: 900,
-};
-
-const summaryRowBalance = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: '12px',
-  padding: '8px 0 0',
-  color: '#b91c1c',
-  fontSize: '18px',
-  fontWeight: 900,
-};
-
-const printFooter = {
-  padding: '18px 28px 28px',
-  borderTop: '1px solid #e2e8f0',
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: '12px',
-  flexWrap: 'wrap',
-  color: '#64748b',
-  fontSize: '13px',
-};
-
-const statusBadge = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  fontSize: '12px',
-  fontWeight: 900,
-};
-
-const paidStyle = {
-  background: '#ecfdf5',
-  color: '#166534',
-};
-
-const partialStyle = {
-  background: '#fffbeb',
-  color: '#b45309',
-};
-
-const unpaidStyle = {
-  background: '#fff1f2',
-  color: '#be123c',
 };
 
 const loadingCard = {
-  maxWidth: '1180px',
+  maxWidth: '900px',
   margin: '0 auto',
   background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '20px',
-  padding: '40px',
+  padding: '30px',
   textAlign: 'center',
-  color: '#64748b',
-  fontWeight: 700,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
 };
 
 const errorCard = {
-  maxWidth: '1180px',
+  maxWidth: '900px',
   margin: '0 auto',
   background: '#fff1f2',
   border: '1px solid #fecdd3',
-  borderRadius: '20px',
-  padding: '24px',
+  padding: '20px',
   color: '#be123c',
   fontWeight: 700,
 };
 
 const printStyles = `
-  @media (max-width: 1100px) {
-    .print-area {
-      border-radius: 22px !important;
-    }
-  }
-
-  @media (max-width: 980px) {
-    .print-area {
-      border-radius: 18px !important;
-    }
-  }
-
   @media (max-width: 900px) {
-    .no-print {
-      flex-direction: column !important;
-      align-items: stretch !important;
+    .print-area {
+      padding: 18px !important;
     }
   }
 
-  @media (max-width: 860px) {
+  @media (max-width: 768px) {
     .print-area {
-      overflow: hidden !important;
+      padding: 14px !important;
     }
   }
 
@@ -1150,10 +863,10 @@ const printStyles = `
     html, body {
       width: 100%;
       background: #fff !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
       margin: 0 !important;
       padding: 0 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     body * {
@@ -1176,16 +889,15 @@ const printStyles = `
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
-      border: none !important;
+      padding: 8mm !important;
       box-shadow: none !important;
-      border-radius: 0 !important;
-      overflow: visible !important;
+      border: none !important;
       background: #fff !important;
     }
 
     @page {
       size: A4;
-      margin: 10mm;
+      margin: 8mm;
     }
   }
 `;
