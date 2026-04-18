@@ -12,6 +12,7 @@ import {
   Car,
   CreditCard,
   FileText,
+  Trash2,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -20,6 +21,7 @@ export default function InvoicesDashboard() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [invoiceTypeFilter, setInvoiceTypeFilter] = useState('ALL');
@@ -45,6 +47,27 @@ export default function InvoicesDashboard() {
     }
   };
 
+  const handleDeleteInvoice = async (invoice) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${invoice.invoice_number}? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setActionLoadingId(invoice.id);
+    setErrorMessage('');
+
+    try {
+      await axios.delete(`${API_URL}/api/invoices/${invoice.id}/`);
+      setInvoices((prev) => prev.filter((item) => item.id !== invoice.id));
+    } catch (error) {
+      console.error(error);
+      setErrorMessage('Failed to delete invoice.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
       const searchableText = [
@@ -56,6 +79,7 @@ export default function InvoicesDashboard() {
         invoice.model,
         invoice.payment_status,
         invoice.invoice_type,
+        invoice.notes,
       ]
         .filter(Boolean)
         .join(' ')
@@ -324,6 +348,7 @@ export default function InvoicesDashboard() {
                                 <Eye size={14} />
                                 View
                               </button>
+
                               <button
                                 type="button"
                                 style={printBtn}
@@ -331,6 +356,16 @@ export default function InvoicesDashboard() {
                               >
                                 <Printer size={14} />
                                 Print
+                              </button>
+
+                              <button
+                                type="button"
+                                style={deleteBtn}
+                                onClick={() => handleDeleteInvoice(invoice)}
+                                disabled={actionLoadingId === invoice.id}
+                              >
+                                <Trash2 size={14} />
+                                {actionLoadingId === invoice.id ? 'Deleting...' : 'Delete'}
                               </button>
                             </div>
                           </td>
@@ -362,6 +397,8 @@ function StatCard({ icon, title, value }) {
 
 function formatInvoiceType(type) {
   if (!type) return '-';
+  if (type === 'USED_PART') return 'Parts Sale';
+  if (type === 'REPAIR') return 'Workshop Invoice';
   return type.replaceAll('_', ' ');
 }
 
@@ -643,7 +680,7 @@ const tableWrap = {
 const table = {
   width: '100%',
   borderCollapse: 'collapse',
-  minWidth: '1050px',
+  minWidth: '1180px',
 };
 
 const th = {
@@ -749,6 +786,19 @@ const printBtn = {
   border: 'none',
   background: '#ef4444',
   color: '#fff',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const deleteBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '10px 12px',
+  borderRadius: '10px',
+  border: '1px solid #fecaca',
+  background: '#fff5f5',
+  color: '#b91c1c',
   fontWeight: 700,
   cursor: 'pointer',
 };
