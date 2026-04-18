@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import {
   LayoutDashboard, Scissors, Package, Wrench,
   ShoppingCart, Menu, X, ChevronRight, AlertTriangle,
-  Settings, ExternalLink, Car
+  Settings, ExternalLink, Car, Receipt
 } from 'lucide-react';
 
 // Lazy Load All Modules
@@ -15,6 +15,8 @@ const AftermarketEditPage = lazy(() => import('./AftermarketEditPage'));
 const DismantleModule = lazy(() => import('./DismantleModule'));
 const LowStockModule = lazy(() => import('./LowStockModule'));
 const SalesModule = lazy(() => import('./SalesModule'));
+const InvoicesDashboard = lazy(() => import('./InvoicesDashboard'));
+const InvoiceDetail = lazy(() => import('./InvoiceDetail'));
 const UsedPartsModule = lazy(() => import('./UsedPartsModule'));
 const UsedPartAddPage = lazy(() => import('./UsedPartAddPage'));
 const UsedPartDetailPage = lazy(() => import('./UsedPartDetailPage'));
@@ -69,7 +71,8 @@ export default function App() {
             <NavItem to="/low-stock" icon={<AlertTriangle size={20} />} label="Low Stock" />
             <NavItem to="/dismantle" icon={<Scissors size={20} />} label="Dismantle Yard" />
             <NavItem to="/yard-master" icon={<Car size={20} />} label="Yard Master" />
-            <NavItem to="/sales" icon={<ShoppingCart size={20} />} label="Sales & POS" />
+            <NavItem to="/sales" icon={<ShoppingCart size={20} />} label="Create Sale / Invoice" />
+            <NavItem to="/sales-dashboard" icon={<Receipt size={20} />} label="Invoices Dashboard" />
           </nav>
 
           <div style={{ padding: '15px', borderTop: '1px solid #334155', backgroundColor: '#161e2b' }}>
@@ -119,6 +122,8 @@ export default function App() {
 
                 <Route path="/dismantle" element={<DismantleModule />} />
                 <Route path="/sales" element={<SalesModule />} />
+                <Route path="/sales-dashboard" element={<InvoicesDashboard />} />
+                <Route path="/sales/:id" element={<InvoiceDetail />} />
                 <Route path="/low-stock" element={<LowStockModule />} />
                 <Route path="/yard-master" element={<InventoryMasterModule />} />
                 <Route path="/yard-master/:id" element={<DonorCarDetailView />} />
@@ -135,7 +140,10 @@ export default function App() {
 
 const NavItem = ({ to, icon, label }) => {
   const location = useLocation();
-  const isActive = location.pathname === to;
+
+  const isActive =
+    location.pathname === to ||
+    (to === '/sales-dashboard' && location.pathname.startsWith('/sales/'));
 
   return (
     <Link
