@@ -40,11 +40,11 @@ urlpatterns = [
 
     path('invoices/', InvoiceListCreateView.as_view(), name='invoice-list'),
     path(
-        'invoices/<int:pk>/',
-        generics.RetrieveAPIView.as_view(
-            queryset=Invoice.objects.prefetch_related('items', 'service_detail').all(),
-            serializer_class=InvoiceSerializer
-        ),
-        name='invoice-detail'
+    'invoices/<int:pk>/',
+    generics.RetrieveDestroyAPIView.as_view(
+        queryset=Invoice.objects.prefetch_related('items', 'service_detail').all(),
+        serializer_class=InvoiceSerializer
     ),
+    name='invoice-detail'
+),
 ]
