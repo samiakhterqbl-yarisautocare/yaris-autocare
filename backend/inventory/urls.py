@@ -8,6 +8,7 @@ from .views import (
     DonorCarDetailView,
     UsedPartListCreateView,
     UsedPartDetailView,
+    InventoryItemDetailView,
     AftermarketListCreateView,
     AftermarketDetailView,
     BulkDismantleView,
@@ -26,6 +27,8 @@ urlpatterns = [
     path('used-parts/', UsedPartListCreateView.as_view(), name='used-parts-list'),
     path('used-parts/<int:pk>/', UsedPartDetailView.as_view(), name='used-part-detail'),
 
+    path('dismantle-parts/<int:pk>/', InventoryItemDetailView.as_view(), name='dismantle-part-detail'),
+
     path('aftermarket/', AftermarketListCreateView.as_view(), name='aftermarket-list'),
     path('aftermarket/<int:pk>/', AftermarketDetailView.as_view(), name='aftermarket-detail'),
 
@@ -40,11 +43,11 @@ urlpatterns = [
 
     path('invoices/', InvoiceListCreateView.as_view(), name='invoice-list'),
     path(
-    'invoices/<int:pk>/',
-    generics.RetrieveDestroyAPIView.as_view(
-        queryset=Invoice.objects.prefetch_related('items', 'service_detail').all(),
-        serializer_class=InvoiceSerializer
+        'invoices/<int:pk>/',
+        generics.RetrieveDestroyAPIView.as_view(
+            queryset=Invoice.objects.prefetch_related('items', 'service_detail').all(),
+            serializer_class=InvoiceSerializer
+        ),
+        name='invoice-detail'
     ),
-    name='invoice-detail'
-),
 ]

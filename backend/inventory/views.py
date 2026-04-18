@@ -193,6 +193,36 @@ class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         return Response(response_serializer.data)
 
+class InventoryItemDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = InventoryItem.objects.all()
+    serializer_class = InventoryItemSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        inventory_item = serializer.save()
+
+        images = request.FILES.getlist('images')
+        for index, img in enumerate(images):
+            ProductImage.objects.create(
+                inventory_item=inventory_item,
+                image=img,
+                is_main=(index == 0 and not inventory_item.images.filter(is_main=True).exists()),
+            )
+
+        response_serializer = InventoryItemSerializer(
+            inventory_item,
+            context={'request': request}
+        )
+        return Response(response_serializer.data)
 
 class AftermarketListCreateView(generics.ListCreateAPIView):
     queryset = AftermarketPart.objects.all().order_by('-id')
