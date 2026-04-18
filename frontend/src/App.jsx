@@ -26,6 +26,7 @@ const InventoryMasterModule = lazy(() => import('./InventoryMasterModule'));
 const DonorCarDetailView = lazy(() => import('./DonorCarDetailView'));
 const DismantlePartDetailPage = lazy(() => import('./DismantlePartDetailPage'));
 const DismantlePartEditPage = lazy(() => import('./DismantlePartEditPage'));
+const DismantleLabelsPage = lazy(() => import('./DismantleLabelsPage'));
 
 const COLORS = {
   primary: '#ef4444',
@@ -151,6 +152,7 @@ function MainLayout() {
               <Route path="/yard-master/:id" element={<DonorCarDetailView />} />
               <Route path="/dismantle-parts/:id" element={<DismantlePartDetailPage />} />
               <Route path="/dismantle-parts/:id/edit" element={<DismantlePartEditPage />} />
+              <Route path="/yard-master/:id/labels" element={<DismantleLabelsPage />} />
 
               <Route path="*" element={<HomePage />} />
             </Routes>
