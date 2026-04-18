@@ -34,18 +34,24 @@ export default function DismantlePartDetailPage() {
   const [activeImage, setActiveImage] = useState('');
 
   useEffect(() => {
-    fetchPart();
+    if (statePart) {
+      setPart(statePart);
+      setDonorCar(stateDonorCar || null);
+      setLoading(false);
+      return;
+    }
+
+    fetchPartFromApi();
   }, [id]);
 
-  const fetchPart = async () => {
+  const fetchPartFromApi = async () => {
     try {
-      if (!statePart) setLoading(true);
+      setLoading(true);
       const res = await axios.get(`${API_URL}/api/used-parts/${id}/`);
       setPart(res.data);
     } catch (err) {
       console.error('Failed to fetch dismantle part detail:', err);
-      // keep statePart if available
-      if (!statePart) setPart(null);
+      setPart(null);
     } finally {
       setLoading(false);
     }
@@ -84,31 +90,36 @@ export default function DismantlePartDetailPage() {
     return [...new Set(images.filter(Boolean))];
   }, [donorCar]);
 
-useEffect(() => {
-  if (statePart) {
-    setPart(statePart);
-    setDonorCar(stateDonorCar || null);
-    setLoading(false);
-    return;
+  useEffect(() => {
+    if (galleryImages.length > 0) {
+      setActiveImage(galleryImages[0]);
+    } else {
+      setActiveImage('');
+    }
+  }, [galleryImages]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: '32px' }}>
+        <div style={loadingBox}>Loading dismantle part details...</div>
+      </div>
+    );
   }
 
-  fetchPartFromApi();
-}, [id]);
+  if (!part) {
+    return (
+      <div style={{ padding: '32px' }}>
+        <button onClick={() => navigate(-1)} style={backBtn}>
+          <ArrowLeft size={16} />
+          BACK
+        </button>
 
-const fetchPartFromApi = async () => {
-  try {
-    setLoading(true);
-    const res = await axios.get(`${API_URL}/api/used-parts/${id}/`);
-    setPart(res.data);
-  } catch (err) {
-    console.error('Failed to fetch dismantle part detail:', err);
-    setPart(null);
-  } finally {
-    setLoading(false);
+        <div style={notFoundBox}>Part not found.</div>
+      </div>
+    );
   }
-};
 
-  const statusColor = STATUS_COLORS[part.status] || STATUS_COLORS.Available;
+  const statusColor = STATUS_COLORS[part?.status] || STATUS_COLORS.Available;
   const donorMainImage = donorImages[0] || '';
 
   return (
