@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Printer, QrCode, Tag, Car } from 'lucide-react';
+import { ArrowLeft, Printer, Tag } from 'lucide-react';
 import QRCodeImport from 'react-qr-code';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
-const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const QRCodeComponent =
   typeof QRCodeImport === 'function'
@@ -37,6 +36,11 @@ export default function DismantleLabelsPage() {
     }
   };
 
+  const FRONTEND_URL =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://yaris-autocare.vercel.app';
+
   const parts = useMemo(() => {
     const rawParts = Array.isArray(car?.parts) ? car.parts : [];
     const q = search.trim().toLowerCase();
@@ -56,6 +60,10 @@ export default function DismantleLabelsPage() {
       );
     });
   }, [car, search]);
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   if (loading) {
     return (
@@ -82,31 +90,49 @@ export default function DismantleLabelsPage() {
       <style>
         {`
           @media print {
-            body {
-              margin: 0;
-              padding: 0;
-            }
-
             @page {
               size: 50mm 30mm;
               margin: 0;
             }
 
-            .no-print {
-              display: none !important;
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #fff !important;
+            }
+
+            body * {
+              visibility: hidden !important;
+            }
+
+            #labels-print-root,
+            #labels-print-root * {
+              visibility: visible !important;
+            }
+
+            #labels-print-root {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
 
             .label-grid {
               display: block !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
 
             .print-label {
               width: 50mm !important;
               height: 30mm !important;
-              page-break-after: always;
-              break-after: page;
+              page-break-after: always !important;
+              break-after: page !important;
               margin: 0 !important;
               box-shadow: none !important;
+              border-radius: 0 !important;
             }
           }
         `}
@@ -129,7 +155,7 @@ export default function DismantleLabelsPage() {
             </div>
           </div>
 
-          <button onClick={() => window.print()} style={printBtn}>
+          <button onClick={handlePrint} style={printBtn}>
             <Printer size={16} />
             PRINT ALL LABELS
           </button>
@@ -152,52 +178,55 @@ export default function DismantleLabelsPage() {
         </div>
       </div>
 
-      <div
-        className="label-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        {parts.map((part, index) => {
-          const qrValue = `${FRONTEND_URL}/dismantle-parts/${part.id}/edit`;
-          const shortModel = `${car.year || ''} ${car.make || ''} ${car.model || ''}`.trim();
+      <div id="labels-print-root">
+        <div
+          className="label-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {parts.map((part, index) => {
+            const qrValue = `${FRONTEND_URL}/dismantle-parts/${part.id}/edit`;
+            const shortModel = `${car.year || ''} ${car.make || ''} ${car.model || ''}`.trim();
 
-          return (
-            <div
-              key={`${part.id}-${index}`}
-              className="print-label"
-              style={labelCard}
-            >
-              <div style={qrBox}>
-                {QRCodeComponent ? (
-                  <QRCodeComponent
-                    size={52}
-                    value={qrValue}
-                    style={{ width: '14mm', height: '14mm' }}
-                  />
-                ) : (
-                  <div style={qrFallback}>QR</div>
-                )}
-              </div>
-
-              <div style={labelContent}>
-                <div style={stockLine}>{car.stock_number || 'NO STOCK'}</div>
-
-                <div style={partLine}>
-                  {part.part_name || 'Unnamed Part'}
+            return (
+              <div
+                key={`${part.id}-${index}`}
+                className="print-label"
+                style={labelCard}
+                title={qrValue}
+              >
+                <div style={qrBox}>
+                  {QRCodeComponent ? (
+                    <QRCodeComponent
+                      size={52}
+                      value={qrValue}
+                      style={{ width: '14mm', height: '14mm' }}
+                    />
+                  ) : (
+                    <div style={qrFallback}>QR</div>
+                  )}
                 </div>
 
-                <div style={metaLine}>{shortModel}</div>
-                <div style={metaLine}>{part.category || 'No Category'}</div>
-                <div style={metaLine}>
-                  {part.label_id || `ID-${part.id}`} • {part.status || 'Available'}
+                <div style={labelContent}>
+                  <div style={stockLine}>{car.stock_number || 'NO STOCK'}</div>
+
+                  <div style={partLine}>
+                    {part.part_name || 'Unnamed Part'}
+                  </div>
+
+                  <div style={metaLine}>{shortModel}</div>
+                  <div style={metaLine}>{part.category || 'No Category'}</div>
+                  <div style={metaLine}>
+                    {part.label_id || `ID-${part.id}`} • {part.status || 'Available'}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {parts.length === 0 && (
