@@ -5,7 +5,7 @@ import { ArrowLeft, Printer, Tag } from 'lucide-react';
 import QRCodeImport from 'react-qr-code';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
-const FRONTEND_URL = window.location.origin;
+const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const QRCodeComponent =
   typeof QRCodeImport === 'function'
