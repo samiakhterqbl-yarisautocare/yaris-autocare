@@ -12,6 +12,7 @@ import {
 import QRCodeImport from 'react-qr-code';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
+const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const COLORS = {
   primary: '#ef4444',
@@ -98,6 +99,7 @@ export default function DismantleModule() {
   const [loading, setLoading] = useState(false);
   const [carData, setCarData] = useState(null);
   const [selectedParts, setSelectedParts] = useState([]);
+  const [createdParts, setCreatedParts] = useState([]);
   const [activeTab, setActiveTab] = useState(CATEGORIES[0]);
   const [imageFiles, setImageFiles] = useState([]);
   const [customPart, setCustomPart] = useState('');
@@ -217,9 +219,24 @@ export default function DismantleModule() {
         })),
       };
 
-      console.log('Bulk create payload:', payload);
-
       await axios.post(`${API_URL}/api/bulk-create/`, payload);
+
+      // Refetch donor car to get actual created part IDs
+      const donorRes = await axios.get(`${API_URL}/api/donor-cars/${carData.id}/`);
+      const donor = donorRes.data;
+
+      const donorParts = Array.isArray(donor.parts) ? donor.parts : [];
+
+      const matchedParts = donorParts.filter((p) =>
+        selectedParts.some(
+          (sp) =>
+            sp.name?.toLowerCase() === p.part_name?.toLowerCase() &&
+            sp.category?.toLowerCase() === p.category?.toLowerCase()
+        )
+      );
+
+      setCreatedParts(matchedParts);
+      setCarData(donor);
       setPhase('labels');
     } catch (err) {
       console.error('Bulk create error:', err?.response?.data || err);
@@ -237,6 +254,8 @@ export default function DismantleModule() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: '16px',
+            flexWrap: 'wrap',
           }}
         >
           <h2 style={{ fontSize: '28px', fontWeight: '900' }}>
@@ -266,6 +285,8 @@ export default function DismantleModule() {
             cursor: 'pointer',
             backgroundColor: '#fff',
             textAlign: 'left',
+            width: '100%',
+            maxWidth: '420px',
           }}
         >
           <PlusCircle size={40} color={COLORS.primary} />
@@ -431,6 +452,7 @@ export default function DismantleModule() {
                       }}
                     />
                     <button
+                      type="button"
                       onClick={() => removeImage(index)}
                       style={{
                         position: 'absolute',
@@ -638,6 +660,7 @@ export default function DismantleModule() {
                     ({part.category})
                   </span>
                   <button
+                    type="button"
                     onClick={() => removeSelectedPart(part.name)}
                     style={{
                       border: 'none',
@@ -693,6 +716,8 @@ export default function DismantleModule() {
   }
 
   if (phase === 'labels') {
+    const labelParts = createdParts.length > 0 ? createdParts : [];
+
     return (
       <div style={{ padding: '40px' }}>
         <style>
@@ -781,16 +806,13 @@ export default function DismantleModule() {
             gap: '15px',
           }}
         >
-          {selectedParts.map((part, index) => {
-            const qrValue = `${carData?.stock_number || 'UNKNOWN'}-${String(
-              part.name || ''
-            ).toUpperCase()}`;
-
+          {labelParts.map((part, index) => {
+            const qrValue = `${FRONTEND_URL}/used-parts/${part.id}`;
             const shortModel = `${carData?.year || ''} ${carData?.model || ''}`.trim();
 
             return (
               <div
-                key={`${part.name}-${index}`}
+                key={`${part.id}-${index}`}
                 className="print-label"
                 style={{
                   width: '50mm',
@@ -872,7 +894,7 @@ export default function DismantleModule() {
                       overflow: 'hidden',
                     }}
                   >
-                    {part.name}
+                    {part.part_name}
                   </div>
 
                   <div
@@ -902,6 +924,23 @@ export default function DismantleModule() {
             );
           })}
         </div>
+
+        {labelParts.length === 0 && (
+          <div
+            className="no-print"
+            style={{
+              marginTop: '20px',
+              padding: '16px',
+              borderRadius: '12px',
+              backgroundColor: '#fff7ed',
+              border: '1px solid #fdba74',
+              color: '#9a3412',
+              fontWeight: '700',
+            }}
+          >
+            No created part IDs were found for labels. Check donor car detail API response.
+          </div>
+        )}
       </div>
     );
   }
