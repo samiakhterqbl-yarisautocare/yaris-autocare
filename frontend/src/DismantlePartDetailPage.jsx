@@ -10,6 +10,7 @@ import {
   Car,
   Boxes,
   Camera,
+  MapPin,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -47,7 +48,7 @@ export default function DismantlePartDetailPage() {
   const fetchPartFromApi = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/used-parts/${id}/`);
+      const res = await axios.get(`${API_URL}/api/dismantle-parts/${id}/`);
       setPart(res.data);
     } catch (err) {
       console.error('Failed to fetch dismantle part detail:', err);
@@ -138,7 +139,7 @@ export default function DismantlePartDetailPage() {
 
           <h1 style={title}>{part.part_name || 'Unnamed Part'}</h1>
           <div style={subtitle}>
-            {part.category || 'No Category'} • {part.grading_display || part.grade || 'No Grade'}
+            {part.category || 'No Category'} • {part.grading || 'No Grade'}
           </div>
         </div>
 
@@ -189,7 +190,7 @@ export default function DismantlePartDetailPage() {
             {donorMainImage ? (
               <img src={donorMainImage} alt="Donor vehicle" style={donorImage} />
             ) : (
-              <div style={donorPlaceholder}>No donor vehicle image passed from previous page</div>
+              <div style={donorPlaceholder}>No donor vehicle image available</div>
             )}
           </div>
         </div>
@@ -199,17 +200,18 @@ export default function DismantlePartDetailPage() {
             <div style={sectionTitle}>Part Information</div>
 
             <InfoRow icon={<Tag size={16} />} label="Category" value={part.category} />
-            <InfoRow icon={<ClipboardList size={16} />} label="Grade" value={part.grading_display || part.grade} />
-            <InfoRow icon={<Package size={16} />} label="Condition" value={part.condition} />
+            <InfoRow icon={<ClipboardList size={16} />} label="Grade" value={part.grading} />
+            <InfoRow icon={<Package size={16} />} label="Usage Type" value={part.usage_type} />
             <InfoRow icon={<DollarSign size={16} />} label="Price" value={`$${part.price || 0}`} />
             <InfoRow icon={<Boxes size={16} />} label="Status" value={part.status || 'Available'} />
-            <InfoRow icon={<Package size={16} />} label="Stock No" value={part.stock_number || part.part_number || 'N/A'} />
+            <InfoRow icon={<MapPin size={16} />} label="Location" value={part.location || 'N/A'} />
+            <InfoRow icon={<Package size={16} />} label="Label ID" value={part.label_id || 'N/A'} />
           </div>
 
           <div style={card}>
-            <div style={sectionTitle}>Description</div>
+            <div style={sectionTitle}>Condition Notes</div>
             <div style={description}>
-              {part.description || 'No description available.'}
+              {part.condition_notes || 'No notes available.'}
             </div>
           </div>
 
@@ -221,15 +223,13 @@ export default function DismantlePartDetailPage() {
               value={
                 donorCar
                   ? [donorCar.year, donorCar.make, donorCar.model].filter(Boolean).join(' ')
-                  : [part.year, part.make, part.model].filter(Boolean).join(' ') || 'N/A'
+                  : [part.donor_car_year, part.donor_car_make, part.donor_car_model].filter(Boolean).join(' ') || 'N/A'
               }
             />
-            <InfoRow icon={<Car size={16} />} label="VIN" value={donorCar?.vin || part.vin || 'N/A'} />
-            <InfoRow icon={<Car size={16} />} label="Color" value={donorCar?.color || part.color || 'N/A'} />
             <InfoRow
               icon={<Car size={16} />}
               label="Stock"
-              value={donorCar?.stock_number || 'N/A'}
+              value={donorCar?.stock_number || part.donor_car_stock || 'N/A'}
             />
           </div>
         </div>
