@@ -1,6 +1,8 @@
+from decimal import Decimal
+import uuid
+
 from django.db import models
 from django.utils import timezone
-import uuid
 
 
 class DonorCar(models.Model):
@@ -281,13 +283,100 @@ class ProductImage(models.Model):
 
 
 class Invoice(models.Model):
-    invoice_number = models.CharField(max_length=20, unique=True)
+    INVOICE_TYPE_CHOICES = [
+        ('USED_PART', 'Used Part'),
+        ('AFTERMARKET', 'Aftermarket'),
+        ('DISMANTLE', 'Dismantle'),
+        ('SERVICING', 'Servicing'),
+        ('DIAGNOSTIC', 'Diagnostic'),
+        ('LABOUR', 'Labour'),
+        ('REPAIR', 'Mechanical Repair'),
+        ('CUSTOM', 'Custom Invoice'),
+    ]
+
+    PAYMENT_STATUS_CHOICES = [
+        ('UNPAID', 'Unpaid'),
+        ('PARTIAL', 'Partial'),
+        ('PAID', 'Paid'),
+    ]
+
+    invoice_number = models.CharField(max_length=30, unique=True)
+    invoice_type = models.CharField(max_length=20, choices=INVOICE_TYPE_CHOICES, default='CUSTOM')
+
     customer_name = models.CharField(max_length=200)
-    customer_phone = models.CharField(max_length=15, blank=True, null=True)
-    items = models.JSONField()
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    date = models.DateTimeField(auto_now_add=True)
+    customer_phone = models.CharField(max_length=30, blank=True, null=True)
+    customer_email = models.EmailField(blank=True, null=True)
+    customer_address = models.TextField(blank=True, null=True)
+    customer_company = models.CharField(max_length=200, blank=True, null=True)
+    customer_abn = models.CharField(max_length=50, blank=True, null=True)
+
+    rego = models.CharField(max_length=30, blank=True, null=True)
+    make = models.CharField(max_length=100, blank=True, null=True)
+    model = models.CharField(max_length=100, blank=True, null=True)
+    year = models.IntegerField(blank=True, null=True)
+    vin = models.CharField(max_length=50, blank=True, null=True)
+    odometer = models.PositiveIntegerField(blank=True, null=True)
+
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    balance_due = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='UNPAID')
+    payment_method = models.CharField(max_length=50, blank=True, null=True)
+
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return self.invoice_number
+
+
+class InvoiceItem(models.Model):
+    ITEM_TYPE_CHOICES = [
+        ('STOCK', 'Stock Item'),
+        ('MANUAL', 'Manual Item'),
+        ('SERVICE', 'Service Item'),
+        ('LABOUR', 'Labour'),
+    ]
+
+    SOURCE_TYPE_CHOICES = [
+        ('USED_PART', 'Used Part'),
+        ('AFTERMARKET', 'Aftermarket'),
+        ('DISMANTLE', 'Dismantle'),
+        ('MANUAL', 'Manual'),
+    ]
+
+    invoice = models.ForeignKey(Invoice, related_name='items', on_delete=models.CASCADE)
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES, default='MANUAL')
+    source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='MANUAL')
+    source_id = models.PositiveIntegerField(blank=True, null=True)
+
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    gst_included = models.BooleanField(default=True)
+    line_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    def __str__(self):
+        return f"{self.invoice.invoice_number} - {self.name}"
+
+
+class ServiceDetail(models.Model):
+    invoice = models.OneToOneField(Invoice, related_name='service_detail', on_delete=models.CASCADE)
+    service_at_km = models.PositiveIntegerField(blank=True, null=True)
+    next_service_at_km = models.PositiveIntegerField(blank=True, null=True)
+    next_service_date = models.DateField(blank=True, null=True)
+    oil_grade = models.CharField(max_length=50, blank=True, null=True)
+    service_notes = models.TextField(blank=True, null=True)
+    recommendations = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Service Detail - {self.invoice.invoice_number}"

@@ -42,7 +42,7 @@ urlpatterns = [
     path(
         'invoices/<int:pk>/',
         generics.RetrieveAPIView.as_view(
-            queryset=Invoice.objects.all(),
+            queryset=Invoice.objects.prefetch_related('items', 'service_detail').all(),
             serializer_class=InvoiceSerializer
         ),
         name='invoice-detail'

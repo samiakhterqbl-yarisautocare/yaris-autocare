@@ -1,52 +1,88 @@
 from django.contrib import admin
-from .models import DonorCar, InventoryItem, AftermarketPart, ProductImage, Invoice
+from .models import (
+    DonorCar,
+    InventoryItem,
+    UsedPart,
+    AftermarketPart,
+    ProductImage,
+    Invoice,
+    InvoiceItem,
+    ServiceDetail,
+)
 
-# --- 1. IMAGE INLINE ---
-class ProductImageInline(admin.TabularInline):
-    model = ProductImage
-    extra = 1
-    fields = ['image', 'is_main']
 
-# --- 2. DONOR CAR ADMIN ---
 @admin.register(DonorCar)
 class DonorCarAdmin(admin.ModelAdmin):
-    # Ensure these names EXACTLY match your models.py
-    list_display = ('stock_number', 'make', 'model', 'year', 'color', 'date_added')
-    search_fields = ('stock_number', 'vin', 'make', 'model', 'rego')
-    list_filter = ('make', 'year', 'color')
+    list_display = ('stock_number', 'make', 'model', 'year', 'rego', 'date_added')
+    search_fields = ('stock_number', 'make', 'model', 'vin', 'rego')
+    readonly_fields = ('stock_number', 'date_added')
 
-# --- 3. USED PARTS ADMIN ---
+
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin):
-    list_display = ('part_name', 'get_stock_number', 'price', 'grading', 'status', 'usage_type')
-    list_filter = ('status', 'grading', 'category', 'usage_type')
-    search_fields = ('part_name', 'donor_car__stock_number', 'label_id')
-    inlines = [ProductImageInline]
+    list_display = ('part_name', 'category', 'price', 'status', 'location', 'donor_car')
+    search_fields = ('part_name', 'category', 'label_id', 'location')
+    list_filter = ('category', 'status', 'usage_type')
 
-    def get_stock_number(self, obj):
-        return obj.donor_car.stock_number if obj.donor_car else "Loose Stock"
-    get_stock_number.short_description = 'Donor Stock #'
 
-# --- 4. AFTERMARKET ADMIN ---
+@admin.register(UsedPart)
+class UsedPartAdmin(admin.ModelAdmin):
+    list_display = ('part_name', 'sku', 'category', 'sale_status', 'quantity', 'price', 'created_at')
+    search_fields = ('part_name', 'sku', 'label_id', 'part_number', 'make', 'model')
+    list_filter = ('category', 'sale_status', 'usage_type', 'condition', 'grade')
+    readonly_fields = ('sku', 'label_id', 'qr_code_value', 'sold_at', 'created_at', 'updated_at')
+
+
 @admin.register(AftermarketPart)
 class AftermarketPartAdmin(admin.ModelAdmin):
-    list_display = ('sku', 'part_name', 'quantity', 'sale_price', 'location', 'status')
-    search_fields = ('sku', 'part_name')
-    list_filter = ('location', 'status')
-    inlines = [ProductImageInline]
+    list_display = ('part_name', 'sku', 'category', 'quantity', 'sale_price', 'status', 'created_at')
+    search_fields = ('part_name', 'sku', 'label_id', 'supplier', 'location')
+    list_filter = ('category', 'status')
+    readonly_fields = ('sku', 'label_id', 'created_at')
 
-# --- 5. INVOICE ADMIN ---
-@admin.register(Invoice)
-class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('invoice_number', 'customer_name', 'total_amount', 'date')
-    readonly_fields = ('invoice_number', 'gst_amount', 'date')
 
-# --- 6. PRODUCT IMAGE ADMIN ---
 @admin.register(ProductImage)
 class ProductImageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'get_part_name', 'image', 'is_main', 'created_at')
-    
-    def get_part_name(self, obj):
-        if obj.aftermarket_part: return obj.aftermarket_part.part_name
-        if obj.inventory_item: return obj.inventory_item.part_name
-        return "Unlinked"
+    list_display = ('id', 'is_main', 'created_at')
+    readonly_fields = ('created_at',)
+
+
+class InvoiceItemInline(admin.TabularInline):
+    model = InvoiceItem
+    extra = 0
+
+
+@admin.register(ServiceDetail)
+class ServiceDetailAdmin(admin.ModelAdmin):
+    list_display = ('invoice', 'service_at_km', 'next_service_at_km', 'next_service_date')
+    search_fields = ('invoice__invoice_number', 'invoice__customer_name', 'invoice__rego')
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = (
+        'invoice_number',
+        'customer_name',
+        'invoice_type',
+        'created_at',
+        'total_amount',
+        'payment_status',
+    )
+    search_fields = (
+        'invoice_number',
+        'customer_name',
+        'customer_phone',
+        'rego',
+        'make',
+        'model',
+    )
+    list_filter = ('invoice_type', 'payment_status', 'created_at')
+    readonly_fields = (
+        'invoice_number',
+        'gst_amount',
+        'created_at',
+        'subtotal',
+        'total_amount',
+        'balance_due',
+    )
+    inlines = [InvoiceItemInline]

@@ -1,5 +1,4 @@
 from django.db.models import Sum, F, Q
-from django.utils import timezone
 
 from rest_framework import generics, status
 from rest_framework.views import APIView
@@ -7,7 +6,14 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import DonorCar, InventoryItem, UsedPart, AftermarketPart, ProductImage, Invoice
+from .models import (
+    DonorCar,
+    InventoryItem,
+    UsedPart,
+    AftermarketPart,
+    ProductImage,
+    Invoice,
+)
 from .serializers import (
     DonorCarSerializer,
     InventoryItemSerializer,
@@ -341,7 +347,7 @@ class GlobalSearchView(APIView):
         query = (request.query_params.get('q') or '').strip()
 
         if not query:
-            return Response({"used": [], "aftermarket": []})
+            return Response({"used": [], "aftermarket": [], "dismantle": []})
 
         used_parts = UsedPart.objects.filter(
             Q(part_name__icontains=query) |
@@ -370,6 +376,15 @@ class GlobalSearchView(APIView):
             Q(supplier__icontains=query)
         ).distinct()[:50]
 
+        dismantle_parts = InventoryItem.objects.filter(
+            Q(part_name__icontains=query) |
+            Q(category__icontains=query) |
+            Q(label_id__icontains=query) |
+            Q(location__icontains=query) |
+            Q(status__icontains=query) |
+            Q(condition_notes__icontains=query)
+        ).distinct()[:50]
+
         return Response({
             "used": UsedPartSerializer(
                 used_parts,
@@ -381,21 +396,22 @@ class GlobalSearchView(APIView):
                 many=True,
                 context={'request': request}
             ).data,
+            "dismantle": InventoryItemSerializer(
+                dismantle_parts,
+                many=True,
+                context={'request': request}
+            ).data,
         })
 
 
 class InvoiceListCreateView(generics.ListCreateAPIView):
-    queryset = Invoice.objects.all().order_by('-date')
+    queryset = Invoice.objects.prefetch_related('items', 'service_detail').all().order_by('-created_at')
     serializer_class = InvoiceSerializer
 
-    def perform_create(self, serializer):
-        total = serializer.validated_data.get('total_amount', 0) or 0
-        gst = total / 11 if total else 0
-        inv_no = f"INV-{timezone.now().strftime('%Y%m%d')}-{Invoice.objects.count() + 1}"
-        serializer.save(
-            invoice_number=inv_no,
-            gst_amount=round(gst, 2),
-        )
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 class BusinessSummaryView(APIView):
