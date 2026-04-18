@@ -150,9 +150,10 @@ function MainLayout() {
               <Route path="/low-stock" element={<LowStockModule />} />
               <Route path="/yard-master" element={<InventoryMasterModule />} />
               <Route path="/yard-master/:id" element={<DonorCarDetailView />} />
+              <Route path="/yard-master/:id/labels" element={<DismantleLabelsPage />} />
+
               <Route path="/dismantle-parts/:id" element={<DismantlePartDetailPage />} />
               <Route path="/dismantle-parts/:id/edit" element={<DismantlePartEditPage />} />
-              <Route path="/yard-master/:id/labels" element={<DismantleLabelsPage />} />
 
               <Route path="*" element={<HomePage />} />
             </Routes>
