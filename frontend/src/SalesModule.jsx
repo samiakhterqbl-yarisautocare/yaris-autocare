@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import {
   Receipt,
   User,
@@ -17,6 +18,9 @@ import {
   CreditCard,
   StickyNote,
   CalendarDays,
+  Eye,
+  LayoutList,
+  ChevronDown,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -40,6 +44,12 @@ const paymentMethodOptions = [
   'Pending',
 ];
 
+const serviceTemplateOptions = [
+  { value: 'CUSTOM', label: 'Custom Service' },
+  { value: 'REGULAR', label: 'Regular Service' },
+  { value: 'MAJOR', label: 'Major Service' },
+];
+
 const createBlankItem = () => ({
   item_type: 'MANUAL',
   source_type: 'MANUAL',
@@ -52,12 +62,12 @@ const createBlankItem = () => ({
   gst_included: true,
 });
 
-const defaultServiceTemplate = [
+const majorServiceTemplate = [
   'Oil filter replacement',
   'Engine oil change',
-  'New sump plug washer',
+  'New Sumpplug washer',
   'Top-ups (brake, power steering, coolant & windscreen washer fluid)',
-  'Safety checks (underbody components, brakes, globes, horn & tyre pressure)',
+  'Safety checks (Underbody components, Brakes, Globes, horn & tyre pressure)',
   'Check globes',
   'Check hoses',
   'Check drive belt',
@@ -76,12 +86,29 @@ const defaultServiceTemplate = [
   'Check front brake pads & rotors',
 ];
 
+const regularServiceTemplate = [
+  'Oil filter replacement',
+  'Engine oil change',
+  'New Sumpplug washer',
+  'Top-ups (brake, power steering, coolant & windscreen washer fluid)',
+  'Safety checks (Underbody components, Brakes, Globes, horn & tyre pressure)',
+  'Check globes',
+  'Check hoses',
+  'Check drive belt',
+  'Battery load test',
+  'Check tyre pressure',
+  'Check front brake pads & rotors',
+];
+
 export default function SalesModule() {
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const [invoiceType, setInvoiceType] = useState('CUSTOM');
+  const [serviceTemplateType, setServiceTemplateType] = useState('CUSTOM');
 
   const [customer, setCustomer] = useState({
     customer_name: 'Walk-in Customer',
@@ -186,8 +213,8 @@ export default function SalesModule() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const applyServiceTemplate = () => {
-    const templateRows = defaultServiceTemplate.map((text) => ({
+  const buildTemplateRows = (templateItems) =>
+    templateItems.map((text) => ({
       item_type: 'SERVICE',
       source_type: 'MANUAL',
       source_id: null,
@@ -199,11 +226,33 @@ export default function SalesModule() {
       gst_included: true,
     }));
 
-    setItems(templateRows);
+  const applyServiceTemplate = (templateType) => {
+    setServiceTemplateType(templateType);
+
+    if (templateType === 'MAJOR') {
+      setItems(buildTemplateRows(majorServiceTemplate));
+      return;
+    }
+
+    if (templateType === 'REGULAR') {
+      setItems(buildTemplateRows(regularServiceTemplate));
+      return;
+    }
+
+    setItems([createBlankItem()]);
+  };
+
+  const handleInvoiceTypeChange = (value) => {
+    setInvoiceType(value);
+
+    if (value !== 'SERVICING') {
+      setServiceTemplateType('CUSTOM');
+    }
   };
 
   const resetForm = () => {
     setInvoiceType('CUSTOM');
+    setServiceTemplateType('CUSTOM');
     setCustomer({
       customer_name: 'Walk-in Customer',
       customer_phone: '',
@@ -235,6 +284,8 @@ export default function SalesModule() {
     });
     setItems([createBlankItem()]);
     setCreatedInvoice(null);
+    setSuccessMessage('');
+    setErrorMessage('');
   };
 
   const validateBeforeSubmit = () => {
@@ -243,9 +294,7 @@ export default function SalesModule() {
     }
 
     const validItems = items.filter(
-      (item) =>
-        item.name.trim() &&
-        (parseFloat(item.quantity || 0) || 0) > 0
+      (item) => item.name.trim() && (parseFloat(item.quantity || 0) || 0) > 0
     );
 
     if (validItems.length === 0) {
@@ -273,7 +322,7 @@ export default function SalesModule() {
       .map((item) => ({
         item_type: item.item_type || 'MANUAL',
         source_type: item.source_type || 'MANUAL',
-        source_id: item.source_id || null,
+        source_id: item.source_id ? parseInt(item.source_id, 10) : null,
         name: item.name.trim(),
         description: item.description?.trim() || '',
         quantity: parseFloat(item.quantity || 0) || 1,
@@ -281,6 +330,11 @@ export default function SalesModule() {
         discount: parseFloat(item.discount || 0) || 0,
         gst_included: !!item.gst_included,
       }));
+
+    const notesWithServiceTemplate =
+      isServicing && serviceTemplateType !== 'CUSTOM'
+        ? `${payment.notes || ''}${payment.notes ? '\n\n' : ''}Service Template: ${serviceTemplateType}`
+        : payment.notes || '';
 
     const payload = {
       invoice_type: invoiceType,
@@ -301,7 +355,7 @@ export default function SalesModule() {
 
       paid_amount: parseFloat(payment.paid_amount || 0) || 0,
       payment_method: payment.payment_method || '',
-      notes: payment.notes || '',
+      notes: notesWithServiceTemplate,
 
       items: validItems,
     };
@@ -353,23 +407,55 @@ export default function SalesModule() {
     }
   };
 
+  const goToInvoice = () => {
+    if (!createdInvoice?.id) return;
+    navigate(`/sales/${createdInvoice.id}`);
+  };
+
+  const goToDashboard = () => {
+    navigate('/sales-dashboard');
+  };
+
   return (
     <div style={pageWrap}>
       <div style={headerBar}>
         <div>
           <h1 style={mainTitle}>Universal Sales & Invoice Module</h1>
           <p style={subTitle}>
-            Create invoices for parts, servicing, diagnostics, labour and workshop jobs.
+            Create professional invoices for parts, servicing, diagnostics, labour and workshop jobs.
           </p>
         </div>
 
-        <div style={headerBadge}>
-          <Receipt size={18} />
-          <span>Yaris Autocare</span>
+        <div style={headerActions}>
+          <button type="button" style={headerSecondaryBtn} onClick={goToDashboard}>
+            <LayoutList size={16} />
+            Invoices Dashboard
+          </button>
+          <div style={headerBadge}>
+            <Receipt size={18} />
+            <span>Yaris Autocare</span>
+          </div>
         </div>
       </div>
 
-      {!!successMessage && <div style={successBox}>{successMessage}</div>}
+      {!!successMessage && (
+        <div style={successBox}>
+          <div>{successMessage}</div>
+          {createdInvoice?.id && (
+            <div style={successActions}>
+              <button type="button" style={successActionBtn} onClick={goToInvoice}>
+                <Eye size={15} />
+                View Invoice
+              </button>
+              <button type="button" style={successActionBtnAlt} onClick={goToDashboard}>
+                <LayoutList size={15} />
+                Open Dashboard
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {!!errorMessage && <div style={errorBox}>{errorMessage}</div>}
 
       <div style={responsiveGrid}>
@@ -383,7 +469,7 @@ export default function SalesModule() {
                 <label style={label}>Select Invoice Type</label>
                 <select
                   value={invoiceType}
-                  onChange={(e) => setInvoiceType(e.target.value)}
+                  onChange={(e) => handleInvoiceTypeChange(e.target.value)}
                   style={input}
                 >
                   {invoiceTypeOptions.map((option) => (
@@ -397,7 +483,7 @@ export default function SalesModule() {
               <div style={invoiceTypePreview}>
                 <div style={invoiceTypePill}>{invoiceType.replaceAll('_', ' ')}</div>
                 <div style={invoiceTypeText}>
-                  Use this module for parts, labour, diagnostics and servicing.
+                  Use this module for parts, labour, diagnostics, repairs and service invoices.
                 </div>
               </div>
             </div>
@@ -516,9 +602,25 @@ export default function SalesModule() {
               title="Service Details"
               icon={<Wrench size={18} color="#ef4444" />}
               actions={
-                <button type="button" style={secondaryBtn} onClick={applyServiceTemplate}>
-                  Apply Basic Service Template
-                </button>
+                <div style={serviceActionBar}>
+                  <div style={serviceTemplateSelectWrap}>
+                    <label style={miniInlineLabel}>Template</label>
+                    <div style={serviceTemplateDropdownWrap}>
+                      <ChevronDown size={14} style={serviceTemplateDropdownIcon} />
+                      <select
+                        value={serviceTemplateType}
+                        onChange={(e) => applyServiceTemplate(e.target.value)}
+                        style={serviceTemplateSelect}
+                      >
+                        {serviceTemplateOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
               }
             >
               <div style={fieldGrid3}>
@@ -585,7 +687,7 @@ export default function SalesModule() {
           )}
 
           <SectionCard
-            title="Invoice Items"
+            title={isServicing ? 'Service Items / Checklist' : 'Invoice Items'}
             icon={<Receipt size={18} color="#ef4444" />}
             actions={
               <button type="button" style={addBtn} onClick={addItemRow}>
@@ -787,6 +889,11 @@ export default function SalesModule() {
               {loading ? 'Creating Invoice...' : 'Create Invoice'}
             </button>
 
+            <button type="button" style={dashboardBtn} onClick={goToDashboard}>
+              <LayoutList size={16} />
+              Open Invoices Dashboard
+            </button>
+
             <button type="button" style={resetBtn} onClick={resetForm}>
               Reset Form
             </button>
@@ -821,6 +928,17 @@ export default function SalesModule() {
                 <div style={previewRow}>
                   <span>Balance</span>
                   <strong>${parseFloat(createdInvoice.balance_due || 0).toFixed(2)}</strong>
+                </div>
+
+                <div style={previewActionWrap}>
+                  <button type="button" style={previewPrimaryBtn} onClick={goToInvoice}>
+                    <Eye size={15} />
+                    View Invoice
+                  </button>
+                  <button type="button" style={previewSecondaryBtn} onClick={goToDashboard}>
+                    <LayoutList size={15} />
+                    Dashboard
+                  </button>
                 </div>
               </div>
             </SectionCard>
@@ -884,6 +1002,26 @@ const headerBar = {
   gap: '20px',
   flexWrap: 'wrap',
   marginBottom: '24px',
+};
+
+const headerActions = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap',
+};
+
+const headerSecondaryBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: '1px solid #dbe3ee',
+  background: '#fff',
+  color: '#0f172a',
+  borderRadius: '12px',
+  padding: '11px 14px',
+  fontWeight: 800,
+  cursor: 'pointer',
 };
 
 const mainTitle = {
@@ -966,6 +1104,14 @@ const label = {
   color: '#64748b',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
+};
+
+const miniInlineLabel = {
+  fontSize: '11px',
+  fontWeight: 800,
+  color: '#64748b',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
 };
 
 const fieldGrid1 = {
@@ -1069,14 +1215,41 @@ const invoiceTypeText = {
   color: '#cbd5e1',
 };
 
-const secondaryBtn = {
+const serviceActionBar = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap',
+};
+
+const serviceTemplateSelectWrap = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+};
+
+const serviceTemplateDropdownWrap = {
+  position: 'relative',
+};
+
+const serviceTemplateDropdownIcon = {
+  position: 'absolute',
+  right: '12px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  color: '#64748b',
+  pointerEvents: 'none',
+};
+
+const serviceTemplateSelect = {
   border: '1px solid #fecaca',
   background: '#fff5f5',
   color: '#dc2626',
   borderRadius: '12px',
-  padding: '10px 14px',
+  padding: '10px 34px 10px 12px',
   fontWeight: 800,
   cursor: 'pointer',
+  appearance: 'none',
 };
 
 const addBtn = {
@@ -1216,6 +1389,22 @@ const checkoutBtn = {
   marginTop: '8px',
 };
 
+const dashboardBtn = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '14px',
+  marginTop: '10px',
+  background: '#fff',
+  color: '#0f172a',
+  border: '1px solid rgba(203, 213, 225, 0.25)',
+  borderRadius: '14px',
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+
 const resetBtn = {
   width: '100%',
   padding: '14px',
@@ -1246,6 +1435,39 @@ const previewRow = {
   color: '#334155',
 };
 
+const previewActionWrap = {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+  marginTop: '8px',
+};
+
+const previewPrimaryBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: 'none',
+  background: '#ef4444',
+  color: '#fff',
+  borderRadius: '12px',
+  padding: '11px 14px',
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+
+const previewSecondaryBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: '1px solid #dbe3ee',
+  background: '#fff',
+  color: '#0f172a',
+  borderRadius: '12px',
+  padding: '11px 14px',
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+
 const successBox = {
   marginBottom: '18px',
   background: '#ecfdf5',
@@ -1254,6 +1476,39 @@ const successBox = {
   padding: '14px 16px',
   borderRadius: '14px',
   fontWeight: 700,
+};
+
+const successActions = {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+  marginTop: '12px',
+};
+
+const successActionBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: 'none',
+  background: '#16a34a',
+  color: '#fff',
+  borderRadius: '10px',
+  padding: '10px 12px',
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+
+const successActionBtnAlt = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: '1px solid #86efac',
+  background: '#fff',
+  color: '#166534',
+  borderRadius: '10px',
+  padding: '10px 12px',
+  fontWeight: 800,
+  cursor: 'pointer',
 };
 
 const errorBox = {
