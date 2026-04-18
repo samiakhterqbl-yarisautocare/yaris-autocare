@@ -4,6 +4,7 @@ import axios from 'axios';
 import { ArrowLeft, Printer } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
+const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 export default function UsedPartLabelPage() {
   const { id } = useParams();
@@ -29,7 +30,7 @@ export default function UsedPartLabelPage() {
   };
 
   const listingUrl = useMemo(() => {
-    return `${window.location.origin}/used-parts/${id}`;
+    return `${FRONTEND_URL}/used-parts/${id}/edit`;
   }, [id]);
 
   const qrImageUrl = useMemo(() => {
