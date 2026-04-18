@@ -23,7 +23,6 @@ const STATUS_COLORS = {
 const COLORS = {
   primary: '#ef4444',
   dark: '#0f172a',
-  slate: '#334155',
   border: '#e2e8f0',
   bg: '#f8fafc',
   muted: '#64748b',
@@ -117,7 +116,7 @@ export default function DonorCarDetailView() {
 
   if (loading) {
     return (
-      <div style={{ padding: '40px' }}>
+      <div style={{ padding: '32px' }}>
         <div style={loadingBox}>Loading donor vehicle profile...</div>
       </div>
     );
@@ -125,7 +124,7 @@ export default function DonorCarDetailView() {
 
   if (!car) {
     return (
-      <div style={{ padding: '40px' }}>
+      <div style={{ padding: '32px' }}>
         <button onClick={() => navigate('/yard-master')} style={backBtn}>
           <ArrowLeft size={16} />
           BACK TO MASTER LIST
@@ -143,48 +142,40 @@ export default function DonorCarDetailView() {
       </button>
 
       <div style={hero}>
-        <div style={heroOverlay} />
-
-        <div style={heroTop}>
-          <div style={heroBadge}>
-            <Car size={14} />
-            DONOR VEHICLE PROFILE
-          </div>
-        </div>
-
         <div style={heroContent}>
           <div style={heroLeft}>
+            <div style={heroBadge}>
+              <Car size={13} />
+              DONOR VEHICLE PROFILE
+            </div>
+
             <h1 style={heroTitle}>
               {car.year} {car.make} {car.model}
             </h1>
 
             <div style={heroMeta}>
               <span style={metaChip}>
-                <Hash size={14} />
+                <Hash size={13} />
                 Stock: {car.stock_number || 'N/A'}
               </span>
               <span style={metaChip}>
-                <Palette size={14} />
+                <Palette size={13} />
                 Color: {car.color || 'N/A'}
               </span>
               <span style={metaChip}>
-                <Package size={14} />
+                <Package size={13} />
                 Salvaged: {stats.total}
               </span>
             </div>
 
-            <div style={vinBox}>
-              VIN: {car.vin || 'N/A'}
-            </div>
+            <div style={vinBox}>VIN: {car.vin || 'N/A'}</div>
           </div>
 
-          <div style={heroRight}>
-            <div style={statsGrid}>
-              <StatCard label="Total Parts" value={stats.total} />
-              <StatCard label="Available" value={stats.available} color="#22c55e" />
-              <StatCard label="Sold" value={stats.sold} color="#ef4444" />
-              <StatCard label="Internal" value={stats.internal} color="#3b82f6" />
-            </div>
+          <div style={statsGrid}>
+            <StatCard label="Total Parts" value={stats.total} />
+            <StatCard label="Available" value={stats.available} color="#22c55e" />
+            <StatCard label="Sold" value={stats.sold} color="#ef4444" />
+            <StatCard label="Internal" value={stats.internal} color="#3b82f6" />
           </div>
         </div>
       </div>
@@ -258,7 +249,7 @@ export default function DonorCarDetailView() {
                 <input
                   value={partSearch}
                   onChange={(e) => setPartSearch(e.target.value)}
-                  placeholder="Search part, category, grade, status..."
+                  placeholder="Search part, category, grade..."
                   style={searchInput}
                 />
               </div>
@@ -272,7 +263,11 @@ export default function DonorCarDetailView() {
                 return (
                   <div
                     key={part.id}
-                    onClick={() => navigate(`/dismantle-parts/${part.id}`)}
+                    onClick={() =>
+                      navigate(`/dismantle-parts/${part.id}`, {
+                        state: { part, donorCar: car },
+                      })
+                    }
                     style={partRow}
                   >
                     <div
@@ -317,7 +312,7 @@ export default function DonorCarDetailView() {
   );
 }
 
-function StatCard({ label, value, color = '#ffffff' }) {
+function StatCard({ label, value, color = '#0f172a' }) {
   return (
     <div style={statCard}>
       <div style={{ ...statValue, color }}>{value}</div>
@@ -337,9 +332,7 @@ function InfoItem({ label, value, mono = false }) {
   );
 }
 
-const page = {
-  animation: 'fadeIn 0.3s ease',
-};
+const page = { animation: 'fadeIn 0.3s ease' };
 
 const backBtn = {
   background: 'none',
@@ -354,32 +347,22 @@ const backBtn = {
 };
 
 const hero = {
-  position: 'relative',
-  background: 'linear-gradient(135deg, #020617 0%, #0f172a 55%, #1e293b 100%)',
-  color: '#fff',
-  borderRadius: '28px',
-  padding: '26px',
-  overflow: 'hidden',
-  marginBottom: '24px',
-  boxShadow: '0 20px 50px rgba(15,23,42,0.18)',
+  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 55%, #eef2ff 100%)',
+  border: '1px solid #e2e8f0',
+  borderRadius: '24px',
+  padding: '24px',
+  marginBottom: '22px',
+  boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
 };
 
-const heroOverlay = {
-  position: 'absolute',
-  inset: 0,
-  background:
-    'radial-gradient(circle at top right, rgba(239,68,68,0.18), transparent 28%), radial-gradient(circle at bottom left, rgba(255,255,255,0.05), transparent 22%)',
-  pointerEvents: 'none',
-};
-
-const heroTop = {
-  position: 'relative',
-  zIndex: 1,
-  display: 'flex',
-  justifyContent: 'space-between',
+const heroContent = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)',
+  gap: '20px',
   alignItems: 'center',
-  marginBottom: '18px',
 };
+
+const heroLeft = { minWidth: 0 };
 
 const heroBadge = {
   display: 'inline-flex',
@@ -387,63 +370,51 @@ const heroBadge = {
   gap: '8px',
   padding: '8px 12px',
   borderRadius: '999px',
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  background: '#eef2ff',
+  border: '1px solid #dbeafe',
   fontSize: '12px',
   fontWeight: '800',
-  letterSpacing: '0.04em',
+  color: '#334155',
+  marginBottom: '14px',
 };
-
-const heroContent = {
-  position: 'relative',
-  zIndex: 1,
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)',
-  gap: '24px',
-  alignItems: 'end',
-};
-
-const heroLeft = {
-  minWidth: 0,
-};
-
-const heroRight = {};
 
 const heroTitle = {
   margin: 0,
-  fontSize: '34px',
+  fontSize: '24px',
   fontWeight: '900',
-  lineHeight: 1.1,
+  color: '#0f172a',
+  lineHeight: 1.15,
 };
 
 const heroMeta = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: '10px',
-  marginTop: '16px',
+  marginTop: '14px',
 };
 
 const metaChip = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '7px',
-  padding: '10px 12px',
+  padding: '9px 12px',
   borderRadius: '12px',
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  background: '#fff',
+  border: '1px solid #e2e8f0',
   fontSize: '13px',
   fontWeight: '700',
+  color: '#0f172a',
 };
 
 const vinBox = {
-  marginTop: '16px',
+  marginTop: '14px',
   fontSize: '13px',
-  color: '#cbd5e1',
+  color: '#475569',
   fontFamily: 'monospace',
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  borderRadius: '14px',
-  padding: '12px 14px',
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  padding: '10px 12px',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
 };
@@ -451,29 +422,29 @@ const vinBox = {
 const statsGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: '12px',
+  gap: '10px',
 };
 
 const statCard = {
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '18px',
-  padding: '18px',
-  minHeight: '92px',
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '16px',
+  padding: '16px',
+  minHeight: '84px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
 };
 
 const statValue = {
-  fontSize: '28px',
+  fontSize: '24px',
   fontWeight: '900',
   lineHeight: 1,
 };
 
 const statLabel = {
-  fontSize: '12px',
-  color: '#cbd5e1',
+  fontSize: '11px',
+  color: '#64748b',
   fontWeight: '800',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
@@ -482,13 +453,13 @@ const statLabel = {
 const contentGrid = {
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 0.95fr) minmax(0, 1.05fr)',
-  gap: '24px',
+  gap: '22px',
 };
 
 const leftCol = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '24px',
+  gap: '22px',
 };
 
 const rightCol = {
@@ -499,17 +470,16 @@ const rightCol = {
 const card = {
   background: '#fff',
   border: `1px solid ${COLORS.border}`,
-  borderRadius: '22px',
-  padding: '20px',
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
+  borderRadius: '20px',
+  padding: '18px',
+  boxShadow: '0 6px 18px rgba(15,23,42,0.04)',
 };
 
 const cardHeader = {
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
   gap: '12px',
-  marginBottom: '16px',
+  marginBottom: '14px',
 };
 
 const cardTitleWrap = {
@@ -521,25 +491,25 @@ const cardTitleWrap = {
 
 const cardTitle = {
   margin: 0,
-  fontSize: '17px',
+  fontSize: '16px',
   fontWeight: '900',
 };
 
 const mainImage = {
   width: '100%',
-  height: '380px',
+  height: '330px',
   objectFit: 'cover',
-  borderRadius: '18px',
+  borderRadius: '16px',
   border: `1px solid ${COLORS.border}`,
   backgroundColor: '#fff',
 };
 
 const imagePlaceholder = {
-  height: '380px',
+  height: '330px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  borderRadius: '18px',
+  borderRadius: '16px',
   background: '#f8fafc',
   border: `1px solid ${COLORS.border}`,
   color: '#94a3b8',
@@ -548,14 +518,14 @@ const imagePlaceholder = {
 
 const thumbGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))',
   gap: '10px',
-  marginTop: '14px',
+  marginTop: '12px',
 };
 
 const thumbImage = {
   width: '100%',
-  height: '82px',
+  height: '74px',
   objectFit: 'cover',
   borderRadius: '12px',
   cursor: 'pointer',
@@ -564,22 +534,22 @@ const thumbImage = {
 const infoGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: '14px',
+  gap: '12px',
 };
 
 const infoItem = {
-  padding: '14px',
-  borderRadius: '16px',
+  padding: '13px',
+  borderRadius: '14px',
   background: '#f8fafc',
   border: `1px solid ${COLORS.border}`,
 };
 
 const infoLabel = {
-  fontSize: '12px',
+  fontSize: '11px',
   fontWeight: '800',
   color: '#94a3b8',
   textTransform: 'uppercase',
-  marginBottom: '8px',
+  marginBottom: '7px',
 };
 
 const infoValue = {
@@ -592,9 +562,9 @@ const infoValue = {
 const partsCard = {
   background: '#fff',
   border: `1px solid ${COLORS.border}`,
-  borderRadius: '22px',
-  padding: '20px',
-  boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
+  borderRadius: '20px',
+  padding: '18px',
+  boxShadow: '0 6px 18px rgba(15,23,42,0.04)',
   height: '100%',
 };
 
@@ -604,28 +574,28 @@ const partsHeader = {
   alignItems: 'center',
   gap: '16px',
   flexWrap: 'wrap',
-  marginBottom: '18px',
+  marginBottom: '16px',
 };
 
 const partsEyebrow = {
-  fontSize: '12px',
+  fontSize: '11px',
   fontWeight: '900',
   color: '#94a3b8',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
-  marginBottom: '6px',
+  marginBottom: '5px',
 };
 
 const partsTitle = {
   margin: 0,
-  fontSize: '24px',
+  fontSize: '22px',
   fontWeight: '900',
   color: COLORS.dark,
 };
 
 const searchWrap = {
   position: 'relative',
-  width: '360px',
+  width: '340px',
   maxWidth: '100%',
 };
 
@@ -639,8 +609,8 @@ const searchIcon = {
 
 const searchInput = {
   width: '100%',
-  padding: '13px 14px 13px 40px',
-  borderRadius: '14px',
+  padding: '12px 14px 12px 40px',
+  borderRadius: '12px',
   border: `1px solid ${COLORS.border}`,
   outline: 'none',
   boxSizing: 'border-box',
@@ -650,27 +620,26 @@ const searchInput = {
 
 const partsList = {
   display: 'grid',
-  gap: '12px',
+  gap: '10px',
 };
 
 const partRow = {
   backgroundColor: '#fff',
   border: `1px solid ${COLORS.border}`,
-  padding: '16px',
-  borderRadius: '18px',
+  padding: '14px 16px',
+  borderRadius: '16px',
   display: 'grid',
   gridTemplateColumns: 'auto minmax(0, 1fr) auto',
   gap: '14px',
   alignItems: 'center',
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
 };
 
 const statusPill = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '8px',
-  padding: '8px 12px',
+  padding: '7px 11px',
   borderRadius: '999px',
   fontSize: '12px',
   fontWeight: '800',
@@ -689,7 +658,7 @@ const partMain = {
 };
 
 const partName = {
-  fontSize: '15px',
+  fontSize: '14px',
   fontWeight: '900',
   color: COLORS.dark,
   whiteSpace: 'nowrap',
@@ -700,7 +669,7 @@ const partName = {
 const partMeta = {
   fontSize: '12px',
   color: COLORS.muted,
-  marginTop: '5px',
+  marginTop: '4px',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -709,11 +678,11 @@ const partMeta = {
 const partSide = {
   display: 'flex',
   alignItems: 'center',
-  gap: '14px',
+  gap: '12px',
 };
 
 const priceTag = {
-  fontSize: '16px',
+  fontSize: '15px',
   fontWeight: '900',
   color: COLORS.dark,
   whiteSpace: 'nowrap',
@@ -723,7 +692,7 @@ const emptyBox = {
   background: '#fff',
   border: `1px dashed ${COLORS.border}`,
   borderRadius: '16px',
-  padding: '28px',
+  padding: '24px',
   textAlign: 'center',
   color: '#64748b',
   fontWeight: '700',
