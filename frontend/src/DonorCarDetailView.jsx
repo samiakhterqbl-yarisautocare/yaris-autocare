@@ -10,6 +10,7 @@ import {
   Palette,
   Hash,
   ChevronRight,
+  Printer,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -89,7 +90,7 @@ export default function DonorCarDetailView() {
     return parts.filter((part) => {
       const name = part.part_name?.toLowerCase() || '';
       const category = part.category?.toLowerCase() || '';
-      const grade = part.grading_display?.toLowerCase() || '';
+      const grade = part.grading?.toLowerCase() || part.grading_display?.toLowerCase() || '';
       const status = part.status?.toLowerCase() || '';
       const price = String(part.price || '').toLowerCase();
 
@@ -171,11 +172,21 @@ export default function DonorCarDetailView() {
             <div style={vinBox}>VIN: {car.vin || 'N/A'}</div>
           </div>
 
-          <div style={statsGrid}>
-            <StatCard label="Total Parts" value={stats.total} />
-            <StatCard label="Available" value={stats.available} color="#22c55e" />
-            <StatCard label="Sold" value={stats.sold} color="#ef4444" />
-            <StatCard label="Internal" value={stats.internal} color="#3b82f6" />
+          <div>
+            <div style={statsGrid}>
+              <StatCard label="Total Parts" value={stats.total} />
+              <StatCard label="Available" value={stats.available} color="#22c55e" />
+              <StatCard label="Sold" value={stats.sold} color="#ef4444" />
+              <StatCard label="Internal" value={stats.internal} color="#3b82f6" />
+            </div>
+
+            <button
+              onClick={() => navigate(`/yard-master/${car.id}/labels`)}
+              style={reprintBtn}
+            >
+              <Printer size={16} />
+              REPRINT LABELS
+            </button>
           </div>
         </div>
       </div>
@@ -264,7 +275,7 @@ export default function DonorCarDetailView() {
                   <div
                     key={part.id}
                     onClick={() =>
-                      navigate(`/dismantle-parts/${part.id}`, {
+                      navigate(`/dismantle-parts/${part.id}/edit`, {
                         state: { part, donorCar: car },
                       })
                     }
@@ -289,7 +300,7 @@ export default function DonorCarDetailView() {
                     <div style={partMain}>
                       <div style={partName}>{part.part_name || 'Unnamed Part'}</div>
                       <div style={partMeta}>
-                        {part.category || 'No Category'} • {part.grading_display || 'No Grade'}
+                        {part.category || 'No Category'} • {part.grading || part.grading_display || 'No Grade'}
                       </div>
                     </div>
 
@@ -448,6 +459,20 @@ const statLabel = {
   fontWeight: '800',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
+};
+
+const reprintBtn = {
+  marginTop: '12px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  background: '#fff',
+  color: '#0f172a',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  padding: '11px 14px',
+  fontWeight: '800',
+  cursor: 'pointer',
 };
 
 const contentGrid = {
