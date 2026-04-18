@@ -6,7 +6,6 @@ import {
   Search,
   Package,
   Filter,
-  ArrowRight,
   Tag,
   MapPin,
   Car,
@@ -16,35 +15,34 @@ import {
   Disc,
   Wind,
   Eye,
-  Grid3X3,
-  Rows3,
+  X,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const CATEGORY_OPTIONS = [
-  { name: 'All', icon: <Package size={18} />, slug: 'All' },
-  { name: 'Engine', icon: <Car size={18} />, slug: 'Engine' },
-  { name: 'Transmission', icon: <Layers size={18} />, slug: 'Transmission' },
-  { name: 'Suspension', icon: <Disc size={18} />, slug: 'Suspension' },
-  { name: 'Steering', icon: <Wrench size={18} />, slug: 'Steering' },
-  { name: 'Brakes', icon: <Disc size={18} />, slug: 'Brakes' },
-  { name: 'Electrical', icon: <Zap size={18} />, slug: 'Electrical' },
-  { name: 'Lighting', icon: <Zap size={18} />, slug: 'Lighting' },
-  { name: 'Interior', icon: <Wind size={18} />, slug: 'Interior' },
-  { name: 'Exterior', icon: <Car size={18} />, slug: 'Exterior' },
-  { name: 'Body Panels', icon: <Car size={18} />, slug: 'Body Panels' },
-  { name: 'Cooling', icon: <Wind size={18} />, slug: 'Cooling' },
-  { name: 'Fuel System', icon: <Wrench size={18} />, slug: 'Fuel System' },
-  { name: 'Exhaust', icon: <Wrench size={18} />, slug: 'Exhaust' },
-  { name: 'Wheels & Tyres', icon: <Disc size={18} />, slug: 'Wheels & Tyres' },
-  { name: 'Doors & Windows', icon: <Layers size={18} />, slug: 'Doors & Windows' },
-  { name: 'Mirrors', icon: <Layers size={18} />, slug: 'Mirrors' },
-  { name: 'AC & Heating', icon: <Wind size={18} />, slug: 'AC & Heating' },
-  { name: 'Sensors', icon: <Zap size={18} />, slug: 'Sensors' },
-  { name: 'ECU / Modules', icon: <Zap size={18} />, slug: 'ECU / Modules' },
-  { name: 'Accessories', icon: <Tag size={18} />, slug: 'Accessories' },
-  { name: 'Other', icon: <Package size={18} />, slug: 'Other' },
+  { name: 'All', icon: <Package size={16} />, slug: 'All' },
+  { name: 'Engine', icon: <Car size={16} />, slug: 'Engine' },
+  { name: 'Transmission', icon: <Layers size={16} />, slug: 'Transmission' },
+  { name: 'Suspension', icon: <Disc size={16} />, slug: 'Suspension' },
+  { name: 'Steering', icon: <Wrench size={16} />, slug: 'Steering' },
+  { name: 'Brakes', icon: <Disc size={16} />, slug: 'Brakes' },
+  { name: 'Electrical', icon: <Zap size={16} />, slug: 'Electrical' },
+  { name: 'Lighting', icon: <Zap size={16} />, slug: 'Lighting' },
+  { name: 'Interior', icon: <Wind size={16} />, slug: 'Interior' },
+  { name: 'Exterior', icon: <Car size={16} />, slug: 'Exterior' },
+  { name: 'Body Panels', icon: <Car size={16} />, slug: 'Body Panels' },
+  { name: 'Cooling', icon: <Wind size={16} />, slug: 'Cooling' },
+  { name: 'Fuel System', icon: <Wrench size={16} />, slug: 'Fuel System' },
+  { name: 'Exhaust', icon: <Wrench size={16} />, slug: 'Exhaust' },
+  { name: 'Wheels & Tyres', icon: <Disc size={16} />, slug: 'Wheels & Tyres' },
+  { name: 'Doors & Windows', icon: <Layers size={16} />, slug: 'Doors & Windows' },
+  { name: 'Mirrors', icon: <Layers size={16} />, slug: 'Mirrors' },
+  { name: 'AC & Heating', icon: <Wind size={16} />, slug: 'AC & Heating' },
+  { name: 'Sensors', icon: <Zap size={16} />, slug: 'Sensors' },
+  { name: 'ECU / Modules', icon: <Zap size={16} />, slug: 'ECU / Modules' },
+  { name: 'Accessories', icon: <Tag size={16} />, slug: 'Accessories' },
+  { name: 'Other', icon: <Package size={16} />, slug: 'Other' },
 ];
 
 const SALE_STATUS_OPTIONS = ['All', 'AVAILABLE', 'RESERVED', 'SOLD', 'REMOVED', 'DAMAGED', 'HOLD'];
@@ -57,7 +55,6 @@ export default function UsedPartsModule() {
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState('grid');
 
   const [filters, setFilters] = useState({
     search: '',
@@ -107,6 +104,18 @@ export default function UsedPartsModule() {
 
     return { total, available, sold, reserved, internal };
   }, [parts]);
+
+  const activeFilterCount = useMemo(() => {
+    return [
+      filters.category !== 'All',
+      filters.sale_status !== 'All',
+      filters.usage_type !== 'All',
+      filters.grade !== 'All',
+      !!filters.make.trim(),
+      !!filters.model.trim(),
+      !!filters.location.trim(),
+    ].filter(Boolean).length;
+  }, [filters]);
 
   const resetFilters = () => {
     setFilters({
@@ -166,173 +175,137 @@ export default function UsedPartsModule() {
 
       <div style={summaryGrid}>
         <SummaryCard title="Total Parts" value={summary.total} />
-        <SummaryCard title="Available" value={summary.available} />
-        <SummaryCard title="Sold" value={summary.sold} />
-        <SummaryCard title="Reserved" value={summary.reserved} />
-        <SummaryCard title="Internal Use" value={summary.internal} />
+        <SummaryCard title="Available" value={summary.available} accent="#16a34a" />
+        <SummaryCard title="Sold" value={summary.sold} accent="#dc2626" />
+        <SummaryCard title="Reserved" value={summary.reserved} accent="#d97706" />
+        <SummaryCard title="Internal Use" value={summary.internal} accent="#475569" />
       </div>
 
-      <div style={toolbar}>
-        <div style={searchWrap}>
-          <Search size={18} style={searchIcon} />
-          <input
-            type="text"
-            placeholder="Search by name, SKU, label, QR, make, model, notes..."
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            style={searchInput}
-          />
+      <div style={toolbarCard}>
+        <div style={toolbarTop}>
+          <div style={searchWrap}>
+            <Search size={18} style={searchIcon} />
+            <input
+              type="text"
+              placeholder="Search by name, SKU, make, model, location, notes..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              style={searchInput}
+            />
+          </div>
+
+          <div style={toolbarButtons}>
+            <button onClick={() => setShowFilters(!showFilters)} style={filterBtn}>
+              <Filter size={16} />
+              {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'}
+              {activeFilterCount > 0 ? <span style={filterCount}>{activeFilterCount}</span> : null}
+            </button>
+          </div>
         </div>
 
-        <div style={toolbarRight}>
-          <div style={viewToggle}>
+        <div style={chipWrap}>
+          {CATEGORY_OPTIONS.map((item) => (
             <button
-              type="button"
-              style={viewMode === 'grid' ? activeViewBtn : viewBtn}
-              onClick={() => setViewMode('grid')}
+              key={item.slug}
+              onClick={() => setFilters({ ...filters, category: item.slug })}
+              style={filters.category === item.slug ? activeChip : categoryChip}
             >
-              <Grid3X3 size={16} />
+              {item.icon}
+              <span>{item.name}</span>
             </button>
-            <button
-              type="button"
-              style={viewMode === 'list' ? activeViewBtn : viewBtn}
-              onClick={() => setViewMode('list')}
-            >
-              <Rows3 size={16} />
-            </button>
-          </div>
-
-          <button onClick={() => setShowFilters(!showFilters)} style={filterBtn}>
-            <Filter size={18} />
-            {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'}
-          </button>
+          ))}
         </div>
-      </div>
 
-      {showFilters && (
-        <div style={filtersCard}>
-          <div style={filtersGrid}>
-            <div style={fieldGroup}>
-              <label style={label}>Category</label>
-              <select
-                value={filters.category}
-                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                style={input}
-              >
-                {CATEGORY_OPTIONS.map((item) => (
-                  <option key={item.slug} value={item.slug}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+        {showFilters && (
+          <div style={filtersPanel}>
+            <div style={filtersGrid}>
+              <div style={fieldGroup}>
+                <label style={label}>Sale Status</label>
+                <select
+                  value={filters.sale_status}
+                  onChange={(e) => setFilters({ ...filters, sale_status: e.target.value })}
+                  style={input}
+                >
+                  {SALE_STATUS_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={fieldGroup}>
+                <label style={label}>Usage Type</label>
+                <select
+                  value={filters.usage_type}
+                  onChange={(e) => setFilters({ ...filters, usage_type: e.target.value })}
+                  style={input}
+                >
+                  {USAGE_TYPE_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={fieldGroup}>
+                <label style={label}>Grade</label>
+                <select
+                  value={filters.grade}
+                  onChange={(e) => setFilters({ ...filters, grade: e.target.value })}
+                  style={input}
+                >
+                  {GRADE_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={fieldGroup}>
+                <label style={label}>Make</label>
+                <input
+                  type="text"
+                  value={filters.make}
+                  onChange={(e) => setFilters({ ...filters, make: e.target.value })}
+                  style={input}
+                  placeholder="e.g. Toyota"
+                />
+              </div>
+
+              <div style={fieldGroup}>
+                <label style={label}>Model</label>
+                <input
+                  type="text"
+                  value={filters.model}
+                  onChange={(e) => setFilters({ ...filters, model: e.target.value })}
+                  style={input}
+                  placeholder="e.g. Yaris"
+                />
+              </div>
+
+              <div style={fieldGroup}>
+                <label style={label}>Location</label>
+                <input
+                  type="text"
+                  value={filters.location}
+                  onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                  style={input}
+                  placeholder="e.g. A1B3"
+                />
+              </div>
             </div>
 
-            <div style={fieldGroup}>
-              <label style={label}>Sale Status</label>
-              <select
-                value={filters.sale_status}
-                onChange={(e) => setFilters({ ...filters, sale_status: e.target.value })}
-                style={input}
-              >
-                {SALE_STATUS_OPTIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={fieldGroup}>
-              <label style={label}>Usage Type</label>
-              <select
-                value={filters.usage_type}
-                onChange={(e) => setFilters({ ...filters, usage_type: e.target.value })}
-                style={input}
-              >
-                {USAGE_TYPE_OPTIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={fieldGroup}>
-              <label style={label}>Grade</label>
-              <select
-                value={filters.grade}
-                onChange={(e) => setFilters({ ...filters, grade: e.target.value })}
-                style={input}
-              >
-                {GRADE_OPTIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={fieldGroup}>
-              <label style={label}>Make</label>
-              <input
-                type="text"
-                value={filters.make}
-                onChange={(e) => setFilters({ ...filters, make: e.target.value })}
-                style={input}
-                placeholder="e.g. Toyota"
-              />
-            </div>
-
-            <div style={fieldGroup}>
-              <label style={label}>Model</label>
-              <input
-                type="text"
-                value={filters.model}
-                onChange={(e) => setFilters({ ...filters, model: e.target.value })}
-                style={input}
-                placeholder="e.g. Yaris"
-              />
-            </div>
-
-            <div style={fieldGroup}>
-              <label style={label}>Location</label>
-              <input
-                type="text"
-                value={filters.location}
-                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                style={input}
-                placeholder="e.g. Shelf A1"
-              />
+            <div style={filterActionRow}>
+              <button onClick={resetFilters} style={clearBtn}>
+                <X size={14} />
+                RESET FILTERS
+              </button>
             </div>
           </div>
-
-          <div style={filterActionRow}>
-            <button onClick={resetFilters} style={clearBtn}>
-              RESET FILTERS
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div style={sectionHeader}>
-        <h2 style={sectionTitle}>Browse by Category</h2>
-      </div>
-
-      <div style={categoryGrid}>
-        {CATEGORY_OPTIONS.filter((item) => item.slug !== 'All').map((item) => (
-          <button
-            key={item.slug}
-            onClick={() => setFilters({ ...filters, category: item.slug })}
-            style={filters.category === item.slug ? activeCategoryCard : categoryCard}
-          >
-            <div style={categoryIconWrap}>{item.icon}</div>
-            <div style={categoryTextWrap}>
-              <div style={categoryTitle}>{item.name}</div>
-              <div style={categorySubtext}>Filter inventory</div>
-            </div>
-            <ArrowRight size={16} />
-          </button>
-        ))}
+        )}
       </div>
 
       <div style={sectionHeaderRow}>
@@ -351,171 +324,131 @@ export default function UsedPartsModule() {
             ADD USED PART
           </button>
         </div>
-      ) : viewMode === 'grid' ? (
-        <div style={compactGrid}>
-          {parts.map((part) => {
-            const imageUrl = getMainImage(part);
-
-            return (
-              <div
-                key={part.id}
-                style={compactCard}
-                onClick={() => navigate(`/used-parts/${part.id}`)}
-              >
-                <div style={compactThumbWrap}>
-                  {imageUrl ? (
-                    <img src={imageUrl} alt={part.part_name} style={compactThumb} />
-                  ) : (
-                    <div style={compactPlaceholder}>
-                      <Package size={22} />
-                    </div>
-                  )}
-                </div>
-
-                <div style={compactBody}>
-                  <div style={compactTop}>
-                    <span style={smallCategoryBadge}>{part.category || 'Other'}</span>
-                    <span style={getStatusBadgeStyle(part.sale_status)}>
-                      {part.sale_status || 'AVAILABLE'}
-                    </span>
-                  </div>
-
-                  <div style={compactName}>{part.part_name}</div>
-
-                  <div style={compactMeta}>
-                    <div style={metaLine}>
-                      <Tag size={13} />
-                      <span>{part.sku || 'No SKU'}</span>
-                    </div>
-
-                    {(part.make || part.model) && (
-                      <div style={metaLine}>
-                        <Car size={13} />
-                        <span>{[part.make, part.model].filter(Boolean).join(' ')}</span>
-                      </div>
-                    )}
-
-                    {part.location && (
-                      <div style={metaLine}>
-                        <MapPin size={13} />
-                        <span>{part.location}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={compactFooter}>
-                    <div style={compactPrice}>{formatPrice(part.price)}</div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/used-parts/${part.id}`);
-                      }}
-                      style={openMiniBtn}
-                    >
-                      <Eye size={14} />
-                      OPEN
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       ) : (
-        <div style={listWrap}>
-          {parts.map((part) => {
-            const imageUrl = getMainImage(part);
+        <div style={tableCard}>
+          <div style={tableWrap}>
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th style={thPart}>Part</th>
+                  <th style={th}>SKU / Label</th>
+                  <th style={th}>Fitment</th>
+                  <th style={th}>Location</th>
+                  <th style={th}>Grade</th>
+                  <th style={th}>Status</th>
+                  <th style={thPrice}>Price</th>
+                  <th style={thAction}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map((part) => {
+                  const imageUrl = getMainImage(part);
 
-            return (
-              <div
-                key={part.id}
-                style={listCard}
-                onClick={() => navigate(`/used-parts/${part.id}`)}
-              >
-                <div style={listThumbWrap}>
-                  {imageUrl ? (
-                    <img src={imageUrl} alt={part.part_name} style={listThumb} />
-                  ) : (
-                    <div style={listPlaceholder}>
-                      <Package size={20} />
-                    </div>
-                  )}
-                </div>
+                  return (
+                    <tr
+                      key={part.id}
+                      style={tr}
+                      onClick={() => navigate(`/used-parts/${part.id}`)}
+                    >
+                      <td style={tdPart}>
+                        <div style={partCell}>
+                          <div style={thumbWrap}>
+                            {imageUrl ? (
+                              <img src={imageUrl} alt={part.part_name} style={thumb} />
+                            ) : (
+                              <div style={thumbPlaceholder}>
+                                <Package size={18} />
+                              </div>
+                            )}
+                          </div>
 
-                <div style={listMain}>
-                  <div style={listHeader}>
-                    <div style={listName}>{part.part_name}</div>
-                    <div style={listBadges}>
-                      <span style={smallCategoryBadge}>{part.category || 'Other'}</span>
-                      <span style={getStatusBadgeStyle(part.sale_status)}>
-                        {part.sale_status || 'AVAILABLE'}
-                      </span>
-                    </div>
-                  </div>
+                          <div style={partInfo}>
+                            <div style={partName}>{part.part_name}</div>
+                            <div style={partSubRow}>
+                              <span style={smallCategoryBadge}>{part.category || 'Other'}</span>
+                              {part.part_number ? (
+                                <span style={mutedMini}>PN: {part.part_number}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-                  <div style={listMetaRow}>
-                    <span style={listMetaItem}>
-                      <Tag size={13} />
-                      {part.sku || 'No SKU'}
-                    </span>
+                      <td style={td}>
+                        <div style={monoText}>{part.sku || '-'}</div>
+                        <div style={mutedMini}>{part.label_id || '-'}</div>
+                      </td>
 
-                    {(part.make || part.model) && (
-                      <span style={listMetaItem}>
-                        <Car size={13} />
-                        {[part.make, part.model, part.variant].filter(Boolean).join(' ')}
-                      </span>
-                    )}
+                      <td style={td}>
+                        <div style={fitmentWrap}>
+                          <span style={inlineMeta}>
+                            <Car size={13} />
+                            {[part.make, part.model, part.variant].filter(Boolean).join(' ') || '-'}
+                          </span>
+                          {(part.year_from || part.year_to) && (
+                            <span style={mutedMini}>
+                              {part.year_from || ''}{part.year_to ? ` - ${part.year_to}` : ''}
+                            </span>
+                          )}
+                        </div>
+                      </td>
 
-                    {part.location && (
-                      <span style={listMetaItem}>
-                        <MapPin size={13} />
-                        {part.location}
-                      </span>
-                    )}
+                      <td style={td}>
+                        <div style={inlineMeta}>
+                          <MapPin size={13} />
+                          {part.location || '-'}
+                        </div>
+                        {part.shelf_code ? <div style={mutedMini}>{part.shelf_code}</div> : null}
+                      </td>
 
-                    {part.grade && (
-                      <span style={listMetaItem}>
-                        Grade {part.grade}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                      <td style={td}>
+                        <div style={gradeBadge}>Grade {part.grade || '-'}</div>
+                      </td>
 
-                <div style={listSide}>
-                  <div style={listPrice}>{formatPrice(part.price)}</div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/used-parts/${part.id}`);
-                    }}
-                    style={openMiniBtn}
-                  >
-                    <Eye size={14} />
-                    OPEN
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                      <td style={td}>
+                        <span style={getStatusBadgeStyle(part.sale_status)}>
+                          {part.sale_status || 'AVAILABLE'}
+                        </span>
+                      </td>
+
+                      <td style={tdPrice}>{formatPrice(part.price)}</td>
+
+                      <td style={tdAction}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/used-parts/${part.id}`);
+                          }}
+                          style={openBtn}
+                        >
+                          <Eye size={14} />
+                          Open
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function SummaryCard({ title, value }) {
+function SummaryCard({ title, value, accent = '#0f172a' }) {
   return (
     <div style={summaryCard}>
       <div style={summaryTitle}>{title}</div>
-      <div style={summaryValue}>{value}</div>
+      <div style={{ ...summaryValue, color: accent }}>{value}</div>
     </div>
   );
 }
 
 const page = {
-  padding: '32px',
+  padding: '28px',
 };
 
 const headerRow = {
@@ -523,13 +456,13 @@ const headerRow = {
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: '16px',
-  marginBottom: '24px',
+  marginBottom: '22px',
   flexWrap: 'wrap',
 };
 
 const pageTitle = {
   margin: 0,
-  fontSize: '32px',
+  fontSize: '30px',
   fontWeight: '900',
   color: '#0f172a',
 };
@@ -568,42 +501,50 @@ const addBtnSmall = {
 
 const summaryGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-  gap: '16px',
-  marginBottom: '24px',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+  gap: '14px',
+  marginBottom: '20px',
 };
 
 const summaryCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '20px',
+  borderRadius: '18px',
   padding: '18px',
 };
 
 const summaryTitle = {
-  fontSize: '13px',
+  fontSize: '12px',
   fontWeight: '800',
   color: '#64748b',
   marginBottom: '8px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
 };
 
 const summaryValue = {
   fontSize: '30px',
   fontWeight: '900',
-  color: '#0f172a',
 };
 
-const toolbar = {
+const toolbarCard = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '22px',
+  padding: '18px',
+  marginBottom: '22px',
+};
+
+const toolbarTop = {
   display: 'flex',
   gap: '12px',
   alignItems: 'center',
-  marginBottom: '20px',
   flexWrap: 'wrap',
 };
 
-const toolbarRight = {
+const toolbarButtons = {
   display: 'flex',
-  gap: '12px',
+  gap: '10px',
   alignItems: 'center',
   flexWrap: 'wrap',
 };
@@ -632,34 +573,6 @@ const searchInput = {
   outline: 'none',
 };
 
-const viewToggle = {
-  display: 'flex',
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '14px',
-  padding: '4px',
-  gap: '4px',
-};
-
-const viewBtn = {
-  width: '40px',
-  height: '40px',
-  borderRadius: '10px',
-  border: 'none',
-  background: 'transparent',
-  color: '#475569',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const activeViewBtn = {
-  ...viewBtn,
-  background: '#0f172a',
-  color: '#fff',
-};
-
 const filterBtn = {
   padding: '14px 16px',
   borderRadius: '14px',
@@ -673,12 +586,51 @@ const filterBtn = {
   gap: '8px',
 };
 
-const filtersCard = {
-  background: '#fff',
+const filterCount = {
+  minWidth: '20px',
+  height: '20px',
+  borderRadius: '999px',
+  background: '#0f172a',
+  color: '#fff',
+  fontSize: '11px',
+  fontWeight: '800',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const chipWrap = {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+  marginTop: '14px',
+};
+
+const categoryChip = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '10px 12px',
+  borderRadius: '999px',
   border: '1px solid #e2e8f0',
-  borderRadius: '20px',
-  padding: '20px',
-  marginBottom: '24px',
+  background: '#fff',
+  color: '#334155',
+  fontWeight: '700',
+  cursor: 'pointer',
+  fontSize: '13px',
+};
+
+const activeChip = {
+  ...categoryChip,
+  background: '#0f172a',
+  color: '#fff',
+  border: '1px solid #0f172a',
+};
+
+const filtersPanel = {
+  marginTop: '16px',
+  borderTop: '1px solid #e2e8f0',
+  paddingTop: '16px',
 };
 
 const filtersGrid = {
@@ -694,9 +646,11 @@ const fieldGroup = {
 };
 
 const label = {
-  fontSize: '13px',
+  fontSize: '12px',
   fontWeight: '800',
   color: '#334155',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
 };
 
 const input = {
@@ -715,21 +669,20 @@ const filterActionRow = {
 };
 
 const clearBtn = {
-  padding: '12px 14px',
+  padding: '11px 14px',
   borderRadius: '12px',
   border: '1px solid #cbd5e1',
   background: '#fff',
   color: '#334155',
   fontWeight: '800',
   cursor: 'pointer',
-};
-
-const sectionHeader = {
-  marginBottom: '12px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
 };
 
 const sectionHeaderRow = {
-  marginBottom: '14px',
+  marginBottom: '12px',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -742,88 +695,112 @@ const sectionTitle = {
   margin: 0,
 };
 
-const categoryGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: '14px',
-  marginBottom: '24px',
-};
-
-const categoryCard = {
+const tableCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '18px',
-  padding: '16px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '12px',
-  cursor: 'pointer',
+  borderRadius: '22px',
+  overflow: 'hidden',
 };
 
-const activeCategoryCard = {
-  ...categoryCard,
-  border: '1px solid #ef4444',
-  boxShadow: '0 0 0 2px rgba(239, 68, 68, 0.08)',
+const tableWrap = {
+  overflowX: 'auto',
 };
 
-const categoryIconWrap = {
-  width: '40px',
-  height: '40px',
-  borderRadius: '12px',
-  background: '#0f172a',
-  color: '#fff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flexShrink: 0,
+const table = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  minWidth: '1200px',
 };
 
-const categoryTextWrap = {
-  flex: 1,
+const thBase = {
   textAlign: 'left',
+  fontSize: '12px',
+  fontWeight: '800',
+  color: '#64748b',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+  padding: '14px 16px',
+  background: '#f8fafc',
+  borderBottom: '1px solid #e2e8f0',
 };
 
-const categoryTitle = {
+const thPart = {
+  ...thBase,
+  minWidth: '300px',
+};
+
+const th = {
+  ...thBase,
+};
+
+const thPrice = {
+  ...thBase,
+  textAlign: 'right',
+  minWidth: '110px',
+};
+
+const thAction = {
+  ...thBase,
+  textAlign: 'center',
+  minWidth: '120px',
+};
+
+const tr = {
+  cursor: 'pointer',
+  borderBottom: '1px solid #eef2f7',
+};
+
+const tdBase = {
+  padding: '14px 16px',
+  verticalAlign: 'middle',
   fontSize: '14px',
-  fontWeight: '800',
   color: '#0f172a',
 };
 
-const categorySubtext = {
-  fontSize: '12px',
-  color: '#64748b',
-  marginTop: '4px',
+const tdPart = {
+  ...tdBase,
 };
 
-const compactGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-  gap: '16px',
+const td = {
+  ...tdBase,
 };
 
-const compactCard = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '18px',
+const tdPrice = {
+  ...tdBase,
+  textAlign: 'right',
+  fontWeight: '900',
+  fontSize: '20px',
+  color: '#16a34a',
+};
+
+const tdAction = {
+  ...tdBase,
+  textAlign: 'center',
+};
+
+const partCell = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '14px',
+};
+
+const thumbWrap = {
+  width: '78px',
+  height: '62px',
+  borderRadius: '12px',
   overflow: 'hidden',
-  cursor: 'pointer',
-  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
-};
-
-const compactThumbWrap = {
-  height: '130px',
   background: '#f8fafc',
-  borderBottom: '1px solid #f1f5f9',
+  border: '1px solid #f1f5f9',
+  flexShrink: 0,
 };
 
-const compactThumb = {
+const thumb = {
   width: '100%',
   height: '100%',
   objectFit: 'cover',
 };
 
-const compactPlaceholder = {
+const thumbPlaceholder = {
   width: '100%',
   height: '100%',
   display: 'flex',
@@ -832,16 +809,23 @@ const compactPlaceholder = {
   color: '#94a3b8',
 };
 
-const compactBody = {
-  padding: '14px',
+const partInfo = {
+  minWidth: 0,
 };
 
-const compactTop = {
+const partName = {
+  fontSize: '18px',
+  fontWeight: '900',
+  color: '#0f172a',
+  lineHeight: 1.2,
+};
+
+const partSubRow = {
   display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
   gap: '8px',
-  marginBottom: '10px',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  marginTop: '6px',
 };
 
 const smallCategoryBadge = {
@@ -854,145 +838,51 @@ const smallCategoryBadge = {
   whiteSpace: 'nowrap',
 };
 
-const compactName = {
-  fontSize: '17px',
-  fontWeight: '900',
-  color: '#0f172a',
-  marginBottom: '10px',
-  lineHeight: 1.2,
-  minHeight: '40px',
-};
-
-const compactMeta = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '6px',
-};
-
-const metaLine = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '7px',
-  color: '#64748b',
+const mutedMini = {
   fontSize: '12px',
+  color: '#64748b',
   fontWeight: '600',
 };
 
-const compactFooter = {
-  marginTop: '14px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
+const monoText = {
+  fontWeight: '800',
+  color: '#0f172a',
 };
 
-const compactPrice = {
-  fontSize: '20px',
-  color: '#16a34a',
-  fontWeight: '900',
-};
-
-const listWrap = {
+const fitmentWrap = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '12px',
+  gap: '5px',
 };
 
-const listCard = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '18px',
-  padding: '14px',
-  display: 'grid',
-  gridTemplateColumns: '92px 1fr auto',
-  gap: '16px',
-  alignItems: 'center',
-  cursor: 'pointer',
-};
-
-const listThumbWrap = {
-  width: '92px',
-  height: '76px',
-  borderRadius: '12px',
-  overflow: 'hidden',
-  background: '#f8fafc',
-  border: '1px solid #f1f5f9',
-};
-
-const listThumb = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-};
-
-const listPlaceholder = {
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#94a3b8',
-};
-
-const listMain = {
-  minWidth: 0,
-};
-
-const listHeader = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  gap: '12px',
-  flexWrap: 'wrap',
-};
-
-const listName = {
-  fontSize: '18px',
-  fontWeight: '900',
-  color: '#0f172a',
-  lineHeight: 1.2,
-};
-
-const listBadges = {
-  display: 'flex',
-  gap: '8px',
-  flexWrap: 'wrap',
-};
-
-const listMetaRow = {
-  display: 'flex',
-  gap: '16px',
-  flexWrap: 'wrap',
-  marginTop: '10px',
-};
-
-const listMetaItem = {
+const inlineMeta = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '6px',
+  color: '#334155',
+  fontWeight: '700',
+};
+
+const gradeBadge = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '6px 10px',
+  borderRadius: '999px',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontWeight: '800',
   fontSize: '12px',
-  color: '#64748b',
-  fontWeight: '600',
-};
-
-const listSide = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-end',
-  gap: '10px',
-};
-
-const listPrice = {
-  fontSize: '22px',
-  color: '#16a34a',
-  fontWeight: '900',
 };
 
 const statusBase = {
-  padding: '4px 9px',
+  padding: '6px 10px',
   borderRadius: '999px',
   fontWeight: '800',
-  fontSize: '10px',
+  fontSize: '11px',
   whiteSpace: 'nowrap',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const statusAvailable = {
@@ -1031,9 +921,9 @@ const statusDefault = {
   color: '#475569',
 };
 
-const openMiniBtn = {
-  padding: '9px 12px',
-  borderRadius: '10px',
+const openBtn = {
+  padding: '10px 14px',
+  borderRadius: '12px',
   border: 'none',
   background: '#0f172a',
   color: '#fff',
@@ -1042,7 +932,6 @@ const openMiniBtn = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '6px',
-  fontSize: '12px',
 };
 
 const emptyStateCard = {
