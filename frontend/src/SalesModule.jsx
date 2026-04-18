@@ -3,66 +3,60 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   Receipt,
+  FileText,
   User,
   Phone,
   Mail,
   MapPin,
   Car,
-  FileText,
-  Wrench,
+  Hash,
+  CalendarDays,
+  StickyNote,
   Plus,
   Trash2,
   Save,
-  Building2,
-  Hash,
-  CreditCard,
-  StickyNote,
-  CalendarDays,
   Eye,
   LayoutList,
-  ChevronDown,
+  Wrench,
+  Package,
+  Settings,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
-const invoiceTypeOptions = [
-  { value: 'CUSTOM', label: 'Custom Invoice' },
-  { value: 'USED_PART', label: 'Used Part Sale' },
-  { value: 'AFTERMARKET', label: 'Aftermarket Part Sale' },
-  { value: 'DISMANTLE', label: 'Dismantle Part Sale' },
+const documentTypeOptions = [
+  { value: 'INVOICE', label: 'Tax Invoice' },
+  { value: 'QUOTE', label: 'Quote' },
+];
+
+const jobTypeOptions = [
   { value: 'SERVICING', label: 'Servicing' },
-  { value: 'DIAGNOSTIC', label: 'Diagnostic' },
-  { value: 'LABOUR', label: 'Labour' },
-  { value: 'REPAIR', label: 'Mechanical Repair' },
+  { value: 'PARTS_SALE', label: 'Parts Sale' },
+  { value: 'WORKSHOP', label: 'Workshop Invoice' },
 ];
 
-const paymentMethodOptions = [
-  'Cash',
-  'Bank Transfer',
-  'Card',
-  'EFTPOS',
-  'Pending',
-];
-
-const serviceTemplateOptions = [
-  { value: 'CUSTOM', label: 'Custom Service' },
+const serviceTypeOptions = [
   { value: 'REGULAR', label: 'Regular Service' },
   { value: 'MAJOR', label: 'Major Service' },
 ];
 
-const createBlankItem = () => ({
-  item_type: 'MANUAL',
-  source_type: 'MANUAL',
-  source_id: null,
-  name: '',
-  description: '',
-  quantity: 1,
-  unit_price: '',
-  discount: 0,
-  gst_included: true,
-});
+const paymentMethodOptions = ['Cash', 'Bank Transfer', 'Card', 'EFTPOS', 'Pending'];
 
-const majorServiceTemplate = [
+const regularServiceRows = [
+  'Oil filter replacement',
+  'Engine oil change',
+  'New Sumpplug washer',
+  'Top-ups (brake, power steering, coolant & windscreen washer fluid)',
+  'Safety checks (Underbody components, Brakes, Globes, horn & tyre pressure)',
+  'Check globes',
+  'Check hoses',
+  'Check drive belt',
+  'Battery load test',
+  'Check tyre pressure',
+  'Check front brake pads & rotors',
+];
+
+const majorServiceRows = [
   'Oil filter replacement',
   'Engine oil change',
   'New Sumpplug washer',
@@ -86,19 +80,30 @@ const majorServiceTemplate = [
   'Check front brake pads & rotors',
 ];
 
-const regularServiceTemplate = [
-  'Oil filter replacement',
-  'Engine oil change',
-  'New Sumpplug washer',
-  'Top-ups (brake, power steering, coolant & windscreen washer fluid)',
-  'Safety checks (Underbody components, Brakes, Globes, horn & tyre pressure)',
-  'Check globes',
-  'Check hoses',
-  'Check drive belt',
-  'Battery load test',
-  'Check tyre pressure',
-  'Check front brake pads & rotors',
-];
+const createBlankRow = () => ({
+  item_type: 'MANUAL',
+  source_type: 'MANUAL',
+  source_id: null,
+  name: '',
+  description: '',
+  quantity: 1,
+  unit_price: '',
+  discount: 0,
+  gst_included: true,
+});
+
+const createServiceRows = (rows) =>
+  rows.map((text) => ({
+    item_type: 'SERVICE',
+    source_type: 'MANUAL',
+    source_id: null,
+    name: text,
+    description: '',
+    quantity: 1,
+    unit_price: 0,
+    discount: 0,
+    gst_included: true,
+  }));
 
 export default function SalesModule() {
   const navigate = useNavigate();
@@ -106,24 +111,23 @@ export default function SalesModule() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [createdInvoice, setCreatedInvoice] = useState(null);
 
-  const [invoiceType, setInvoiceType] = useState('CUSTOM');
-  const [serviceTemplateType, setServiceTemplateType] = useState('CUSTOM');
+  const [documentType, setDocumentType] = useState('INVOICE');
+  const [jobType, setJobType] = useState('SERVICING');
+  const [serviceType, setServiceType] = useState('REGULAR');
 
   const [customer, setCustomer] = useState({
     customer_name: 'Walk-in Customer',
     customer_phone: '',
     customer_email: '',
     customer_address: '',
-    customer_company: '',
-    customer_abn: '',
   });
 
   const [vehicle, setVehicle] = useState({
     rego: '',
     make: '',
     model: '',
-    year: '',
     vin: '',
     odometer: '',
   });
@@ -132,9 +136,7 @@ export default function SalesModule() {
     service_at_km: '',
     next_service_at_km: '',
     next_service_date: '',
-    oil_grade: '',
-    service_notes: '',
-    recommendations: '',
+    notes: '',
   });
 
   const [payment, setPayment] = useState({
@@ -143,33 +145,35 @@ export default function SalesModule() {
     notes: '',
   });
 
-  const [items, setItems] = useState([createBlankItem()]);
-  const [createdInvoice, setCreatedInvoice] = useState(null);
+  const [rows, setRows] = useState(createServiceRows(regularServiceRows));
 
-  const isServicing = invoiceType === 'SERVICING';
+  const showVehicleDetails = jobType === 'SERVICING' || jobType === 'WORKSHOP';
+  const isServicing = jobType === 'SERVICING';
+  const isPartsSale = jobType === 'PARTS_SALE';
+  const isWorkshop = jobType === 'WORKSHOP';
 
-  const lineItemsWithTotals = useMemo(() => {
-    return items.map((item) => {
-      const qty = parseFloat(item.quantity || 0) || 0;
-      const unitPrice = parseFloat(item.unit_price || 0) || 0;
-      const discount = parseFloat(item.discount || 0) || 0;
-      const lineTotal = Math.max((qty * unitPrice) - discount, 0);
-      return { ...item, lineTotal };
+  const lineItems = useMemo(() => {
+    return rows.map((row) => {
+      const qty = parseFloat(row.quantity || 0) || 0;
+      const unit = parseFloat(row.unit_price || 0) || 0;
+      const discount = parseFloat(row.discount || 0) || 0;
+      const lineTotal = Math.max(qty * unit - discount, 0);
+      return { ...row, lineTotal };
     });
-  }, [items]);
+  }, [rows]);
 
   const subtotal = useMemo(
-    () => lineItemsWithTotals.reduce((sum, item) => sum + item.lineTotal, 0),
-    [lineItemsWithTotals]
+    () => lineItems.reduce((sum, row) => sum + row.lineTotal, 0),
+    [lineItems]
   );
 
   const gstAmount = useMemo(
     () =>
-      lineItemsWithTotals.reduce((sum, item) => {
-        if (!item.gst_included) return sum;
-        return sum + item.lineTotal / 11;
+      lineItems.reduce((sum, row) => {
+        if (!row.gst_included) return sum;
+        return sum + row.lineTotal / 11;
       }, 0),
-    [lineItemsWithTotals]
+    [lineItems]
   );
 
   const totalAmount = subtotal;
@@ -195,146 +199,97 @@ export default function SalesModule() {
     setPayment((prev) => ({ ...prev, [field]: value }));
   };
 
-  const updateItem = (index, field, value) => {
-    setItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+  const updateRow = (index, field, value) => {
+    setRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
     );
   };
 
-  const addItemRow = () => {
-    setItems((prev) => [...prev, createBlankItem()]);
+  const addRow = () => {
+    setRows((prev) => [...prev, createBlankRow()]);
   };
 
-  const removeItemRow = (index) => {
-    if (items.length === 1) {
-      setItems([createBlankItem()]);
+  const removeRow = (index) => {
+    if (rows.length === 1) {
+      setRows([createBlankRow()]);
       return;
     }
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const buildTemplateRows = (templateItems) =>
-    templateItems.map((text) => ({
-      item_type: 'SERVICE',
-      source_type: 'MANUAL',
-      source_id: null,
-      name: text,
-      description: '',
-      quantity: 1,
-      unit_price: 0,
-      discount: 0,
-      gst_included: true,
-    }));
-
-  const applyServiceTemplate = (templateType) => {
-    setServiceTemplateType(templateType);
-
-    if (templateType === 'MAJOR') {
-      setItems(buildTemplateRows(majorServiceTemplate));
-      return;
-    }
-
-    if (templateType === 'REGULAR') {
-      setItems(buildTemplateRows(regularServiceTemplate));
-      return;
-    }
-
-    setItems([createBlankItem()]);
-  };
-
-  const handleInvoiceTypeChange = (value) => {
-    setInvoiceType(value);
-
-    if (value !== 'SERVICING') {
-      setServiceTemplateType('CUSTOM');
-    }
-  };
-
-  const resetForm = () => {
-    setInvoiceType('CUSTOM');
-    setServiceTemplateType('CUSTOM');
-    setCustomer({
-      customer_name: 'Walk-in Customer',
-      customer_phone: '',
-      customer_email: '',
-      customer_address: '',
-      customer_company: '',
-      customer_abn: '',
-    });
-    setVehicle({
-      rego: '',
-      make: '',
-      model: '',
-      year: '',
-      vin: '',
-      odometer: '',
-    });
-    setServiceDetail({
-      service_at_km: '',
-      next_service_at_km: '',
-      next_service_date: '',
-      oil_grade: '',
-      service_notes: '',
-      recommendations: '',
-    });
-    setPayment({
-      paid_amount: '',
-      payment_method: 'Cash',
-      notes: '',
-    });
-    setItems([createBlankItem()]);
-    setCreatedInvoice(null);
+  const handleJobTypeChange = (value) => {
+    setJobType(value);
     setSuccessMessage('');
     setErrorMessage('');
+    setCreatedInvoice(null);
+
+    if (value === 'SERVICING') {
+      setServiceType('REGULAR');
+      setRows(createServiceRows(regularServiceRows));
+    } else {
+      setRows([createBlankRow()]);
+    }
   };
 
-  const validateBeforeSubmit = () => {
+  const handleServiceTypeChange = (value) => {
+    setServiceType(value);
+    if (value === 'REGULAR') {
+      setRows(createServiceRows(regularServiceRows));
+    } else {
+      setRows(createServiceRows(majorServiceRows));
+    }
+  };
+
+  const validateForm = () => {
     if (!customer.customer_name.trim()) {
       return 'Customer name is required.';
     }
 
-    const validItems = items.filter(
-      (item) => item.name.trim() && (parseFloat(item.quantity || 0) || 0) > 0
+    const validRows = rows.filter(
+      (row) => row.name.trim() && (parseFloat(row.quantity || 0) || 0) > 0
     );
 
-    if (validItems.length === 0) {
-      return 'Please add at least one valid invoice item.';
+    if (validRows.length === 0) {
+      return 'Please add at least one valid row.';
     }
 
     if (isServicing) {
-      if (!serviceDetail.service_at_km) {
-        return 'Service At KM is required for servicing.';
-      }
-      if (!serviceDetail.next_service_at_km) {
-        return 'Next Service At KM is required for servicing.';
-      }
-      if (!serviceDetail.next_service_date) {
-        return 'Next Service Date is required for servicing.';
-      }
+      if (!serviceDetail.service_at_km) return 'Service At KM is required.';
+      if (!serviceDetail.next_service_at_km) return 'Next Service At KM is required.';
+      if (!serviceDetail.next_service_date) return 'Next Service Date is required.';
     }
 
     return null;
   };
 
   const buildPayload = () => {
-    const validItems = items
-      .filter((item) => item.name.trim() && (parseFloat(item.quantity || 0) || 0) > 0)
-      .map((item) => ({
-        item_type: item.item_type || 'MANUAL',
-        source_type: item.source_type || 'MANUAL',
-        source_id: item.source_id ? parseInt(item.source_id, 10) : null,
-        name: item.name.trim(),
-        description: item.description?.trim() || '',
-        quantity: parseFloat(item.quantity || 0) || 1,
-        unit_price: parseFloat(item.unit_price || 0) || 0,
-        discount: parseFloat(item.discount || 0) || 0,
-        gst_included: !!item.gst_included,
+    const validRows = rows
+      .filter((row) => row.name.trim() && (parseFloat(row.quantity || 0) || 0) > 0)
+      .map((row) => ({
+        item_type: row.item_type || 'MANUAL',
+        source_type: row.source_type || 'MANUAL',
+        source_id: row.source_id || null,
+        name: row.name.trim(),
+        description: row.description?.trim() || '',
+        quantity: parseFloat(row.quantity || 0) || 1,
+        unit_price: parseFloat(row.unit_price || 0) || 0,
+        discount: parseFloat(row.discount || 0) || 0,
+        gst_included: !!row.gst_included,
       }));
 
-    const notesWithServiceTemplate =
-      isServicing && serviceTemplateType !== 'CUSTOM'
-        ? `${payment.notes || ''}${payment.notes ? '\n\n' : ''}Service Template: ${serviceTemplateType}`
-        : payment.notes || '';
+    let invoiceType = 'CUSTOM';
+    if (isServicing) invoiceType = 'SERVICING';
+    if (isWorkshop) invoiceType = 'REPAIR';
+    if (isPartsSale) invoiceType = 'USED_PART';
+
+    const combinedNotes = [
+      documentType === 'QUOTE' ? 'Document Type: QUOTE' : 'Document Type: TAX INVOICE',
+      isServicing ? `Service Type: ${serviceType}` : '',
+      isServicing ? serviceDetail.notes : '',
+      payment.notes,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
 
     const payload = {
       invoice_type: invoiceType,
@@ -343,21 +298,24 @@ export default function SalesModule() {
       customer_phone: customer.customer_phone || '',
       customer_email: customer.customer_email || '',
       customer_address: customer.customer_address || '',
-      customer_company: customer.customer_company || '',
-      customer_abn: customer.customer_abn || '',
+      customer_company: '',
+      customer_abn: '',
 
-      rego: vehicle.rego || '',
-      make: vehicle.make || '',
-      model: vehicle.model || '',
-      year: vehicle.year ? parseInt(vehicle.year, 10) : null,
-      vin: vehicle.vin || '',
-      odometer: vehicle.odometer ? parseInt(vehicle.odometer, 10) : null,
+      rego: showVehicleDetails ? vehicle.rego || '' : '',
+      make: showVehicleDetails ? vehicle.make || '' : '',
+      model: showVehicleDetails ? vehicle.model || '' : '',
+      year: null,
+      vin: showVehicleDetails ? vehicle.vin || '' : '',
+      odometer:
+        showVehicleDetails && vehicle.odometer
+          ? parseInt(vehicle.odometer, 10)
+          : null,
 
-      paid_amount: parseFloat(payment.paid_amount || 0) || 0,
+      paid_amount: documentType === 'QUOTE' ? 0 : parseFloat(payment.paid_amount || 0) || 0,
       payment_method: payment.payment_method || '',
-      notes: notesWithServiceTemplate,
+      notes: combinedNotes,
 
-      items: validItems,
+      items: validRows,
     };
 
     if (isServicing) {
@@ -369,20 +327,20 @@ export default function SalesModule() {
           ? parseInt(serviceDetail.next_service_at_km, 10)
           : null,
         next_service_date: serviceDetail.next_service_date || null,
-        oil_grade: serviceDetail.oil_grade || '',
-        service_notes: serviceDetail.service_notes || '',
-        recommendations: serviceDetail.recommendations || '',
+        oil_grade: '',
+        service_notes: serviceDetail.notes || '',
+        recommendations: '',
       };
     }
 
     return payload;
   };
 
-  const handleCreateInvoice = async () => {
+  const handleCreateDocument = async () => {
     setSuccessMessage('');
     setErrorMessage('');
 
-    const validationError = validateBeforeSubmit();
+    const validationError = validateForm();
     if (validationError) {
       setErrorMessage(validationError);
       return;
@@ -394,13 +352,14 @@ export default function SalesModule() {
       const payload = buildPayload();
       const res = await axios.post(`${API_URL}/api/invoices/`, payload);
       setCreatedInvoice(res.data);
-      setSuccessMessage(`Invoice ${res.data.invoice_number} created successfully.`);
+      setSuccessMessage(
+        `${documentType === 'QUOTE' ? 'Quote' : 'Tax Invoice'} ${res.data.invoice_number} created successfully.`
+      );
     } catch (error) {
       console.error(error);
-      const apiError =
-        error?.response?.data
-          ? JSON.stringify(error.response.data)
-          : 'Error creating invoice.';
+      const apiError = error?.response?.data
+        ? JSON.stringify(error.response.data)
+        : 'Error creating document.';
       setErrorMessage(apiError);
     } finally {
       setLoading(false);
@@ -416,13 +375,47 @@ export default function SalesModule() {
     navigate('/sales-dashboard');
   };
 
+  const resetForm = () => {
+    setDocumentType('INVOICE');
+    setJobType('SERVICING');
+    setServiceType('REGULAR');
+    setCustomer({
+      customer_name: 'Walk-in Customer',
+      customer_phone: '',
+      customer_email: '',
+      customer_address: '',
+    });
+    setVehicle({
+      rego: '',
+      make: '',
+      model: '',
+      vin: '',
+      odometer: '',
+    });
+    setServiceDetail({
+      service_at_km: '',
+      next_service_at_km: '',
+      next_service_date: '',
+      notes: '',
+    });
+    setPayment({
+      paid_amount: '',
+      payment_method: 'Cash',
+      notes: '',
+    });
+    setRows(createServiceRows(regularServiceRows));
+    setCreatedInvoice(null);
+    setSuccessMessage('');
+    setErrorMessage('');
+  };
+
   return (
     <div style={pageWrap}>
       <div style={headerBar}>
         <div>
-          <h1 style={mainTitle}>Universal Sales & Invoice Module</h1>
+          <h1 style={mainTitle}>Simple Invoice Creator</h1>
           <p style={subTitle}>
-            Create professional invoices for parts, servicing, diagnostics, labour and workshop jobs.
+            Create Tax Invoices or Quotes for servicing, parts sales, and workshop jobs.
           </p>
         </div>
 
@@ -445,7 +438,7 @@ export default function SalesModule() {
             <div style={successActions}>
               <button type="button" style={successActionBtn} onClick={goToInvoice}>
                 <Eye size={15} />
-                View Invoice
+                View Document
               </button>
               <button type="button" style={successActionBtnAlt} onClick={goToDashboard}>
                 <LayoutList size={15} />
@@ -458,41 +451,48 @@ export default function SalesModule() {
 
       {!!errorMessage && <div style={errorBox}>{errorMessage}</div>}
 
-      <div style={responsiveGrid}>
-        <div style={leftColumn}>
-          <SectionCard
-            title="Invoice Type"
-            icon={<FileText size={18} color="#ef4444" />}
-          >
-            <div style={fieldGrid2}>
-              <div>
-                <label style={label}>Select Invoice Type</label>
-                <select
-                  value={invoiceType}
-                  onChange={(e) => handleInvoiceTypeChange(e.target.value)}
-                  style={input}
+      <div style={layoutGrid}>
+        <div style={mainColumn}>
+          <SectionCard title="Step 1 — Document Type" icon={<FileText size={18} color="#ef4444" />}>
+            <div style={choiceGrid}>
+              {documentTypeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setDocumentType(option.value)}
+                  style={{
+                    ...choiceBtn,
+                    ...(documentType === option.value ? choiceBtnActive : {}),
+                  }}
                 >
-                  {invoiceTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={invoiceTypePreview}>
-                <div style={invoiceTypePill}>{invoiceType.replaceAll('_', ' ')}</div>
-                <div style={invoiceTypeText}>
-                  Use this module for parts, labour, diagnostics, repairs and service invoices.
-                </div>
-              </div>
+                  <div style={choiceBtnTitle}>{option.label}</div>
+                  <div style={choiceBtnText}>
+                    {option.value === 'INVOICE' ? 'Final billing document' : 'Save as quotation'}
+                  </div>
+                </button>
+              ))}
             </div>
           </SectionCard>
 
-          <SectionCard
-            title="Customer Details"
-            icon={<User size={18} color="#ef4444" />}
-          >
+          <SectionCard title="Step 2 — Job Type" icon={<Settings size={18} color="#ef4444" />}>
+            <div style={choiceGrid3}>
+              {jobTypeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleJobTypeChange(option.value)}
+                  style={{
+                    ...choiceBtn,
+                    ...(jobType === option.value ? choiceBtnActive : {}),
+                  }}
+                >
+                  <div style={choiceBtnTitle}>{option.label}</div>
+                </button>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Customer Details" icon={<User size={18} color="#ef4444" />}>
             <div style={fieldGrid2}>
               <InputField
                 icon={<User size={15} />}
@@ -510,24 +510,10 @@ export default function SalesModule() {
               />
               <InputField
                 icon={<Mail size={15} />}
-                labelText="Email"
+                labelText="Email (optional)"
                 value={customer.customer_email}
                 onChange={(e) => updateCustomer('customer_email', e.target.value)}
                 placeholder="customer@email.com"
-              />
-              <InputField
-                icon={<Building2 size={15} />}
-                labelText="Company"
-                value={customer.customer_company}
-                onChange={(e) => updateCustomer('customer_company', e.target.value)}
-                placeholder="Business name"
-              />
-              <InputField
-                icon={<Hash size={15} />}
-                labelText="ABN"
-                value={customer.customer_abn}
-                onChange={(e) => updateCustomer('customer_abn', e.target.value)}
-                placeholder="ABN"
               />
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={label}>Address</label>
@@ -545,85 +531,67 @@ export default function SalesModule() {
             </div>
           </SectionCard>
 
-          <SectionCard
-            title="Vehicle / Job Details"
-            icon={<Car size={18} color="#ef4444" />}
-          >
-            <div style={fieldGrid3}>
-              <InputField
-                icon={<Car size={15} />}
-                labelText="Rego"
-                value={vehicle.rego}
-                onChange={(e) => updateVehicle('rego', e.target.value)}
-                placeholder="ABC123"
-              />
-              <InputField
-                icon={<Car size={15} />}
-                labelText="Make"
-                value={vehicle.make}
-                onChange={(e) => updateVehicle('make', e.target.value)}
-                placeholder="Toyota"
-              />
-              <InputField
-                icon={<Car size={15} />}
-                labelText="Model"
-                value={vehicle.model}
-                onChange={(e) => updateVehicle('model', e.target.value)}
-                placeholder="Yaris"
-              />
-              <InputField
-                icon={<Hash size={15} />}
-                labelText="Year"
-                value={vehicle.year}
-                onChange={(e) => updateVehicle('year', e.target.value)}
-                placeholder="2014"
-                type="number"
-              />
-              <InputField
-                icon={<Hash size={15} />}
-                labelText="VIN"
-                value={vehicle.vin}
-                onChange={(e) => updateVehicle('vin', e.target.value)}
-                placeholder="Vehicle VIN"
-              />
-              <InputField
-                icon={<Hash size={15} />}
-                labelText="Odometer"
-                value={vehicle.odometer}
-                onChange={(e) => updateVehicle('odometer', e.target.value)}
-                placeholder="62585"
-                type="number"
-              />
-            </div>
-          </SectionCard>
+          {showVehicleDetails && (
+            <SectionCard title="Car Details" icon={<Car size={18} color="#ef4444" />}>
+              <div style={fieldGrid3}>
+                <InputField
+                  icon={<Car size={15} />}
+                  labelText="Rego"
+                  value={vehicle.rego}
+                  onChange={(e) => updateVehicle('rego', e.target.value)}
+                  placeholder="ABC123"
+                />
+                <InputField
+                  icon={<Car size={15} />}
+                  labelText="Make"
+                  value={vehicle.make}
+                  onChange={(e) => updateVehicle('make', e.target.value)}
+                  placeholder="Toyota"
+                />
+                <InputField
+                  icon={<Car size={15} />}
+                  labelText="Model"
+                  value={vehicle.model}
+                  onChange={(e) => updateVehicle('model', e.target.value)}
+                  placeholder="Yaris"
+                />
+                <InputField
+                  icon={<Hash size={15} />}
+                  labelText="VIN"
+                  value={vehicle.vin}
+                  onChange={(e) => updateVehicle('vin', e.target.value)}
+                  placeholder="Vehicle VIN"
+                />
+                <InputField
+                  icon={<Hash size={15} />}
+                  labelText="Odometer"
+                  value={vehicle.odometer}
+                  onChange={(e) => updateVehicle('odometer', e.target.value)}
+                  placeholder="62585"
+                  type="number"
+                />
+              </div>
+            </SectionCard>
+          )}
 
           {isServicing && (
-            <SectionCard
-              title="Service Details"
-              icon={<Wrench size={18} color="#ef4444" />}
-              actions={
-                <div style={serviceActionBar}>
-                  <div style={serviceTemplateSelectWrap}>
-                    <label style={miniInlineLabel}>Template</label>
-                    <div style={serviceTemplateDropdownWrap}>
-                      <ChevronDown size={14} style={serviceTemplateDropdownIcon} />
-                      <select
-                        value={serviceTemplateType}
-                        onChange={(e) => applyServiceTemplate(e.target.value)}
-                        style={serviceTemplateSelect}
-                      >
-                        {serviceTemplateOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              }
-            >
+            <SectionCard title="Service Details" icon={<Wrench size={18} color="#ef4444" />}>
               <div style={fieldGrid3}>
+                <div>
+                  <label style={label}>Service Type</label>
+                  <select
+                    value={serviceType}
+                    onChange={(e) => handleServiceTypeChange(e.target.value)}
+                    style={input}
+                  >
+                    {serviceTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <InputField
                   icon={<Hash size={15} />}
                   labelText="Service At KM"
@@ -647,144 +615,103 @@ export default function SalesModule() {
                   onChange={(e) => updateServiceDetail('next_service_date', e.target.value)}
                   type="date"
                 />
-                <InputField
-                  icon={<Wrench size={15} />}
-                  labelText="Oil Grade"
-                  value={serviceDetail.oil_grade}
-                  onChange={(e) => updateServiceDetail('oil_grade', e.target.value)}
-                  placeholder="5W-30"
-                />
+              </div>
 
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={label}>Service Notes</label>
-                  <div style={inputWrap}>
-                    <StickyNote size={15} style={inputIcon} />
-                    <textarea
-                      value={serviceDetail.service_notes}
-                      onChange={(e) => updateServiceDetail('service_notes', e.target.value)}
-                      placeholder="Write service notes..."
-                      style={textarea}
-                      rows={3}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={label}>Recommendations</label>
-                  <div style={inputWrap}>
-                    <StickyNote size={15} style={inputIcon} />
-                    <textarea
-                      value={serviceDetail.recommendations}
-                      onChange={(e) => updateServiceDetail('recommendations', e.target.value)}
-                      placeholder="Write recommendations for next visit..."
-                      style={textarea}
-                      rows={3}
-                    />
-                  </div>
+              <div style={{ marginTop: '16px' }}>
+                <label style={label}>Service Notes</label>
+                <div style={inputWrap}>
+                  <StickyNote size={15} style={inputIcon} />
+                  <textarea
+                    value={serviceDetail.notes}
+                    onChange={(e) => updateServiceDetail('notes', e.target.value)}
+                    placeholder="Write notes here..."
+                    style={textarea}
+                    rows={3}
+                  />
                 </div>
               </div>
             </SectionCard>
           )}
 
           <SectionCard
-            title={isServicing ? 'Service Items / Checklist' : 'Invoice Items'}
-            icon={<Receipt size={18} color="#ef4444" />}
+            title={
+              isServicing
+                ? `${serviceType === 'MAJOR' ? 'Major' : 'Regular'} Service Rows`
+                : isPartsSale
+                ? 'Parts Sale Rows'
+                : 'Workshop Rows'
+            }
+            icon={
+              isPartsSale ? (
+                <Package size={18} color="#ef4444" />
+              ) : isWorkshop ? (
+                <Wrench size={18} color="#ef4444" />
+              ) : (
+                <Receipt size={18} color="#ef4444" />
+              )
+            }
             actions={
-              <button type="button" style={addBtn} onClick={addItemRow}>
+              <button type="button" style={addBtn} onClick={addRow}>
                 <Plus size={15} />
-                Add Item
+                Add Row
               </button>
             }
           >
-            <div style={itemsWrap}>
-              {lineItemsWithTotals.map((item, index) => (
-                <div key={index} style={itemCard}>
-                  <div style={itemRowTop}>
-                    <div style={itemRowTitle}>Line Item #{index + 1}</div>
-                    <button
-                      type="button"
-                      style={removeBtn}
-                      onClick={() => removeItemRow(index)}
-                    >
+            <div style={rowsWrap}>
+              {lineItems.map((row, index) => (
+                <div key={index} style={rowCard}>
+                  <div style={rowTop}>
+                    <div style={rowTitle}>Row #{index + 1}</div>
+                    <button type="button" style={removeBtn} onClick={() => removeRow(index)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
 
                   <div style={fieldGrid3}>
-                    <div>
-                      <label style={label}>Item Type</label>
-                      <select
-                        value={item.item_type}
-                        onChange={(e) => updateItem(index, 'item_type', e.target.value)}
-                        style={input}
-                      >
-                        <option value="MANUAL">Manual</option>
-                        <option value="SERVICE">Service</option>
-                        <option value="LABOUR">Labour</option>
-                        <option value="STOCK">Stock</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={label}>Source Type</label>
-                      <select
-                        value={item.source_type}
-                        onChange={(e) => updateItem(index, 'source_type', e.target.value)}
-                        style={input}
-                      >
-                        <option value="MANUAL">Manual</option>
-                        <option value="USED_PART">Used Part</option>
-                        <option value="AFTERMARKET">Aftermarket</option>
-                        <option value="DISMANTLE">Dismantle</option>
-                      </select>
-                    </div>
-
-                    <InputField
-                      labelText="Source ID (optional)"
-                      value={item.source_id || ''}
-                      onChange={(e) => updateItem(index, 'source_id', e.target.value)}
-                      placeholder="Stock item id"
-                      type="number"
-                    />
-
                     <div style={{ gridColumn: '1 / -1' }}>
                       <InputField
-                        labelText="Item / Service Name"
-                        value={item.name}
-                        onChange={(e) => updateItem(index, 'name', e.target.value)}
-                        placeholder="Enter item or service name"
+                        labelText="Description"
+                        value={row.name}
+                        onChange={(e) => updateRow(index, 'name', e.target.value)}
+                        placeholder={
+                          isPartsSale
+                            ? 'Part description'
+                            : isWorkshop
+                            ? 'Labour or parts description'
+                            : 'Service line description'
+                        }
                       />
                     </div>
 
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={label}>Description</label>
+                      <label style={label}>Optional Details</label>
                       <textarea
-                        value={item.description}
-                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        placeholder="Optional line description"
+                        value={row.description}
+                        onChange={(e) => updateRow(index, 'description', e.target.value)}
+                        placeholder="Extra detail if needed"
                         style={textareaPlain}
                         rows={2}
                       />
                     </div>
 
                     <InputField
-                      labelText="Quantity"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                      labelText="Qty"
+                      value={row.quantity}
+                      onChange={(e) => updateRow(index, 'quantity', e.target.value)}
                       placeholder="1"
                       type="number"
                     />
                     <InputField
-                      labelText="Unit Price"
-                      value={item.unit_price}
-                      onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                      labelText="Amount"
+                      value={row.unit_price}
+                      onChange={(e) => updateRow(index, 'unit_price', e.target.value)}
                       placeholder="0.00"
                       type="number"
                     />
                     <InputField
                       labelText="Discount"
-                      value={item.discount}
-                      onChange={(e) => updateItem(index, 'discount', e.target.value)}
+                      value={row.discount}
+                      onChange={(e) => updateRow(index, 'discount', e.target.value)}
                       placeholder="0.00"
                       type="number"
                     />
@@ -792,10 +719,8 @@ export default function SalesModule() {
                     <div>
                       <label style={label}>GST Included</label>
                       <select
-                        value={item.gst_included ? 'yes' : 'no'}
-                        onChange={(e) =>
-                          updateItem(index, 'gst_included', e.target.value === 'yes')
-                        }
+                        value={row.gst_included ? 'yes' : 'no'}
+                        onChange={(e) => updateRow(index, 'gst_included', e.target.value === 'yes')}
                         style={input}
                       >
                         <option value="yes">Yes</option>
@@ -805,7 +730,7 @@ export default function SalesModule() {
 
                     <div style={lineTotalBox}>
                       <div style={lineTotalLabel}>Line Total</div>
-                      <div style={lineTotalValue}>${item.lineTotal.toFixed(2)}</div>
+                      <div style={lineTotalValue}>${row.lineTotal.toFixed(2)}</div>
                     </div>
                   </div>
                 </div>
@@ -814,19 +739,18 @@ export default function SalesModule() {
           </SectionCard>
         </div>
 
-        <div style={rightColumn}>
-          <SectionCard
-            title="Payment & Notes"
-            icon={<CreditCard size={18} color="#ef4444" />}
-          >
+        <div style={sideColumn}>
+          <SectionCard title="Payment Details" icon={<Receipt size={18} color="#ef4444" />}>
             <div style={fieldGrid1}>
-              <InputField
-                labelText="Paid Amount"
-                value={payment.paid_amount}
-                onChange={(e) => updatePayment('paid_amount', e.target.value)}
-                placeholder="0.00"
-                type="number"
-              />
+              {documentType === 'INVOICE' && (
+                <InputField
+                  labelText="Paid Amount"
+                  value={payment.paid_amount}
+                  onChange={(e) => updatePayment('paid_amount', e.target.value)}
+                  placeholder="0.00"
+                  type="number"
+                />
+              )}
 
               <div>
                 <label style={label}>Payment Method</label>
@@ -844,11 +768,11 @@ export default function SalesModule() {
               </div>
 
               <div>
-                <label style={label}>Internal / Invoice Notes</label>
+                <label style={label}>Document Notes</label>
                 <textarea
                   value={payment.notes}
                   onChange={(e) => updatePayment('notes', e.target.value)}
-                  placeholder="Write any notes here..."
+                  placeholder="Any extra note"
                   style={textareaPlain}
                   rows={4}
                 />
@@ -857,7 +781,18 @@ export default function SalesModule() {
           </SectionCard>
 
           <div style={summaryCard}>
-            <div style={summarySmall}>INVOICE SUMMARY</div>
+            <div style={summaryDocType}>
+              {documentType === 'QUOTE' ? 'QUOTE' : 'TAX INVOICE'}
+            </div>
+
+            <div style={summaryJobType}>
+              {jobType === 'SERVICING'
+                ? `${serviceType === 'MAJOR' ? 'Major' : 'Regular'} Service`
+                : jobType === 'PARTS_SALE'
+                ? 'Parts Sale'
+                : 'Workshop Invoice'}
+            </div>
+
             <div style={summaryRow}>
               <span>Subtotal</span>
               <strong>${subtotal.toFixed(2)}</strong>
@@ -868,7 +803,9 @@ export default function SalesModule() {
             </div>
             <div style={summaryRow}>
               <span>Paid</span>
-              <strong>${(parseFloat(payment.paid_amount || 0) || 0).toFixed(2)}</strong>
+              <strong>
+                ${documentType === 'QUOTE' ? '0.00' : (parseFloat(payment.paid_amount || 0) || 0).toFixed(2)}
+              </strong>
             </div>
             <div style={summaryRowTotal}>
               <span>Total</span>
@@ -881,59 +818,34 @@ export default function SalesModule() {
 
             <button
               type="button"
-              style={checkoutBtn}
-              onClick={handleCreateInvoice}
+              style={primaryBtn}
+              onClick={handleCreateDocument}
               disabled={loading}
             >
               <Save size={18} />
-              {loading ? 'Creating Invoice...' : 'Create Invoice'}
+              {loading ? 'Saving...' : documentType === 'QUOTE' ? 'Create Quote' : 'Create Tax Invoice'}
             </button>
 
-            <button type="button" style={dashboardBtn} onClick={goToDashboard}>
+            <button type="button" style={secondaryBtn} onClick={goToDashboard}>
               <LayoutList size={16} />
-              Open Invoices Dashboard
+              Open Dashboard
             </button>
 
-            <button type="button" style={resetBtn} onClick={resetForm}>
+            <button type="button" style={ghostBtn} onClick={resetForm}>
               Reset Form
             </button>
           </div>
 
           {createdInvoice && (
-            <SectionCard
-              title="Last Created Invoice"
-              icon={<Receipt size={18} color="#ef4444" />}
-            >
-              <div style={invoicePreviewCard}>
-                <div style={previewRow}>
-                  <span>Invoice Number</span>
-                  <strong>{createdInvoice.invoice_number}</strong>
-                </div>
-                <div style={previewRow}>
-                  <span>Customer</span>
-                  <strong>{createdInvoice.customer_name}</strong>
-                </div>
-                <div style={previewRow}>
-                  <span>Type</span>
-                  <strong>{createdInvoice.invoice_type}</strong>
-                </div>
-                <div style={previewRow}>
-                  <span>Total</span>
-                  <strong>${parseFloat(createdInvoice.total_amount || 0).toFixed(2)}</strong>
-                </div>
-                <div style={previewRow}>
-                  <span>Paid</span>
-                  <strong>${parseFloat(createdInvoice.paid_amount || 0).toFixed(2)}</strong>
-                </div>
-                <div style={previewRow}>
-                  <span>Balance</span>
-                  <strong>${parseFloat(createdInvoice.balance_due || 0).toFixed(2)}</strong>
-                </div>
-
-                <div style={previewActionWrap}>
+            <SectionCard title="Last Created Document" icon={<FileText size={18} color="#ef4444" />}>
+              <div style={previewCard}>
+                <PreviewRow label="Number" value={createdInvoice.invoice_number} />
+                <PreviewRow label="Customer" value={createdInvoice.customer_name} />
+                <PreviewRow label="Total" value={`$${parseFloat(createdInvoice.total_amount || 0).toFixed(2)}`} />
+                <div style={previewActions}>
                   <button type="button" style={previewPrimaryBtn} onClick={goToInvoice}>
                     <Eye size={15} />
-                    View Invoice
+                    View
                   </button>
                   <button type="button" style={previewSecondaryBtn} onClick={goToDashboard}>
                     <LayoutList size={15} />
@@ -989,6 +901,15 @@ function InputField({
   );
 }
 
+function PreviewRow({ label, value }) {
+  return (
+    <div style={previewRow}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 const pageWrap = {
   padding: '24px',
   background: '#f8fafc',
@@ -1011,19 +932,6 @@ const headerActions = {
   flexWrap: 'wrap',
 };
 
-const headerSecondaryBtn = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '8px',
-  border: '1px solid #dbe3ee',
-  background: '#fff',
-  color: '#0f172a',
-  borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
-  cursor: 'pointer',
-};
-
 const mainTitle = {
   margin: 0,
   fontSize: '32px',
@@ -1037,6 +945,19 @@ const subTitle = {
   fontSize: '14px',
 };
 
+const headerSecondaryBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  border: '1px solid #dbe3ee',
+  background: '#fff',
+  color: '#0f172a',
+  borderRadius: '12px',
+  padding: '11px 14px',
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+
 const headerBadge = {
   display: 'flex',
   alignItems: 'center',
@@ -1048,19 +969,19 @@ const headerBadge = {
   fontWeight: 700,
 };
 
-const responsiveGrid = {
+const layoutGrid = {
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
   gap: '24px',
 };
 
-const leftColumn = {
+const mainColumn = {
   display: 'flex',
   flexDirection: 'column',
   gap: '24px',
 };
 
-const rightColumn = {
+const sideColumn = {
   display: 'flex',
   flexDirection: 'column',
   gap: '24px',
@@ -1096,6 +1017,45 @@ const sectionTitle = {
   color: '#0f172a',
 };
 
+const choiceGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '14px',
+};
+
+const choiceGrid3 = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  gap: '14px',
+};
+
+const choiceBtn = {
+  textAlign: 'left',
+  border: '1px solid #e2e8f0',
+  background: '#fff',
+  borderRadius: '18px',
+  padding: '18px',
+  cursor: 'pointer',
+};
+
+const choiceBtnActive = {
+  border: '1px solid #ef4444',
+  background: '#fff5f5',
+  boxShadow: '0 0 0 3px rgba(239,68,68,0.08)',
+};
+
+const choiceBtnTitle = {
+  fontSize: '16px',
+  fontWeight: 900,
+  color: '#111827',
+};
+
+const choiceBtnText = {
+  fontSize: '13px',
+  color: '#64748b',
+  marginTop: '6px',
+};
+
 const label = {
   display: 'block',
   marginBottom: '8px',
@@ -1104,14 +1064,6 @@ const label = {
   color: '#64748b',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
-};
-
-const miniInlineLabel = {
-  fontSize: '11px',
-  fontWeight: 800,
-  color: '#64748b',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
 };
 
 const fieldGrid1 = {
@@ -1187,71 +1139,6 @@ const textareaPlain = {
   fontFamily: 'inherit',
 };
 
-const invoiceTypePreview = {
-  background: 'linear-gradient(135deg, #111827, #1f2937)',
-  color: '#fff',
-  borderRadius: '18px',
-  padding: '18px',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-};
-
-const invoiceTypePill = {
-  display: 'inline-flex',
-  alignSelf: 'flex-start',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  background: '#ef4444',
-  color: '#fff',
-  fontSize: '11px',
-  fontWeight: 800,
-  marginBottom: '10px',
-};
-
-const invoiceTypeText = {
-  fontSize: '13px',
-  lineHeight: 1.5,
-  color: '#cbd5e1',
-};
-
-const serviceActionBar = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  flexWrap: 'wrap',
-};
-
-const serviceTemplateSelectWrap = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-};
-
-const serviceTemplateDropdownWrap = {
-  position: 'relative',
-};
-
-const serviceTemplateDropdownIcon = {
-  position: 'absolute',
-  right: '12px',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  color: '#64748b',
-  pointerEvents: 'none',
-};
-
-const serviceTemplateSelect = {
-  border: '1px solid #fecaca',
-  background: '#fff5f5',
-  color: '#dc2626',
-  borderRadius: '12px',
-  padding: '10px 34px 10px 12px',
-  fontWeight: 800,
-  cursor: 'pointer',
-  appearance: 'none',
-};
-
 const addBtn = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -1265,20 +1152,20 @@ const addBtn = {
   cursor: 'pointer',
 };
 
-const itemsWrap = {
+const rowsWrap = {
   display: 'flex',
   flexDirection: 'column',
   gap: '18px',
 };
 
-const itemCard = {
+const rowCard = {
   border: '1px solid #e2e8f0',
   borderRadius: '20px',
   padding: '18px',
   background: '#fcfcfd',
 };
 
-const itemRowTop = {
+const rowTop = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -1286,7 +1173,7 @@ const itemRowTop = {
   marginBottom: '16px',
 };
 
-const itemRowTitle = {
+const rowTitle = {
   fontSize: '14px',
   fontWeight: 900,
   color: '#111827',
@@ -1336,11 +1223,17 @@ const summaryCard = {
   boxShadow: '0 15px 35px rgba(15, 23, 42, 0.2)',
 };
 
-const summarySmall = {
+const summaryDocType = {
   fontSize: '12px',
   letterSpacing: '0.08em',
-  color: '#94a3b8',
-  fontWeight: 800,
+  color: '#fca5a5',
+  fontWeight: 900,
+  marginBottom: '8px',
+};
+
+const summaryJobType = {
+  fontSize: '18px',
+  fontWeight: 900,
   marginBottom: '18px',
 };
 
@@ -1372,7 +1265,7 @@ const summaryRowBalance = {
   fontWeight: 900,
 };
 
-const checkoutBtn = {
+const primaryBtn = {
   width: '100%',
   display: 'flex',
   justifyContent: 'center',
@@ -1389,7 +1282,7 @@ const checkoutBtn = {
   marginTop: '8px',
 };
 
-const dashboardBtn = {
+const secondaryBtn = {
   width: '100%',
   display: 'flex',
   justifyContent: 'center',
@@ -1405,7 +1298,7 @@ const dashboardBtn = {
   cursor: 'pointer',
 };
 
-const resetBtn = {
+const ghostBtn = {
   width: '100%',
   padding: '14px',
   marginTop: '10px',
@@ -1417,7 +1310,7 @@ const resetBtn = {
   cursor: 'pointer',
 };
 
-const invoicePreviewCard = {
+const previewCard = {
   display: 'flex',
   flexDirection: 'column',
   gap: '12px',
@@ -1435,7 +1328,7 @@ const previewRow = {
   color: '#334155',
 };
 
-const previewActionWrap = {
+const previewActions = {
   display: 'flex',
   gap: '10px',
   flexWrap: 'wrap',
