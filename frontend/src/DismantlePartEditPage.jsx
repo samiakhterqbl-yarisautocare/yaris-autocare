@@ -56,6 +56,12 @@ export default function DismantlePartEditPage() {
   });
 
   useEffect(() => {
+    if (!id) {
+      setPart(null);
+      setLoading(false);
+      return;
+    }
+
     if (statePart) {
       hydrateFromPart(statePart);
       setDonorCar(stateDonorCar || null);
@@ -64,15 +70,15 @@ export default function DismantlePartEditPage() {
     }
 
     fetchPart();
-  }, [id]);
+  }, [id, statePart, stateDonorCar]);
 
   const fetchPart = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/dismantle-parts/${id}/`);
+      const res = await axios.get(`${API_URL}/api/dismantle-parts/${encodeURIComponent(id)}/`);
       hydrateFromPart(res.data);
     } catch (err) {
-      console.error('Failed to fetch dismantle part for edit:', err);
+      console.error('Failed to fetch dismantle part for edit:', err?.response?.data || err);
       setPart(null);
     } finally {
       setLoading(false);
@@ -106,15 +112,28 @@ export default function DismantlePartEditPage() {
     return imgs;
   }, [part]);
 
+  const newImagePreviews = useMemo(() => {
+    return newImages.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+  }, [newImages]);
+
+  useEffect(() => {
+    return () => {
+      newImagePreviews.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [newImagePreviews]);
+
   useEffect(() => {
     if (existingImages.length > 0) {
       setActiveImage(existingImages[0].image);
-    } else if (newImages.length > 0) {
-      setActiveImage(URL.createObjectURL(newImages[0]));
+    } else if (newImagePreviews.length > 0) {
+      setActiveImage(newImagePreviews[0].url);
     } else {
       setActiveImage('');
     }
-  }, [existingImages, newImages]);
+  }, [existingImages, newImagePreviews]);
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -134,7 +153,7 @@ export default function DismantlePartEditPage() {
       await axios.post(`${API_URL}/api/images/${imageId}/set-main/`);
       await fetchPart();
     } catch (err) {
-      console.error('Failed to set main image:', err);
+      console.error('Failed to set main image:', err?.response?.data || err);
       alert('Failed to set main image.');
     }
   };
@@ -159,7 +178,7 @@ export default function DismantlePartEditPage() {
       });
 
       const res = await axios.patch(
-        `${API_URL}/api/dismantle-parts/${id}/`,
+        `${API_URL}/api/dismantle-parts/${encodeURIComponent(id)}/`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -188,7 +207,7 @@ export default function DismantlePartEditPage() {
   if (!part) {
     return (
       <div style={{ padding: '32px' }}>
-        <button onClick={() => navigate(-1)} style={backBtn}>
+        <button onClick={() => navigate('/dismantle')} style={backBtn}>
           <ArrowLeft size={16} />
           BACK
         </button>
@@ -258,51 +277,50 @@ export default function DismantlePartEditPage() {
               <>
                 <div style={subheading}>Existing Images</div>
                 <div style={thumbGrid}>
-                  {existingImages.map((img) => (
-                    <div key={img.id} style={thumbWrap}>
+                  {existingImages.map((img, index) => (
+                    <div key={img.id || `${img.image}-${index}`} style={thumbWrap}>
                       <img
                         src={img.image}
                         alt="Existing"
                         onClick={() => setActiveImage(img.image)}
                         style={thumbImage}
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSetMainImage(img.id)}
-                        style={smallBtn}
-                      >
-                        Set Main
-                      </button>
+                      {img.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetMainImage(img.id)}
+                          style={smallBtn}
+                        >
+                          Set Main
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               </>
             )}
 
-            {newImages.length > 0 && (
+            {newImagePreviews.length > 0 && (
               <>
                 <div style={subheading}>New Images to Upload</div>
                 <div style={thumbGrid}>
-                  {newImages.map((file, index) => {
-                    const preview = URL.createObjectURL(file);
-                    return (
-                      <div key={`${file.name}-${index}`} style={thumbWrap}>
-                        <img
-                          src={preview}
-                          alt={file.name}
-                          onClick={() => setActiveImage(preview)}
-                          style={thumbImage}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeNewImage(index)}
-                          style={removeBtn}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {newImagePreviews.map((item, index) => (
+                    <div key={`${item.file.name}-${index}`} style={thumbWrap}>
+                      <img
+                        src={item.url}
+                        alt={item.file.name}
+                        onClick={() => setActiveImage(item.url)}
+                        style={thumbImage}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        style={removeBtn}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
