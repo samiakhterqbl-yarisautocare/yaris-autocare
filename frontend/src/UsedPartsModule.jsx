@@ -15,6 +15,9 @@ import {
   Zap,
   Disc,
   Wind,
+  Eye,
+  Grid3X3,
+  Rows3,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -54,6 +57,7 @@ export default function UsedPartsModule() {
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState('grid');
 
   const [filters, setFilters] = useState({
     search: '',
@@ -139,13 +143,18 @@ export default function UsedPartsModule() {
     }
   };
 
+  const formatPrice = (value) => {
+    const num = parseFloat(value || 0);
+    return `$${num.toFixed(2)}`;
+  };
+
   return (
     <div style={page}>
       <div style={headerRow}>
         <div>
           <h1 style={pageTitle}>Used Parts Inventory</h1>
           <p style={pageSubtitle}>
-            Manage individual used parts with photos, grading, pricing, and stock status.
+            Manage individual used parts with photos, grading, pricing and stock status.
           </p>
         </div>
 
@@ -175,10 +184,29 @@ export default function UsedPartsModule() {
           />
         </div>
 
-        <button onClick={() => setShowFilters(!showFilters)} style={filterBtn}>
-          <Filter size={18} />
-          {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'}
-        </button>
+        <div style={toolbarRight}>
+          <div style={viewToggle}>
+            <button
+              type="button"
+              style={viewMode === 'grid' ? activeViewBtn : viewBtn}
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid3X3 size={16} />
+            </button>
+            <button
+              type="button"
+              style={viewMode === 'list' ? activeViewBtn : viewBtn}
+              onClick={() => setViewMode('list')}
+            >
+              <Rows3 size={16} />
+            </button>
+          </div>
+
+          <button onClick={() => setShowFilters(!showFilters)} style={filterBtn}>
+            <Filter size={18} />
+            {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'}
+          </button>
+        </div>
       </div>
 
       {showFilters && (
@@ -307,7 +335,7 @@ export default function UsedPartsModule() {
         ))}
       </div>
 
-      <div style={sectionHeader}>
+      <div style={sectionHeaderRow}>
         <h2 style={sectionTitle}>Parts ({parts.length})</h2>
       </div>
 
@@ -323,75 +351,150 @@ export default function UsedPartsModule() {
             ADD USED PART
           </button>
         </div>
-      ) : (
-        <div style={partsGrid}>
+      ) : viewMode === 'grid' ? (
+        <div style={compactGrid}>
           {parts.map((part) => {
             const imageUrl = getMainImage(part);
 
             return (
               <div
                 key={part.id}
-                style={partCard}
+                style={compactCard}
                 onClick={() => navigate(`/used-parts/${part.id}`)}
               >
-                <div style={imageWrap}>
+                <div style={compactThumbWrap}>
                   {imageUrl ? (
-                    <img src={imageUrl} alt={part.part_name} style={partImage} />
+                    <img src={imageUrl} alt={part.part_name} style={compactThumb} />
                   ) : (
-                    <div style={imagePlaceholder}>
-                      <Package size={28} />
+                    <div style={compactPlaceholder}>
+                      <Package size={22} />
                     </div>
                   )}
                 </div>
 
-                <div style={cardBody}>
-                  <div style={cardTopRow}>
-                    <span style={partCategoryBadge}>{part.category || 'Other'}</span>
+                <div style={compactBody}>
+                  <div style={compactTop}>
+                    <span style={smallCategoryBadge}>{part.category || 'Other'}</span>
                     <span style={getStatusBadgeStyle(part.sale_status)}>
                       {part.sale_status || 'AVAILABLE'}
                     </span>
                   </div>
 
-                  <h3 style={partName}>{part.part_name}</h3>
+                  <div style={compactName}>{part.part_name}</div>
 
-                  <div style={metaRow}>
-                    <Tag size={14} />
-                    <span>{part.sku || 'No SKU'}</span>
+                  <div style={compactMeta}>
+                    <div style={metaLine}>
+                      <Tag size={13} />
+                      <span>{part.sku || 'No SKU'}</span>
+                    </div>
+
+                    {(part.make || part.model) && (
+                      <div style={metaLine}>
+                        <Car size={13} />
+                        <span>{[part.make, part.model].filter(Boolean).join(' ')}</span>
+                      </div>
+                    )}
+
+                    {part.location && (
+                      <div style={metaLine}>
+                        <MapPin size={13} />
+                        <span>{part.location}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {(part.make || part.model) && (
-                    <div style={metaRow}>
-                      <Car size={14} />
-                      <span>
-                        {[part.make, part.model, part.variant].filter(Boolean).join(' ')}
-                      </span>
-                    </div>
-                  )}
-
-                  {part.location && (
-                    <div style={metaRow}>
-                      <MapPin size={14} />
-                      <span>{part.location}</span>
-                    </div>
-                  )}
-
-                  <div style={cardFooter}>
-                    <div>
-                      <div style={priceLabel}>Price</div>
-                      <div style={priceValue}>${part.price ?? '0.00'}</div>
-                    </div>
-
+                  <div style={compactFooter}>
+                    <div style={compactPrice}>{formatPrice(part.price)}</div>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/used-parts/${part.id}`);
                       }}
-                      style={viewBtn}
+                      style={openMiniBtn}
                     >
+                      <Eye size={14} />
                       OPEN
                     </button>
                   </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={listWrap}>
+          {parts.map((part) => {
+            const imageUrl = getMainImage(part);
+
+            return (
+              <div
+                key={part.id}
+                style={listCard}
+                onClick={() => navigate(`/used-parts/${part.id}`)}
+              >
+                <div style={listThumbWrap}>
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={part.part_name} style={listThumb} />
+                  ) : (
+                    <div style={listPlaceholder}>
+                      <Package size={20} />
+                    </div>
+                  )}
+                </div>
+
+                <div style={listMain}>
+                  <div style={listHeader}>
+                    <div style={listName}>{part.part_name}</div>
+                    <div style={listBadges}>
+                      <span style={smallCategoryBadge}>{part.category || 'Other'}</span>
+                      <span style={getStatusBadgeStyle(part.sale_status)}>
+                        {part.sale_status || 'AVAILABLE'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={listMetaRow}>
+                    <span style={listMetaItem}>
+                      <Tag size={13} />
+                      {part.sku || 'No SKU'}
+                    </span>
+
+                    {(part.make || part.model) && (
+                      <span style={listMetaItem}>
+                        <Car size={13} />
+                        {[part.make, part.model, part.variant].filter(Boolean).join(' ')}
+                      </span>
+                    )}
+
+                    {part.location && (
+                      <span style={listMetaItem}>
+                        <MapPin size={13} />
+                        {part.location}
+                      </span>
+                    )}
+
+                    {part.grade && (
+                      <span style={listMetaItem}>
+                        Grade {part.grade}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={listSide}>
+                  <div style={listPrice}>{formatPrice(part.price)}</div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/used-parts/${part.id}`);
+                    }}
+                    style={openMiniBtn}
+                  >
+                    <Eye size={14} />
+                    OPEN
+                  </button>
                 </div>
               </div>
             );
@@ -498,6 +601,13 @@ const toolbar = {
   flexWrap: 'wrap',
 };
 
+const toolbarRight = {
+  display: 'flex',
+  gap: '12px',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+};
+
 const searchWrap = {
   position: 'relative',
   flex: 1,
@@ -520,6 +630,34 @@ const searchInput = {
   background: '#fff',
   fontSize: '14px',
   outline: 'none',
+};
+
+const viewToggle = {
+  display: 'flex',
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '14px',
+  padding: '4px',
+  gap: '4px',
+};
+
+const viewBtn = {
+  width: '40px',
+  height: '40px',
+  borderRadius: '10px',
+  border: 'none',
+  background: 'transparent',
+  color: '#475569',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const activeViewBtn = {
+  ...viewBtn,
+  background: '#0f172a',
+  color: '#fff',
 };
 
 const filterBtn = {
@@ -590,6 +728,13 @@ const sectionHeader = {
   marginBottom: '12px',
 };
 
+const sectionHeaderRow = {
+  marginBottom: '14px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
 const sectionTitle = {
   fontSize: '18px',
   fontWeight: '900',
@@ -651,32 +796,34 @@ const categorySubtext = {
   marginTop: '4px',
 };
 
-const partsGrid = {
+const compactGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-  gap: '18px',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+  gap: '16px',
 };
 
-const partCard = {
+const compactCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '20px',
+  borderRadius: '18px',
   overflow: 'hidden',
   cursor: 'pointer',
+  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
 };
 
-const imageWrap = {
-  height: '190px',
+const compactThumbWrap = {
+  height: '130px',
   background: '#f8fafc',
+  borderBottom: '1px solid #f1f5f9',
 };
 
-const partImage = {
+const compactThumb = {
   width: '100%',
   height: '100%',
   objectFit: 'cover',
 };
 
-const imagePlaceholder = {
+const compactPlaceholder = {
   width: '100%',
   height: '100%',
   display: 'flex',
@@ -685,32 +832,167 @@ const imagePlaceholder = {
   color: '#94a3b8',
 };
 
-const cardBody = {
-  padding: '18px',
+const compactBody = {
+  padding: '14px',
 };
 
-const cardTopRow = {
+const compactTop = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: '10px',
   alignItems: 'center',
-  marginBottom: '12px',
+  gap: '8px',
+  marginBottom: '10px',
 };
 
-const partCategoryBadge = {
-  padding: '5px 10px',
+const smallCategoryBadge = {
+  padding: '4px 9px',
   borderRadius: '999px',
   background: '#f1f5f9',
   color: '#475569',
   fontWeight: '800',
-  fontSize: '11px',
+  fontSize: '10px',
+  whiteSpace: 'nowrap',
+};
+
+const compactName = {
+  fontSize: '17px',
+  fontWeight: '900',
+  color: '#0f172a',
+  marginBottom: '10px',
+  lineHeight: 1.2,
+  minHeight: '40px',
+};
+
+const compactMeta = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+};
+
+const metaLine = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '7px',
+  color: '#64748b',
+  fontSize: '12px',
+  fontWeight: '600',
+};
+
+const compactFooter = {
+  marginTop: '14px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const compactPrice = {
+  fontSize: '20px',
+  color: '#16a34a',
+  fontWeight: '900',
+};
+
+const listWrap = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+};
+
+const listCard = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '18px',
+  padding: '14px',
+  display: 'grid',
+  gridTemplateColumns: '92px 1fr auto',
+  gap: '16px',
+  alignItems: 'center',
+  cursor: 'pointer',
+};
+
+const listThumbWrap = {
+  width: '92px',
+  height: '76px',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  background: '#f8fafc',
+  border: '1px solid #f1f5f9',
+};
+
+const listThumb = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+};
+
+const listPlaceholder = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#94a3b8',
+};
+
+const listMain = {
+  minWidth: 0,
+};
+
+const listHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: '12px',
+  flexWrap: 'wrap',
+};
+
+const listName = {
+  fontSize: '18px',
+  fontWeight: '900',
+  color: '#0f172a',
+  lineHeight: 1.2,
+};
+
+const listBadges = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap',
+};
+
+const listMetaRow = {
+  display: 'flex',
+  gap: '16px',
+  flexWrap: 'wrap',
+  marginTop: '10px',
+};
+
+const listMetaItem = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontSize: '12px',
+  color: '#64748b',
+  fontWeight: '600',
+};
+
+const listSide = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-end',
+  gap: '10px',
+};
+
+const listPrice = {
+  fontSize: '22px',
+  color: '#16a34a',
+  fontWeight: '900',
 };
 
 const statusBase = {
-  padding: '5px 10px',
+  padding: '4px 9px',
   borderRadius: '999px',
   fontWeight: '800',
-  fontSize: '11px',
+  fontSize: '10px',
+  whiteSpace: 'nowrap',
 };
 
 const statusAvailable = {
@@ -749,50 +1031,18 @@ const statusDefault = {
   color: '#475569',
 };
 
-const partName = {
-  fontSize: '18px',
-  fontWeight: '900',
-  color: '#0f172a',
-  margin: '0 0 12px 0',
-};
-
-const metaRow = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  color: '#64748b',
-  fontSize: '13px',
-  fontWeight: '600',
-  marginBottom: '8px',
-};
-
-const cardFooter = {
-  marginTop: '16px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-};
-
-const priceLabel = {
-  fontSize: '12px',
-  color: '#64748b',
-  fontWeight: '700',
-};
-
-const priceValue = {
-  fontSize: '20px',
-  color: '#16a34a',
-  fontWeight: '900',
-};
-
-const viewBtn = {
-  padding: '10px 14px',
-  borderRadius: '12px',
+const openMiniBtn = {
+  padding: '9px 12px',
+  borderRadius: '10px',
   border: 'none',
   background: '#0f172a',
   color: '#fff',
   fontWeight: '800',
   cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontSize: '12px',
 };
 
 const emptyStateCard = {
