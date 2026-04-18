@@ -5,6 +5,7 @@ import { ArrowLeft, Printer, Tag } from 'lucide-react';
 import QRCodeImport from 'react-qr-code';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
+const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const QRCodeComponent =
   typeof QRCodeImport === 'function'
@@ -35,11 +36,6 @@ export default function DismantleLabelsPage() {
       setLoading(false);
     }
   };
-
-  const FRONTEND_URL =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://yaris-autocare.vercel.app';
 
   const parts = useMemo(() => {
     const rawParts = Array.isArray(car?.parts) ? car.parts : [];
@@ -134,6 +130,10 @@ export default function DismantleLabelsPage() {
               box-shadow: none !important;
               border-radius: 0 !important;
             }
+
+            .no-print {
+              display: none !important;
+            }
           }
         `}
       </style>
@@ -188,7 +188,8 @@ export default function DismantleLabelsPage() {
           }}
         >
           {parts.map((part, index) => {
-            const qrValue = `${FRONTEND_URL}/dismantle-parts/${part.id}/edit`;
+            const safeId = encodeURIComponent(part.id);
+            const qrValue = `${FRONTEND_URL}/dismantle-parts/${safeId}/edit`;
             const shortModel = `${car.year || ''} ${car.make || ''} ${car.model || ''}`.trim();
 
             return (
