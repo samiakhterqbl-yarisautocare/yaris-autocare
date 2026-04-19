@@ -4,25 +4,23 @@ import {
   BarChart3,
   Package,
   AlertTriangle,
-  Car,
   Search,
   Zap,
-  Clock3,
   Scissors,
   ShoppingCart,
   Receipt,
-  ChevronRight,
-  Activity,
-  Boxes,
-  Wrench,
+  Car,
   ArrowRight,
+  Boxes,
+  Activity,
+  ChevronRight,
 } from 'lucide-react';
 import api from './api';
 import { useAuth } from './AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated, user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [summary, setSummary] = useState({
@@ -63,18 +61,18 @@ export default function HomePage() {
 
   return (
     <div style={page}>
-      <div style={hero}>
+      <div style={topHero}>
         <div style={heroLeft}>
-          <div style={eyebrow}>YARIS AUTOCARE INVENTORY SYSTEM</div>
-          <h1 style={heroTitle}>Control Center</h1>
-          <div style={heroSub}>
-            Manage inventory, dismantle flow, sales, labels, and stock movement from one place.
+          <div style={heroEyebrow}>YARIS AUTOCARE INVENTORY</div>
+          <h1 style={heroTitle}>Welcome back{user?.first_name ? `, ${user.first_name}` : ''}</h1>
+          <div style={heroSubtitle}>
+            Manage used parts, aftermarket stock, dismantle flow, invoices, and low stock from one clean dashboard.
           </div>
 
-          <div style={heroActions}>
+          <div style={heroButtons}>
             <button onClick={() => navigate('/used-parts')} style={primaryBtn}>
               <Package size={16} />
-              Open Used Parts
+              Used Parts
             </button>
 
             <button onClick={() => navigate('/sales')} style={secondaryBtn}>
@@ -84,257 +82,207 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div style={heroRight}>
-          <div style={searchCard}>
-            <div style={searchLabel}>Quick Search</div>
-            <div style={searchInputWrap}>
-              <Search size={16} style={searchIcon} />
-              <input
-                style={searchInput}
-                placeholder="Search stock, part name, SKU, label, VIN..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSearch();
-                }}
-              />
-            </div>
-            <button onClick={handleSearch} style={searchBtn}>
-              Search Inventory
-              <ArrowRight size={15} />
-            </button>
+        <div style={searchPanel}>
+          <div style={searchPanelTitle}>Quick Search</div>
+          <div style={searchWrap}>
+            <Search size={16} style={searchIcon} />
+            <input
+              style={searchInput}
+              placeholder="Search part name, SKU, label, stock..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch();
+              }}
+            />
           </div>
+          <button onClick={handleSearch} style={searchBtn}>
+            Search Inventory
+            <ArrowRight size={15} />
+          </button>
         </div>
       </div>
 
-      <div style={statsGrid}>
-        <MetricCard
-          title="Total Revenue"
+      <div style={kpiGrid}>
+        <KpiCard
+          title="Revenue"
           value={loading ? '...' : `$${Number(summary.total_revenue || 0).toLocaleString()}`}
-          helpText="All recorded invoices"
-          icon={<BarChart3 size={20} />}
-          accent="#22c55e"
+          icon={<BarChart3 size={18} />}
+          accent="#16a34a"
         />
-        <MetricCard
-          title="Used Inventory"
+        <KpiCard
+          title="Used Parts"
           value={loading ? '...' : Number(summary.used_parts_count || 0).toLocaleString()}
-          helpText="Used parts currently tracked"
-          icon={<Package size={20} />}
+          icon={<Package size={18} />}
           accent="#0f172a"
         />
-        <MetricCard
+        <KpiCard
           title="Aftermarket"
           value={loading ? '...' : Number(summary.aftermarket_count || 0).toLocaleString()}
-          helpText="Aftermarket items in stock"
-          icon={<Zap size={20} />}
+          icon={<Zap size={18} />}
           accent="#2563eb"
         />
-        <MetricCard
-          title="Low Stock Alerts"
+        <KpiCard
+          title="Low Stock"
           value={loading ? '...' : Number(summary.low_stock_alerts || 0).toLocaleString()}
-          helpText="Items needing attention"
-          icon={<AlertTriangle size={20} />}
+          icon={<AlertTriangle size={18} />}
           accent="#ef4444"
         />
       </div>
 
-      <div style={mainGrid}>
-        <div style={leftColumn}>
-          <SectionCard
-            title="Operations"
+      <div style={contentGrid}>
+        <div style={mainColumn}>
+          <Panel
+            title="Quick Actions"
+            subtitle="Most-used daily actions"
             icon={<Activity size={16} />}
-            rightLabel="Daily workflow"
           >
             <div style={actionGrid}>
-              <ActionCard
+              <ActionTile
                 title="Used Parts"
-                desc="View, edit, print labels, and manage individual used stock."
+                desc="View, edit and manage individual used stock."
                 icon={<Package size={18} />}
                 onClick={() => navigate('/used-parts')}
               />
-              <ActionCard
+              <ActionTile
                 title="Aftermarket"
-                desc="Manage aftermarket stock, pricing, and low-stock replenishment."
-                icon={<Wrench size={18} />}
+                desc="Manage aftermarket products and stock levels."
+                icon={<Zap size={18} />}
                 onClick={() => navigate('/aftermarket')}
               />
-              <ActionCard
+              <ActionTile
                 title="Dismantle Yard"
-                desc="Process dismantle vehicles and generate parts quickly."
+                desc="Process dismantle cars and create parts."
                 icon={<Scissors size={18} />}
                 onClick={() => navigate('/dismantle')}
               />
-              <ActionCard
+              <ActionTile
                 title="Yard Master"
-                desc="Control donor cars, labels, and dismantle inventory overview."
+                desc="Review donor vehicles and label control."
                 icon={<Car size={18} />}
                 onClick={() => navigate('/yard-master')}
               />
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Sales & Records"
-            icon={<Receipt size={16} />}
-            rightLabel="Front desk"
-          >
-            <div style={actionGrid}>
-              <ActionCard
-                title="Create Sale / Invoice"
-                desc="Build invoices from used parts, aftermarket stock, or manual items."
+              <ActionTile
+                title="Create Sale"
+                desc="Open POS and build invoice quickly."
                 icon={<ShoppingCart size={18} />}
                 onClick={() => navigate('/sales')}
               />
-              <ActionCard
-                title="Invoices Dashboard"
-                desc="Review previous invoices and print customer paperwork."
+              <ActionTile
+                title="Invoices"
+                desc="Review and re-open previous invoices."
                 icon={<Receipt size={18} />}
                 onClick={() => navigate('/sales-dashboard')}
               />
-              <ActionCard
-                title="Low Stock Monitor"
-                desc="Check parts that need restocking before they become unavailable."
-                icon={<AlertTriangle size={18} />}
-                onClick={() => navigate('/low-stock')}
-              />
-              <ActionCard
-                title="Inventory Overview"
-                desc="Jump into live stock modules and continue current work."
-                icon={<Boxes size={18} />}
-                onClick={() => navigate('/used-parts')}
-              />
             </div>
-          </SectionCard>
+          </Panel>
         </div>
 
-        <div style={rightColumn}>
-          <SectionCard
-            title="Live Activity"
-            icon={<Clock3 size={16} />}
-            rightLabel="Overview"
+        <div style={sideColumn}>
+          <Panel
+            title="System Snapshot"
+            subtitle="Current business totals"
+            icon={<Boxes size={16} />}
           >
-            <div style={activityList}>
-              <ActivityRow
-                label="INVENTORY"
-                text={`Used inventory currently tracked: ${summary.used_parts_count || 0}`}
+            <div style={snapshotList}>
+              <SnapshotRow
+                label="Used inventory"
+                value={loading ? '...' : summary.used_parts_count}
               />
-              <ActivityRow
-                label="AFTERMARKET"
-                text={`Aftermarket items tracked: ${summary.aftermarket_count || 0}`}
+              <SnapshotRow
+                label="Aftermarket items"
+                value={loading ? '...' : summary.aftermarket_count}
               />
-              <ActivityRow
-                label="ALERTS"
-                text={`Low stock warnings: ${summary.low_stock_alerts || 0}`}
+              <SnapshotRow
+                label="Low stock warnings"
+                value={loading ? '...' : summary.low_stock_alerts}
               />
-              <ActivityRow
-                label="REVENUE"
-                text={`Recorded invoice revenue: $${Number(summary.total_revenue || 0).toLocaleString()}`}
+              <SnapshotRow
+                label="Invoice revenue"
+                value={loading ? '...' : `$${Number(summary.total_revenue || 0).toLocaleString()}`}
               />
             </div>
-          </SectionCard>
+          </Panel>
 
-          <SectionCard
-            title="Quick Commands"
+          <Panel
+            title="Shortcuts"
+            subtitle="Fast access"
             icon={<ChevronRight size={16} />}
-            rightLabel="Fast access"
           >
-            <div style={quickCmdList}>
-              <button onClick={() => navigate('/dismantle')} style={quickCmdBtnDark}>
-                <Scissors size={17} />
+            <div style={shortcutList}>
+              <button onClick={() => navigate('/dismantle')} style={darkShortcut}>
+                <Scissors size={16} />
                 Start Dismantle Process
               </button>
-
-              <button onClick={() => navigate('/used-parts/add')} style={quickCmdBtn}>
-                <Package size={17} />
+              <button onClick={() => navigate('/used-parts/add')} style={lightShortcut}>
+                <Package size={16} />
                 Add Used Part
               </button>
-
-              <button onClick={() => navigate('/aftermarket/new')} style={quickCmdBtn}>
-                <Zap size={17} />
+              <button onClick={() => navigate('/aftermarket/new')} style={lightShortcut}>
+                <Zap size={16} />
                 Add Aftermarket Item
               </button>
-
-              <button onClick={() => navigate('/sales')} style={quickCmdBtn}>
-                <ShoppingCart size={17} />
-                Open POS / Sales
+              <button onClick={() => navigate('/low-stock')} style={lightShortcut}>
+                <AlertTriangle size={16} />
+                View Low Stock
               </button>
             </div>
-          </SectionCard>
-
-          <SectionCard
-            title="System Notes"
-            icon={<BarChart3 size={16} />}
-            rightLabel="Status"
-          >
-            <div style={notesBox}>
-              <div style={noteLine}>
-                This dashboard is now connected through the authenticated API client.
-              </div>
-              <div style={noteLine}>
-                After login, protected pages and QR edit pages can use token-based access properly.
-              </div>
-              <div style={noteLine}>
-                Next recommended step: convert remaining modules from plain axios to the shared API client.
-              </div>
-            </div>
-          </SectionCard>
+          </Panel>
         </div>
       </div>
     </div>
   );
 }
 
-function MetricCard({ title, value, helpText, icon, accent }) {
+function KpiCard({ title, value, icon, accent }) {
   return (
-    <div style={metricCard}>
-      <div style={metricTop}>
+    <div style={kpiCard}>
+      <div style={kpiTop}>
         <div>
-          <div style={metricTitle}>{title}</div>
-          <div style={metricValue}>{value}</div>
-          <div style={metricHelp}>{helpText}</div>
+          <div style={kpiTitle}>{title}</div>
+          <div style={kpiValue}>{value}</div>
         </div>
-
-        <div style={{ ...metricIconWrap, color: accent }}>
-          {icon}
-        </div>
+        <div style={{ ...kpiIconWrap, color: accent }}>{icon}</div>
       </div>
     </div>
   );
 }
 
-function SectionCard({ title, icon, rightLabel, children }) {
+function Panel({ title, subtitle, icon, children }) {
   return (
-    <div style={sectionCard}>
-      <div style={sectionHeader}>
-        <div style={sectionTitle}>
-          {icon}
-          {title}
+    <div style={panel}>
+      <div style={panelHeader}>
+        <div>
+          <div style={panelTitle}>
+            {icon}
+            {title}
+          </div>
+          <div style={panelSubtitle}>{subtitle}</div>
         </div>
-        <div style={sectionRightLabel}>{rightLabel}</div>
       </div>
-      <div style={sectionBody}>{children}</div>
+      <div style={panelBody}>{children}</div>
     </div>
   );
 }
 
-function ActionCard({ title, desc, icon, onClick }) {
+function ActionTile({ title, desc, icon, onClick }) {
   return (
-    <button onClick={onClick} style={actionCard}>
-      <div style={actionIconWrap}>{icon}</div>
-      <div style={actionTextWrap}>
-        <div style={actionTitle}>{title}</div>
-        <div style={actionDesc}>{desc}</div>
+    <button onClick={onClick} style={actionTile}>
+      <div style={tileIconWrap}>{icon}</div>
+      <div style={tileContent}>
+        <div style={tileTitle}>{title}</div>
+        <div style={tileDesc}>{desc}</div>
       </div>
       <ChevronRight size={16} style={{ color: '#94a3b8' }} />
     </button>
   );
 }
 
-function ActivityRow({ label, text }) {
+function SnapshotRow({ label, value }) {
   return (
-    <div style={activityRow}>
-      <div style={activityLabel}>{label}</div>
-      <div style={activityText}>{text}</div>
+    <div style={snapshotRow}>
+      <div style={snapshotLabel}>{label}</div>
+      <div style={snapshotValue}>{value}</div>
     </div>
   );
 }
@@ -342,16 +290,16 @@ function ActivityRow({ label, text }) {
 const page = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '24px',
+  gap: '22px',
 };
 
-const hero = {
+const topHero = {
   display: 'grid',
-  gridTemplateColumns: '1.4fr 0.9fr',
-  gap: '20px',
-  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 55%, #fff1f2 100%)',
+  gridTemplateColumns: '1.3fr 0.8fr',
+  gap: '18px',
+  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 60%, #fff1f2 100%)',
   border: '1px solid #e2e8f0',
-  borderRadius: '24px',
+  borderRadius: '22px',
   padding: '24px',
 };
 
@@ -361,13 +309,13 @@ const heroLeft = {
   justifyContent: 'center',
 };
 
-const eyebrow = {
+const heroEyebrow = {
   fontSize: '11px',
   fontWeight: '900',
   color: '#ef4444',
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
-  marginBottom: '10px',
+  marginBottom: '8px',
 };
 
 const heroTitle = {
@@ -378,16 +326,16 @@ const heroTitle = {
   letterSpacing: '-0.03em',
 };
 
-const heroSub = {
+const heroSubtitle = {
   marginTop: '10px',
   fontSize: '14px',
   lineHeight: 1.6,
   color: '#475569',
-  maxWidth: '680px',
   fontWeight: '600',
+  maxWidth: '680px',
 };
 
-const heroActions = {
+const heroButtons = {
   display: 'flex',
   gap: '12px',
   flexWrap: 'wrap',
@@ -420,13 +368,7 @@ const secondaryBtn = {
   cursor: 'pointer',
 };
 
-const heroRight = {
-  display: 'flex',
-  alignItems: 'stretch',
-};
-
-const searchCard = {
-  width: '100%',
+const searchPanel = {
   background: '#ffffff',
   border: '1px solid #e2e8f0',
   borderRadius: '20px',
@@ -437,7 +379,7 @@ const searchCard = {
   gap: '12px',
 };
 
-const searchLabel = {
+const searchPanelTitle = {
   fontSize: '12px',
   fontWeight: '900',
   color: '#64748b',
@@ -445,7 +387,7 @@ const searchLabel = {
   letterSpacing: '0.06em',
 };
 
-const searchInputWrap = {
+const searchWrap = {
   position: 'relative',
 };
 
@@ -481,27 +423,27 @@ const searchBtn = {
   cursor: 'pointer',
 };
 
-const statsGrid = {
+const kpiGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: '18px',
+  gap: '16px',
 };
 
-const metricCard = {
+const kpiCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '20px',
-  padding: '20px',
+  borderRadius: '18px',
+  padding: '18px',
 };
 
-const metricTop = {
+const kpiTop = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
   gap: '12px',
 };
 
-const metricTitle = {
+const kpiTitle = {
   fontSize: '12px',
   fontWeight: '900',
   color: '#64748b',
@@ -509,22 +451,15 @@ const metricTitle = {
   letterSpacing: '0.06em',
 };
 
-const metricValue = {
+const kpiValue = {
   marginTop: '10px',
-  fontSize: '30px',
+  fontSize: '32px',
   fontWeight: '900',
   color: '#0f172a',
   letterSpacing: '-0.03em',
 };
 
-const metricHelp = {
-  marginTop: '8px',
-  fontSize: '12px',
-  fontWeight: '700',
-  color: '#94a3b8',
-};
-
-const metricIconWrap = {
+const kpiIconWrap = {
   width: '42px',
   height: '42px',
   borderRadius: '14px',
@@ -534,67 +469,63 @@ const metricIconWrap = {
   justifyContent: 'center',
 };
 
-const mainGrid = {
+const contentGrid = {
   display: 'grid',
-  gridTemplateColumns: '1.55fr 1fr',
-  gap: '20px',
+  gridTemplateColumns: '1.5fr 0.9fr',
+  gap: '18px',
 };
 
-const leftColumn = {
+const mainColumn = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '20px',
 };
 
-const rightColumn = {
+const sideColumn = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '20px',
+  gap: '18px',
 };
 
-const sectionCard = {
+const panel = {
   background: '#fff',
   border: '1px solid #e2e8f0',
   borderRadius: '20px',
   overflow: 'hidden',
 };
 
-const sectionHeader = {
+const panelHeader = {
   padding: '16px 20px',
   borderBottom: '1px solid #f1f5f9',
   background: '#fcfdfe',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
 };
 
-const sectionTitle = {
+const panelTitle = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  fontSize: '14px',
+  fontSize: '15px',
   fontWeight: '900',
   color: '#0f172a',
 };
 
-const sectionRightLabel = {
-  fontSize: '11px',
-  fontWeight: '800',
+const panelSubtitle = {
+  marginTop: '4px',
+  fontSize: '12px',
+  fontWeight: '700',
   color: '#94a3b8',
-  textTransform: 'uppercase',
 };
 
-const sectionBody = {
-  padding: '20px',
+const panelBody = {
+  padding: '18px',
 };
 
 const actionGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
   gap: '14px',
 };
 
-const actionCard = {
+const actionTile = {
   border: '1px solid #e2e8f0',
   background: '#fff',
   borderRadius: '18px',
@@ -606,9 +537,9 @@ const actionCard = {
   cursor: 'pointer',
 };
 
-const actionIconWrap = {
-  width: '42px',
-  height: '42px',
+const tileIconWrap = {
+  width: '44px',
+  height: '44px',
   borderRadius: '14px',
   background: '#f8fafc',
   color: '#0f172a',
@@ -618,18 +549,18 @@ const actionIconWrap = {
   flexShrink: 0,
 };
 
-const actionTextWrap = {
+const tileContent = {
   flex: 1,
   minWidth: 0,
 };
 
-const actionTitle = {
-  fontSize: '14px',
+const tileTitle = {
+  fontSize: '15px',
   fontWeight: '900',
   color: '#0f172a',
 };
 
-const actionDesc = {
+const tileDesc = {
   marginTop: '4px',
   fontSize: '12px',
   lineHeight: 1.5,
@@ -637,43 +568,42 @@ const actionDesc = {
   fontWeight: '600',
 };
 
-const activityList = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-};
-
-const activityRow = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4px',
-  border: '1px solid #f1f5f9',
-  background: '#f8fafc',
-  borderRadius: '14px',
-  padding: '12px 14px',
-};
-
-const activityLabel = {
-  fontSize: '10px',
-  fontWeight: '900',
-  color: '#94a3b8',
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-};
-
-const activityText = {
-  fontSize: '13px',
-  fontWeight: '700',
-  color: '#0f172a',
-};
-
-const quickCmdList = {
+const snapshotList = {
   display: 'flex',
   flexDirection: 'column',
   gap: '12px',
 };
 
-const quickCmdBtnDark = {
+const snapshotRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '14px 16px',
+  borderRadius: '14px',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+};
+
+const snapshotLabel = {
+  fontSize: '13px',
+  fontWeight: '700',
+  color: '#475569',
+};
+
+const snapshotValue = {
+  fontSize: '16px',
+  fontWeight: '900',
+  color: '#0f172a',
+};
+
+const shortcutList = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+};
+
+const darkShortcut = {
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
@@ -684,11 +614,10 @@ const quickCmdBtnDark = {
   borderRadius: '14px',
   fontWeight: '800',
   cursor: 'pointer',
-  textAlign: 'left',
   fontSize: '13px',
 };
 
-const quickCmdBtn = {
+const lightShortcut = {
   display: 'flex',
   alignItems: 'center',
   gap: '10px',
@@ -699,23 +628,5 @@ const quickCmdBtn = {
   borderRadius: '14px',
   fontWeight: '800',
   cursor: 'pointer',
-  textAlign: 'left',
   fontSize: '13px',
-};
-
-const notesBox = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-};
-
-const noteLine = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '14px',
-  padding: '12px 14px',
-  fontSize: '13px',
-  lineHeight: 1.6,
-  color: '#475569',
-  fontWeight: '600',
 };
