@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { ArrowLeft, Printer, Tag } from 'lucide-react';
 import QRCodeImport from 'react-qr-code';
+import api from './api';
 
-const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const QRCodeComponent =
@@ -27,7 +26,7 @@ export default function DismantleLabelsPage() {
   const fetchCar = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/donor-cars/${id}/`);
+      const res = await api.get(`/donor-cars/${id}/`);
       setCar(res.data);
     } catch (err) {
       console.error('Failed to fetch donor car for labels:', err);
@@ -48,6 +47,7 @@ export default function DismantleLabelsPage() {
       const category = part.category?.toLowerCase() || '';
       const labelId = part.label_id?.toLowerCase() || '';
       const status = part.status?.toLowerCase() || '';
+
       return (
         name.includes(q) ||
         category.includes(q) ||
