@@ -18,9 +18,11 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import api from './api';
+import { useAuth } from './AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { loading: authLoading, isAuthenticated } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [summary, setSummary] = useState({
@@ -32,12 +34,17 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) return;
+
+    setLoading(true);
+
     api
       .get('/summary/')
       .then((res) => setSummary(res.data))
       .catch((err) => console.error('Summary fetch failed', err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   const quickSearchTarget = useMemo(() => {
     const q = searchTerm.trim();
@@ -49,6 +56,10 @@ export default function HomePage() {
     if (!quickSearchTarget) return;
     navigate(quickSearchTarget);
   };
+
+  if (authLoading) {
+    return <div style={{ padding: '30px', fontWeight: '800' }}>Loading system...</div>;
+  }
 
   return (
     <div style={page}>
