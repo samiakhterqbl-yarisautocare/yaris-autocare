@@ -1,10 +1,13 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Scissors, Package, Wrench,
   ShoppingCart, Menu, X, ChevronRight, AlertTriangle,
-  Settings, ExternalLink, Car, Receipt
+  Settings, ExternalLink, Car, Receipt, LogOut
 } from 'lucide-react';
+import ProtectedRoute from './ProtectedRoute';
+import LoginPage from './LoginPage';
+import { useAuth } from './AuthContext';
 
 // Lazy Load All Modules
 const HomePage = lazy(() => import('./HomePage'));
@@ -50,39 +53,78 @@ function AppRoutes() {
   const location = useLocation();
   const isInvoicePrintView = /^\/sales\/[^/]+$/.test(location.pathname);
 
+  if (location.pathname === '/login') {
+    return <LoginPage />;
+  }
+
   if (isInvoicePrintView) {
     return (
-      <Suspense fallback={<div style={{ padding: '40px', fontWeight: '700' }}>Loading Invoice...</div>}>
-        <Routes>
-          <Route path="/sales/:id" element={<InvoiceDetail />} />
-        </Routes>
-      </Suspense>
+      <ProtectedRoute>
+        <Suspense fallback={<div style={{ padding: '40px', fontWeight: '700' }}>Loading Invoice...</div>}>
+          <Routes>
+            <Route path="/sales/:id" element={<InvoiceDetail />} />
+          </Routes>
+        </Suspense>
+      </ProtectedRoute>
     );
   }
 
-  return <MainLayout />;
+  return (
+    <ProtectedRoute>
+      <MainLayout />
+    </ProtectedRoute>
+  );
 }
 
 function MainLayout() {
   const [isOpen, setIsOpen] = useState(true);
+  const { user, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  const initials =
+    `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.trim() ||
+    user?.username?.slice(0, 2)?.toUpperCase() ||
+    'YA';
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: COLORS.bg }}>
-      <aside style={{
-        backgroundColor: COLORS.sidebar,
-        width: isOpen ? '260px' : '0px',
-        minWidth: isOpen ? '260px' : '0px',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.2s ease',
-        overflow: 'hidden',
-        color: '#fff',
-        zIndex: 100
-      }}>
+      <aside
+        style={{
+          backgroundColor: COLORS.sidebar,
+          width: isOpen ? '260px' : '0px',
+          minWidth: isOpen ? '260px' : '0px',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          color: '#fff',
+          zIndex: 100
+        }}
+      >
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div style={{ padding: '25px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ backgroundColor: COLORS.primary, width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#fff', fontSize: '20px' }}>Y</div>
+            <div
+              style={{
+                backgroundColor: COLORS.primary,
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '900',
+                color: '#fff',
+                fontSize: '20px'
+              }}
+            >
+              Y
+            </div>
             <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#fff' }}>
               YARIS <span style={{ color: COLORS.primary }}>AUTOCARE</span>
             </h1>
@@ -101,30 +143,87 @@ function MainLayout() {
         </nav>
 
         <div style={{ padding: '15px', borderTop: '1px solid #334155', backgroundColor: '#161e2b' }}>
-          <a
-            href={DJANGO_ADMIN_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#94a3b8', textDecoration: 'none', fontSize: '12px', fontWeight: '800' }}
+          {isAdmin && (
+            <a
+              href={DJANGO_ADMIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px',
+                color: '#94a3b8',
+                textDecoration: 'none',
+                fontSize: '12px',
+                fontWeight: '800'
+              }}
+            >
+              <Settings size={16} />
+              <span style={{ flex: 1 }}>SYSTEM ADMIN</span>
+              <ExternalLink size={12} opacity={0.5} />
+            </a>
+          )}
+
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px',
+              color: '#fca5a5',
+              background: 'none',
+              border: 'none',
+              width: '100%',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '800'
+            }}
           >
-            <Settings size={16} />
-            <span style={{ flex: 1 }}>SYSTEM ADMIN</span>
-            <ExternalLink size={12} opacity={0.5} />
-          </a>
+            <LogOut size={16} />
+            <span style={{ flex: 1, textAlign: 'left' }}>LOG OUT</span>
+          </button>
         </div>
       </aside>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
-        <header style={{ height: '64px', backgroundColor: '#fff', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
+        <header
+          style={{
+            height: '64px',
+            backgroundColor: '#fff',
+            borderBottom: `1px solid ${COLORS.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px'
+          }}
+        >
           <button onClick={() => setIsOpen(!isOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             {isOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '12px', fontWeight: '800' }}>ADMIN CONTROL</div>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>Legana Yard Terminal</div>
+              <div style={{ fontSize: '12px', fontWeight: '800' }}>{user?.role || 'STAFF'} ACCESS</div>
+              <div style={{ fontSize: '11px', color: '#64748b' }}>{user?.first_name || user?.username}</div>
             </div>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: COLORS.dark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>BA</div>
+
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                backgroundColor: COLORS.dark,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '800'
+              }}
+            >
+              {initials}
+            </div>
           </div>
         </header>
 
