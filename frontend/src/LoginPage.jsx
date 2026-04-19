@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LockKeyhole, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from './AuthContext';
+import logo from './assets/LOGO.jpeg';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -28,8 +29,7 @@ export default function LoginPage() {
       setError(
         err?.response?.data?.non_field_errors?.[0] ||
         err?.response?.data?.detail ||
-        err?.response?.data?.login?.[0] ||
-        'Login failed. Please check username/email and password.'
+        'Invalid username/email or password.'
       );
     } finally {
       setSubmitting(false);
@@ -39,17 +39,19 @@ export default function LoginPage() {
   return (
     <div style={page}>
       <div style={card}>
+        
+        {/* LOGO SECTION */}
         <div style={logoWrap}>
-          <div style={logoBox}>Y</div>
+          <img src={logo} alt="Yaris Autocare" style={logoImg} />
           <div>
-            <div style={brandTop}>YARIS</div>
-            <div style={brandBottom}>AUTOCARE INVENTORY</div>
+            <div style={brandTop}>YARIS AUTOCARE</div>
+            <div style={brandBottom}>Inventory System</div>
           </div>
         </div>
 
         <h1 style={title}>Staff Login</h1>
         <div style={subtitle}>
-          Login with username or email to access the system.
+          Login to access inventory, sales and system tools.
         </div>
 
         <form onSubmit={handleSubmit} style={form}>
@@ -60,7 +62,6 @@ export default function LoginPage() {
               placeholder="Username or email"
               value={loginValue}
               onChange={(e) => setLoginValue(e.target.value)}
-              autoComplete="username"
             />
           </div>
 
@@ -72,7 +73,6 @@ export default function LoginPage() {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
             />
             <button
               type="button"
@@ -89,6 +89,12 @@ export default function LoginPage() {
             {submitting ? 'Signing in...' : 'Login'}
           </button>
         </form>
+
+        {/* FOOTER */}
+        <div style={footer}>
+          <div>📞 0449 828 749</div>
+          <div>📍 Legana, Tasmania</div>
+        </div>
       </div>
     </div>
   );
@@ -101,7 +107,7 @@ const page = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'linear-gradient(135deg, #0f172a 0%, #111827 55%, #7f1d1d 100%)',
+  background: 'linear-gradient(135deg, #0f172a 0%, #111827 60%, #7f1d1d 100%)',
   padding: '24px',
 };
 
@@ -111,27 +117,22 @@ const card = {
   background: '#fff',
   borderRadius: '24px',
   padding: '32px',
-  boxShadow: '0 25px 50px rgba(0,0,0,0.18)',
+  boxShadow: '0 25px 50px rgba(0,0,0,0.2)',
 };
 
 const logoWrap = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  marginBottom: '22px',
+  marginBottom: '20px',
 };
 
-const logoBox = {
+const logoImg = {
   width: '50px',
   height: '50px',
-  borderRadius: '14px',
-  background: '#ef4444',
-  color: '#fff',
-  fontWeight: '900',
-  fontSize: '24px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  borderRadius: '12px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
 };
 
 const brandTop = {
@@ -147,14 +148,13 @@ const brandBottom = {
 };
 
 const title = {
-  margin: '0 0 6px 0',
-  fontSize: '28px',
+  fontSize: '26px',
   fontWeight: '900',
-  color: '#0f172a',
+  marginBottom: '6px',
 };
 
 const subtitle = {
-  marginBottom: '24px',
+  marginBottom: '20px',
   color: '#64748b',
   fontWeight: '600',
 };
@@ -167,53 +167,56 @@ const form = {
 
 const fieldWrap = {
   position: 'relative',
-  display: 'flex',
-  alignItems: 'center',
 };
 
 const iconStyle = {
   position: 'absolute',
-  left: '14px',
+  left: '12px',
+  top: '50%',
+  transform: 'translateY(-50%)',
   color: '#94a3b8',
 };
 
 const input = {
   width: '100%',
-  padding: '14px 44px 14px 42px',
-  borderRadius: '14px',
+  padding: '14px 40px',
+  borderRadius: '12px',
   border: '1px solid #e2e8f0',
-  outline: 'none',
-  fontSize: '14px',
-  boxSizing: 'border-box',
 };
 
 const toggleBtn = {
   position: 'absolute',
-  right: '12px',
-  border: 'none',
+  right: '10px',
+  top: '50%',
+  transform: 'translateY(-50%)',
   background: 'none',
+  border: 'none',
   cursor: 'pointer',
-  color: '#64748b',
 };
 
 const submitBtn = {
-  marginTop: '8px',
+  marginTop: '10px',
   background: '#0f172a',
   color: '#fff',
+  padding: '14px',
+  borderRadius: '12px',
   border: 'none',
-  borderRadius: '14px',
-  padding: '14px 18px',
   fontWeight: '800',
-  fontSize: '15px',
   cursor: 'pointer',
 };
 
 const errorBox = {
-  background: '#fef2f2',
+  background: '#fee2e2',
+  padding: '10px',
+  borderRadius: '10px',
   color: '#b91c1c',
-  border: '1px solid #fecaca',
-  padding: '12px 14px',
-  borderRadius: '12px',
   fontWeight: '700',
-  fontSize: '13px',
+};
+
+const footer = {
+  marginTop: '20px',
+  fontSize: '12px',
+  color: '#64748b',
+  display: 'flex',
+  justifyContent: 'space-between',
 };
