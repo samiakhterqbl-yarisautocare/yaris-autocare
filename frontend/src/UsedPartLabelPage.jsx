@@ -51,10 +51,10 @@ export default function UsedPartLabelPage() {
 
   const fitName = (name) => {
     const text = safeText(name, '-');
-    if (text.length > 30) return { fontSize: '6.4px', lineHeight: 1.05 };
-    if (text.length > 22) return { fontSize: '6.9px', lineHeight: 1.05 };
-    if (text.length > 16) return { fontSize: '7.3px', lineHeight: 1.05 };
-    return { fontSize: '7.8px', lineHeight: 1.05 };
+    if (text.length > 34) return { fontSize: '6.6px' };
+    if (text.length > 24) return { fontSize: '7.2px' };
+    if (text.length > 16) return { fontSize: '7.8px' };
+    return { fontSize: '8.6px' };
   };
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
@@ -73,9 +73,11 @@ export default function UsedPartLabelPage() {
           {safeText(part.part_name)}
         </div>
 
-        <div style={metaLine}>SKU: {safeText(part.sku)}</div>
-        <div style={metaLine}>LOC: {safeText(part.location)}</div>
-        <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
+        <div style={metaGroup}>
+          <div style={metaLine}>SKU: {safeText(part.sku)}</div>
+          <div style={metaLine}>LOC: {safeText(part.location)}</div>
+          <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
+        </div>
 
         <div style={price}>{formatPrice(part.price)}</div>
       </div>
@@ -264,27 +266,28 @@ const labelBox = {
   background: '#fff',
   display: 'flex',
   flexDirection: 'row',
-  alignItems: 'stretch',
-  paddingTop: '4.2mm',
-  paddingRight: '2.6mm',
-  paddingBottom: '2.4mm',
-  paddingLeft: '4.2mm',
+  alignItems: 'flex-start',
+  paddingTop: '3.6mm',
+  paddingRight: '2.4mm',
+  paddingBottom: '2.1mm',
+  paddingLeft: '3.8mm',
   fontFamily: 'Arial, Helvetica, sans-serif',
   overflow: 'hidden',
 };
 
 const qrCol = {
-  width: '11.5mm',
-  minWidth: '11.5mm',
+  width: '11mm',
+  minWidth: '11mm',
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   justifyContent: 'center',
-  marginRight: '2.2mm',
+  marginRight: '1.8mm',
+  marginTop: '1.1mm',
 };
 
 const qrWrap = {
-  width: '10mm',
-  height: '10mm',
+  width: '9.6mm',
+  height: '9.6mm',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -292,8 +295,8 @@ const qrWrap = {
 };
 
 const qrImg = {
-  width: '10mm',
-  height: '10mm',
+  width: '9.6mm',
+  height: '9.6mm',
   display: 'block',
   objectFit: 'contain',
 };
@@ -301,6 +304,7 @@ const qrImg = {
 const infoCol = {
   flex: 1,
   minWidth: 0,
+  height: '100%',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
@@ -310,6 +314,8 @@ const infoCol = {
 const partName = {
   fontWeight: '900',
   color: '#000',
+  lineHeight: 1,
+  marginBottom: '0.7mm',
   overflow: 'hidden',
   display: '-webkit-box',
   WebkitLineClamp: 2,
@@ -317,8 +323,15 @@ const partName = {
   wordBreak: 'break-word',
 };
 
+const metaGroup = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.35mm',
+  marginBottom: '0.6mm',
+};
+
 const metaLine = {
-  fontSize: '5.8px',
+  fontSize: '6.8px',
   fontWeight: '700',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -327,10 +340,11 @@ const metaLine = {
 };
 
 const price = {
-  fontSize: '8px',
+  fontSize: '8.8px',
   fontWeight: '900',
   lineHeight: 1,
   whiteSpace: 'nowrap',
+  marginTop: '0.3mm',
 };
 
 const urlNote = {
