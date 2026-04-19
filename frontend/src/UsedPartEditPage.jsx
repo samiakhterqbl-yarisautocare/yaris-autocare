@@ -1,15 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import {
-  ArrowLeft,
-  Save,
-  Camera,
-  Star,
-  Package,
-} from 'lucide-react';
-
-const API_URL = 'https://yaris-autocare-production.up.railway.app';
+import { ArrowLeft, Save, Camera, Star, Package } from 'lucide-react';
+import api from './api';
 
 const CATEGORY_OPTIONS = [
   'Engine',
@@ -37,6 +29,7 @@ const CATEGORY_OPTIONS = [
 
 const GRADE_OPTIONS = ['A', 'B', 'C', 'D'];
 const RATING_OPTIONS = ['Excellent', 'Good', 'Fair', 'Poor'];
+
 const CONDITION_OPTIONS = [
   'New Old Stock',
   'Used Excellent',
@@ -45,10 +38,12 @@ const CONDITION_OPTIONS = [
   'Reconditioned',
   'Damaged',
 ];
+
 const USAGE_TYPE_OPTIONS = [
   { value: 'FOR_SALE', label: 'For Sale' },
   { value: 'INTERNAL_USE', label: 'Internal Use' },
 ];
+
 const SALE_STATUS_OPTIONS = [
   'AVAILABLE',
   'RESERVED',
@@ -96,15 +91,16 @@ export default function UsedPartEditPage() {
 
   useEffect(() => {
     fetchPart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchPart = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/used-parts/${id}/`);
+      const res = await api.get(`/used-parts/${id}/`);
       const data = res.data;
-      setPart(data);
 
+      setPart(data);
       setFormData({
         part_name: data.part_name || '',
         part_number: data.part_number || '',
@@ -133,7 +129,10 @@ export default function UsedPartEditPage() {
       });
     } catch (error) {
       console.error('Error loading used part:', error);
-      alert('Error loading used part');
+      alert(
+        error?.response?.data?.detail ||
+          'Error loading used part'
+      );
     } finally {
       setLoading(false);
     }
@@ -159,8 +158,10 @@ export default function UsedPartEditPage() {
         }
       });
 
-      const res = await axios.put(`${API_URL}/api/used-parts/${id}/`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await api.put(`/used-parts/${id}/`, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       setPart(res.data);
@@ -168,7 +169,10 @@ export default function UsedPartEditPage() {
       navigate(`/used-parts/${id}`);
     } catch (error) {
       console.error('Error updating used part:', error);
-      alert('Error updating used part');
+      alert(
+        error?.response?.data?.detail ||
+          'Error updating used part'
+      );
     } finally {
       setSaving(false);
     }
@@ -184,15 +188,20 @@ export default function UsedPartEditPage() {
       const payload = new FormData();
       files.forEach((file) => payload.append('images', file));
 
-      await axios.put(`${API_URL}/api/used-parts/${id}/`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      await api.put(`/used-parts/${id}/`, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       await fetchPart();
       alert('Images uploaded successfully');
     } catch (error) {
       console.error('Image upload error:', error);
-      alert('Error uploading images');
+      alert(
+        error?.response?.data?.detail ||
+          'Error uploading images'
+      );
     } finally {
       setUploading(false);
     }
@@ -200,346 +209,355 @@ export default function UsedPartEditPage() {
 
   const setMainImage = async (imageId) => {
     try {
-      await axios.post(`${API_URL}/api/images/${imageId}/set-main/`);
-      fetchPart();
+      await api.post(`/images/${imageId}/set-main/`);
+      await fetchPart();
     } catch (error) {
       console.error('Set main image error:', error);
-      alert('Error setting main image');
+      alert(
+        error?.response?.data?.detail ||
+          'Error setting main image'
+      );
     }
   };
 
   if (loading) {
-    return <div style={page}>Loading...</div>;
+    return <div style={{ padding: 30 }}>Loading...</div>;
   }
 
   if (!part) {
-    return <div style={page}>Used part not found.</div>;
+    return <div style={{ padding: 30 }}>Used part not found.</div>;
   }
 
   return (
     <div style={page}>
-      <div style={topBar}>
-        <button onClick={() => navigate(`/used-parts/${id}`)} style={backButton}>
-          <ArrowLeft size={16} />
-          BACK TO DETAILS
-        </button>
-      </div>
+      <button onClick={() => navigate(`/used-parts/${id}`)} style={backButton}>
+        <ArrowLeft size={16} />
+        BACK TO DETAILS
+      </button>
 
-      <div style={headerCard}>
+      <div style={heroCard}>
         <div>
-          <h1 style={title}>Edit Used Part</h1>
-          <p style={subtitle}>
+          <div style={eyebrow}>EDIT USED PART</div>
+          <h1 style={title}>#{id} Edit Used Part</h1>
+          <div style={subText}>
             Update details, condition, location, notes, and photos.
-          </p>
-        </div>
-
-        <div style={systemBadges}>
-          <span style={chip}>SKU: {part.sku || '-'}</span>
-          <span style={chip}>Label: {part.label_id || '-'}</span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSave} style={layout}>
-        <div style={leftColumn}>
-          <Section title="Photos">
-            <label style={uploadBox}>
-              <Camera size={24} />
-              <span>{uploading ? 'UPLOADING...' : 'Upload More Photos'}</span>
-              <input type="file" multiple hidden onChange={handleUploadImages} />
-            </label>
-
-            <div style={photoGrid}>
-              {part.images && part.images.length > 0 ? (
-                part.images.map((img) => (
-                  <div key={img.id} style={photoCard}>
-                    <img src={img.image} alt="Part" style={photoImage} />
-                    <button
-                      type="button"
-                      onClick={() => setMainImage(img.id)}
-                      style={img.is_main ? mainBtnActive : mainBtn}
-                    >
-                      <Star size={14} fill={img.is_main ? 'gold' : 'none'} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div style={emptyPhoto}>
-                  <Package size={24} />
-                  <span>No photos uploaded</span>
-                </div>
-              )}
-            </div>
-          </Section>
-
-          <Section title="Basic Information">
-            <div style={grid2}>
-              <Field label="Part Name *">
-                <input
-                  value={formData.part_name}
-                  onChange={(e) => handleChange('part_name', e.target.value)}
-                  style={input}
-                  required
-                />
-              </Field>
-
-              <Field label="Part Number">
-                <input
-                  value={formData.part_number}
-                  onChange={(e) => handleChange('part_number', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Category">
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleChange('category', e.target.value)}
-                  style={input}
-                >
-                  {CATEGORY_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Subcategory">
-                <input
-                  value={formData.subcategory}
-                  onChange={(e) => handleChange('subcategory', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Description" full>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  style={textarea}
-                />
-              </Field>
-            </div>
-          </Section>
-
-          <Section title="Vehicle Compatibility">
-            <div style={grid2}>
-              <Field label="Make">
-                <input
-                  value={formData.make}
-                  onChange={(e) => handleChange('make', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Model">
-                <input
-                  value={formData.model}
-                  onChange={(e) => handleChange('model', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Variant">
-                <input
-                  value={formData.variant}
-                  onChange={(e) => handleChange('variant', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Year From">
-                <input
-                  type="number"
-                  value={formData.year_from}
-                  onChange={(e) => handleChange('year_from', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Year To">
-                <input
-                  type="number"
-                  value={formData.year_to}
-                  onChange={(e) => handleChange('year_to', e.target.value)}
-                  style={input}
-                />
-              </Field>
-            </div>
-          </Section>
-        </div>
-
-        <div style={rightColumn}>
-          <Section title="Condition & Stock">
-            <div style={grid1}>
-              <Field label="Grade">
-                <select
-                  value={formData.grade}
-                  onChange={(e) => handleChange('grade', e.target.value)}
-                  style={input}
-                >
-                  {GRADE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Rating">
-                <select
-                  value={formData.rating}
-                  onChange={(e) => handleChange('rating', e.target.value)}
-                  style={input}
-                >
-                  <option value="">Select</option>
-                  {RATING_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Condition">
-                <select
-                  value={formData.condition}
-                  onChange={(e) => handleChange('condition', e.target.value)}
-                  style={input}
-                >
-                  {CONDITION_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Condition Notes">
-                <textarea
-                  value={formData.condition_notes}
-                  onChange={(e) => handleChange('condition_notes', e.target.value)}
-                  style={textareaSmall}
-                />
-              </Field>
-
-              <Field label="Usage Type">
-                <select
-                  value={formData.usage_type}
-                  onChange={(e) => handleChange('usage_type', e.target.value)}
-                  style={input}
-                >
-                  {USAGE_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Sale Status">
-                <select
-                  value={formData.sale_status}
-                  onChange={(e) => handleChange('sale_status', e.target.value)}
-                  style={input}
-                >
-                  {SALE_STATUS_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Price">
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => handleChange('price', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Cost Price">
-                <input
-                  type="number"
-                  value={formData.cost_price}
-                  onChange={(e) => handleChange('cost_price', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Quantity">
-                <input
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) => handleChange('quantity', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Location">
-                <input
-                  value={formData.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Shelf Code">
-                <input
-                  value={formData.shelf_code}
-                  onChange={(e) => handleChange('shelf_code', e.target.value)}
-                  style={input}
-                />
-              </Field>
-            </div>
-          </Section>
-
-          <Section title="Notes">
-            <div style={grid1}>
-              <Field label="Public Notes">
-                <textarea
-                  value={formData.public_notes}
-                  onChange={(e) => handleChange('public_notes', e.target.value)}
-                  style={textareaSmall}
-                />
-              </Field>
-
-              <Field label="Internal Notes">
-                <textarea
-                  value={formData.internal_notes}
-                  onChange={(e) => handleChange('internal_notes', e.target.value)}
-                  style={textareaSmall}
-                />
-              </Field>
-            </div>
-          </Section>
-
-          <div style={actionBar}>
-            <button type="submit" disabled={saving} style={saveBtn}>
-              <Save size={16} />
-              {saving ? 'SAVING...' : 'SAVE CHANGES'}
-            </button>
+          </div>
+          <div style={metaRow}>
+            <span style={metaPill}>SKU: {part.sku || '-'}</span>
+            <span style={metaPill}>Label: {part.label_id || '-'}</span>
           </div>
         </div>
-      </form>
+
+        <label style={uploadButton}>
+          <Camera size={16} />
+          {uploading ? 'UPLOADING...' : 'Upload More Photos'}
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleUploadImages}
+            disabled={uploading}
+          />
+        </label>
+      </div>
+
+      <div style={layout}>
+        <form onSubmit={handleSave} style={formCard}>
+          <div style={sectionTitle}>
+            <Package size={16} />
+            Core Information
+          </div>
+
+          <div style={grid2}>
+            <Field label="Part Name">
+              <input
+                style={input}
+                value={formData.part_name}
+                onChange={(e) => handleChange('part_name', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Part Number">
+              <input
+                style={input}
+                value={formData.part_number}
+                onChange={(e) => handleChange('part_number', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Category">
+              <select
+                style={input}
+                value={formData.category}
+                onChange={(e) => handleChange('category', e.target.value)}
+              >
+                {CATEGORY_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Subcategory">
+              <input
+                style={input}
+                value={formData.subcategory}
+                onChange={(e) => handleChange('subcategory', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Make">
+              <input
+                style={input}
+                value={formData.make}
+                onChange={(e) => handleChange('make', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Model">
+              <input
+                style={input}
+                value={formData.model}
+                onChange={(e) => handleChange('model', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Variant">
+              <input
+                style={input}
+                value={formData.variant}
+                onChange={(e) => handleChange('variant', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Year From">
+              <input
+                type="number"
+                style={input}
+                value={formData.year_from}
+                onChange={(e) => handleChange('year_from', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Year To">
+              <input
+                type="number"
+                style={input}
+                value={formData.year_to}
+                onChange={(e) => handleChange('year_to', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Grade">
+              <select
+                style={input}
+                value={formData.grade}
+                onChange={(e) => handleChange('grade', e.target.value)}
+              >
+                {GRADE_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Rating">
+              <select
+                style={input}
+                value={formData.rating}
+                onChange={(e) => handleChange('rating', e.target.value)}
+              >
+                <option value="">Select rating</option>
+                {RATING_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Condition">
+              <select
+                style={input}
+                value={formData.condition}
+                onChange={(e) => handleChange('condition', e.target.value)}
+              >
+                {CONDITION_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Usage Type">
+              <select
+                style={input}
+                value={formData.usage_type}
+                onChange={(e) => handleChange('usage_type', e.target.value)}
+              >
+                {USAGE_TYPE_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Sale Status">
+              <select
+                style={input}
+                value={formData.sale_status}
+                onChange={(e) => handleChange('sale_status', e.target.value)}
+              >
+                {SALE_STATUS_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Price">
+              <input
+                type="number"
+                step="0.01"
+                style={input}
+                value={formData.price}
+                onChange={(e) => handleChange('price', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Cost Price">
+              <input
+                type="number"
+                step="0.01"
+                style={input}
+                value={formData.cost_price}
+                onChange={(e) => handleChange('cost_price', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Quantity">
+              <input
+                type="number"
+                style={input}
+                value={formData.quantity}
+                onChange={(e) => handleChange('quantity', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Location">
+              <input
+                style={input}
+                value={formData.location}
+                onChange={(e) => handleChange('location', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Shelf Code">
+              <input
+                style={input}
+                value={formData.shelf_code}
+                onChange={(e) => handleChange('shelf_code', e.target.value)}
+              />
+            </Field>
+
+            <Field label="Active">
+              <select
+                style={input}
+                value={String(formData.is_active)}
+                onChange={(e) => handleChange('is_active', e.target.value === 'true')}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Description">
+            <textarea
+              style={textarea}
+              rows={4}
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+            />
+          </Field>
+
+          <Field label="Condition Notes">
+            <textarea
+              style={textarea}
+              rows={4}
+              value={formData.condition_notes}
+              onChange={(e) => handleChange('condition_notes', e.target.value)}
+            />
+          </Field>
+
+          <Field label="Public Notes">
+            <textarea
+              style={textarea}
+              rows={4}
+              value={formData.public_notes}
+              onChange={(e) => handleChange('public_notes', e.target.value)}
+            />
+          </Field>
+
+          <Field label="Internal Notes">
+            <textarea
+              style={textarea}
+              rows={4}
+              value={formData.internal_notes}
+              onChange={(e) => handleChange('internal_notes', e.target.value)}
+            />
+          </Field>
+
+          <button type="submit" style={saveButton} disabled={saving}>
+            <Save size={16} />
+            {saving ? 'SAVING...' : 'SAVE CHANGES'}
+          </button>
+        </form>
+
+        <div style={photoCard}>
+          <div style={sectionTitle}>
+            <Camera size={16} />
+            Photos
+          </div>
+
+          {part.images && part.images.length > 0 ? (
+            <div style={imageGrid}>
+              {part.images.map((img) => (
+                <div key={img.id} style={imageItem}>
+                  <img
+                    src={img.image}
+                    alt="Used part"
+                    style={image}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMainImage(img.id)}
+                    style={img.is_main ? mainBtnActive : mainBtn}
+                  >
+                    <Star size={14} />
+                    {img.is_main ? 'Main Photo' : 'Set Main'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={emptyState}>No photos uploaded</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function Section({ title, children }) {
+function Field({ label, children }) {
   return (
-    <div style={sectionCard}>
-      <h3 style={sectionTitle}>{title}</h3>
-      {children}
-    </div>
-  );
-}
-
-function Field({ label, children, full = false }) {
-  return (
-    <div style={full ? fieldFull : field}>
+    <div style={fieldWrap}>
       <label style={labelStyle}>{label}</label>
       {children}
     </div>
@@ -547,240 +565,224 @@ function Field({ label, children, full = false }) {
 }
 
 const page = {
-  padding: '32px',
-};
-
-const topBar = {
-  marginBottom: '20px',
+  padding: '24px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '20px',
 };
 
 const backButton = {
-  background: 'none',
   border: 'none',
+  background: 'none',
   cursor: 'pointer',
   fontWeight: '800',
-  color: '#64748b',
+  color: '#475569',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
+  width: 'fit-content',
 };
 
-const headerCard = {
+const heroCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '24px',
-  padding: '24px',
-  marginBottom: '24px',
+  borderRadius: '20px',
+  padding: '22px',
   display: 'flex',
   justifyContent: 'space-between',
   gap: '16px',
   flexWrap: 'wrap',
+  alignItems: 'center',
+};
+
+const eyebrow = {
+  fontSize: '12px',
+  fontWeight: '900',
+  color: '#94a3b8',
+  textTransform: 'uppercase',
+  marginBottom: '6px',
 };
 
 const title = {
   margin: 0,
-  fontSize: '32px',
+  fontSize: '28px',
   fontWeight: '900',
   color: '#0f172a',
 };
 
-const subtitle = {
-  marginTop: '8px',
+const subText = {
   color: '#64748b',
-  fontWeight: '500',
+  fontWeight: '600',
+  marginTop: '8px',
 };
 
-const systemBadges = {
+const metaRow = {
   display: 'flex',
   gap: '10px',
   flexWrap: 'wrap',
-  alignItems: 'flex-start',
+  marginTop: '14px',
 };
 
-const chip = {
+const metaPill = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
   padding: '8px 12px',
   borderRadius: '999px',
-  background: '#f1f5f9',
-  color: '#475569',
-  fontWeight: '800',
   fontSize: '12px',
-};
-
-const layout = {
-  display: 'grid',
-  gridTemplateColumns: '1.4fr 1fr',
-  gap: '24px',
-};
-
-const leftColumn = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-};
-
-const rightColumn = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-};
-
-const sectionCard = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '24px',
-  padding: '24px',
-};
-
-const sectionTitle = {
-  margin: '0 0 18px 0',
-  fontSize: '18px',
-  fontWeight: '900',
-  color: '#0f172a',
-};
-
-const uploadBox = {
-  minHeight: '100px',
-  border: '2px dashed #cbd5e1',
-  borderRadius: '16px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  color: '#64748b',
-  gap: '8px',
-  background: '#f8fafc',
-  marginBottom: '16px',
-};
-
-const photoGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-  gap: '12px',
-};
-
-const photoCard = {
-  position: 'relative',
-  height: '130px',
-  borderRadius: '14px',
-  overflow: 'hidden',
-  border: '1px solid #e2e8f0',
-};
-
-const photoImage = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-};
-
-const mainBtn = {
-  position: 'absolute',
-  top: '8px',
-  right: '8px',
-  border: 'none',
-  background: 'rgba(255,255,255,0.9)',
-  borderRadius: '8px',
-  padding: '6px',
-  cursor: 'pointer',
-};
-
-const mainBtnActive = {
-  ...mainBtn,
-  background: '#0f172a',
-  color: 'gold',
-};
-
-const emptyPhoto = {
-  minHeight: '100px',
-  borderRadius: '14px',
-  border: '1px dashed #cbd5e1',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  color: '#94a3b8',
-  fontWeight: '700',
-};
-
-const grid2 = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '16px',
-};
-
-const grid1 = {
-  display: 'grid',
-  gridTemplateColumns: '1fr',
-  gap: '16px',
-};
-
-const field = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-};
-
-const fieldFull = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  gridColumn: '1 / -1',
-};
-
-const labelStyle = {
-  fontSize: '13px',
   fontWeight: '800',
   color: '#334155',
 };
 
-const input = {
-  padding: '14px',
+const uploadButton = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  background: '#0f172a',
+  color: '#fff',
   borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  outline: 'none',
+  padding: '12px 16px',
+  fontWeight: '800',
+  cursor: 'pointer',
+};
+
+const layout = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
+  gap: '20px',
+};
+
+const formCard = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '20px',
+  padding: '22px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px',
+};
+
+const photoCard = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '20px',
+  padding: '22px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px',
+};
+
+const sectionTitle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
   fontSize: '14px',
-  fontWeight: '600',
+  fontWeight: '900',
+  color: '#0f172a',
+};
+
+const grid2 = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '14px',
+};
+
+const fieldWrap = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+};
+
+const labelStyle = {
+  fontSize: '12px',
+  fontWeight: '800',
+  color: '#475569',
+};
+
+const input = {
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: '12px',
+  border: '1px solid #e2e8f0',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontSize: '14px',
   background: '#fff',
 };
 
 const textarea = {
-  minHeight: '110px',
-  resize: 'vertical',
-  padding: '14px',
+  width: '100%',
+  padding: '12px 14px',
   borderRadius: '12px',
-  border: '1px solid #cbd5e1',
+  border: '1px solid #e2e8f0',
   outline: 'none',
+  boxSizing: 'border-box',
   fontSize: '14px',
-  fontWeight: '600',
   background: '#fff',
-};
-
-const textareaSmall = {
-  minHeight: '90px',
   resize: 'vertical',
-  padding: '14px',
-  borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  outline: 'none',
-  fontSize: '14px',
-  fontWeight: '600',
-  background: '#fff',
 };
 
-const actionBar = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-};
-
-const saveBtn = {
-  padding: '14px 18px',
-  borderRadius: '12px',
+const saveButton = {
+  marginTop: '8px',
   border: 'none',
-  background: '#ef4444',
+  background: '#16a34a',
   color: '#fff',
+  borderRadius: '12px',
+  padding: '14px 18px',
   fontWeight: '800',
   cursor: 'pointer',
-  display: 'flex',
+  display: 'inline-flex',
   alignItems: 'center',
   gap: '8px',
+  width: 'fit-content',
+};
+
+const imageGrid = {
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+  gap: '14px',
+};
+
+const imageItem = {
+  border: '1px solid #e2e8f0',
+  borderRadius: '16px',
+  padding: '10px',
+  background: '#f8fafc',
+};
+
+const image = {
+  width: '100%',
+  height: '200px',
+  objectFit: 'cover',
+  borderRadius: '12px',
+  display: 'block',
+};
+
+const mainBtn = {
+  marginTop: '10px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#334155',
+  borderRadius: '10px',
+  padding: '10px 12px',
+  fontWeight: '800',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+};
+
+const mainBtnActive = {
+  ...mainBtn,
+  border: '1px solid #f59e0b',
+  background: '#fef3c7',
+  color: '#92400e',
+};
+
+const emptyState = {
+  padding: '20px',
+  borderRadius: '14px',
+  background: '#f8fafc',
+  color: '#64748b',
+  fontWeight: '700',
+  textAlign: 'center',
 };
