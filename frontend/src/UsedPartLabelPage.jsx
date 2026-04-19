@@ -34,7 +34,7 @@ export default function UsedPartLabelPage() {
   }, [id]);
 
   const qrImageUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=88x88&margin=0&data=${encodeURIComponent(
+    return `https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=0&data=${encodeURIComponent(
       listingUrl
     )}`;
   }, [listingUrl]);
@@ -51,37 +51,35 @@ export default function UsedPartLabelPage() {
 
   const getNameFontSize = (name) => {
     const text = safeText(name, '-');
-    if (text.length > 34) return '6.3px';
-    if (text.length > 26) return '6.9px';
+    if (text.length > 34) return '6.2px';
+    if (text.length > 26) return '6.8px';
     if (text.length > 18) return '7.5px';
-    return '8.2px';
+    return '8.3px';
   };
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
   if (!part) return <div style={{ padding: 30 }}>Label not found</div>;
 
-  const labelInner = (
-    <>
-      <div style={qrCol}>
-        <div style={qrWrap}>
-          <img src={qrImageUrl} alt="QR Code" style={qrImg} />
-        </div>
+  const labelContent = (
+    <div style={labelInner}>
+      <div style={brandLine}>YARIS AUTOCARE</div>
+
+      <div style={qrBox}>
+        <img src={qrImageUrl} alt="QR Code" style={qrImg} />
       </div>
 
-      <div style={textCol}>
+      <div style={textBox}>
         <div style={{ ...partName, fontSize: getNameFontSize(part.part_name) }}>
           {safeText(part.part_name)}
         </div>
 
-        <div style={detailsWrap}>
-          <div style={metaLine}>SKU: {safeText(part.sku)}</div>
-          <div style={metaLine}>LOC: {safeText(part.location)}</div>
-          <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
-        </div>
+        <div style={metaLine}>SKU: {safeText(part.sku)}</div>
+        <div style={metaLine}>LOC: {safeText(part.location)}</div>
+        <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
 
         <div style={price}>{formatPrice(part.price)}</div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -100,7 +98,9 @@ export default function UsedPartLabelPage() {
 
       <div style={previewWrap} className="no-print">
         <div style={previewCard}>
-          <div style={labelBox}>{labelInner}</div>
+          <div style={previewScaleWrap}>
+            <div style={labelBox}>{labelContent}</div>
+          </div>
         </div>
       </div>
 
@@ -109,10 +109,8 @@ export default function UsedPartLabelPage() {
       </div>
 
       <div id="print-root" aria-hidden="true">
-        <div id="print-label" style={printShell}>
-          <div id="label-50x30-print" style={labelBox}>
-            {labelInner}
-          </div>
+        <div id="label-50x30-print" style={labelBox}>
+          {labelContent}
         </div>
       </div>
 
@@ -176,12 +174,10 @@ export default function UsedPartLabelPage() {
             background: #fff !important;
           }
 
-          #print-label,
           #label-50x30-print {
             width: 50mm !important;
             height: 30mm !important;
             margin: 0 !important;
-            padding: 0 !important;
             border: none !important;
             box-shadow: none !important;
             background: #fff !important;
@@ -240,74 +236,81 @@ const previewWrap = {
 
 const previewCard = {
   background: '#e2e8f0',
-  padding: '16px',
+  padding: '20px',
   borderRadius: '16px',
-  display: 'inline-block',
 };
 
-const printShell = {
+const previewScaleWrap = {
+  transform: 'scale(4)',
+  transformOrigin: 'top left',
   width: '50mm',
   height: '30mm',
-  overflow: 'hidden',
-  background: '#fff',
 };
 
 const labelBox = {
   width: '50mm',
   height: '30mm',
+  position: 'relative',
   background: '#fff',
-  display: 'flex',
-  alignItems: 'flex-start',
-  paddingTop: '3.2mm',
-  paddingRight: '2.2mm',
-  paddingBottom: '2.2mm',
-  paddingLeft: '3.6mm',
+  overflow: 'hidden',
   fontFamily: 'Arial, Helvetica, sans-serif',
-  overflow: 'hidden',
 };
 
-const qrCol = {
-  width: '10.8mm',
-  minWidth: '10.8mm',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'flex-start',
-  marginRight: '1.7mm',
-  marginTop: '0.2mm',
+const labelInner = {
+  position: 'relative',
+  width: '50mm',
+  height: '30mm',
 };
 
-const qrWrap = {
-  width: '9.5mm',
-  height: '9.5mm',
+const brandLine = {
+  position: 'absolute',
+  left: '15.2mm',
+  top: '2.0mm',
+  width: '29mm',
+  fontSize: '4.8px',
+  fontWeight: '900',
+  lineHeight: 1,
+  letterSpacing: '0.2px',
+  whiteSpace: 'nowrap',
   overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const qrBox = {
+  position: 'absolute',
+  left: '3.2mm',
+  top: '6.2mm',
+  width: '10.4mm',
+  height: '10.4mm',
   display: 'flex',
-  justifyContent: 'center',
   alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const qrImg = {
-  width: '9.5mm',
-  height: '9.5mm',
+  width: '10.4mm',
+  height: '10.4mm',
   display: 'block',
   objectFit: 'contain',
 };
 
-const textCol = {
-  flex: 1,
-  minWidth: 0,
+const textBox = {
+  position: 'absolute',
+  left: '15.3mm',
+  top: '5.2mm',
+  width: '30.5mm',
+  height: '20.5mm',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'flex-start',
   justifyContent: 'flex-start',
-  gap: '0.55mm',
-  paddingTop: '0.1mm',
+  overflow: 'hidden',
 };
 
 const partName = {
   fontWeight: '900',
   color: '#000',
-  lineHeight: 1,
-  margin: 0,
+  lineHeight: 1.02,
+  marginBottom: '0.7mm',
   overflow: 'hidden',
   display: '-webkit-box',
   WebkitLineClamp: 2,
@@ -315,29 +318,22 @@ const partName = {
   wordBreak: 'break-word',
 };
 
-const detailsWrap = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.15mm',
-  marginTop: '0.1mm',
-};
-
 const metaLine = {
   fontSize: '6.7px',
   fontWeight: '800',
-  lineHeight: 1,
+  lineHeight: 1.02,
+  marginBottom: '0.35mm',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
-  margin: 0,
 };
 
 const price = {
   fontSize: '8.8px',
   fontWeight: '900',
   lineHeight: 1,
+  marginTop: '0.8mm',
   whiteSpace: 'nowrap',
-  marginTop: '0.6mm',
 };
 
 const urlNote = {
