@@ -34,27 +34,27 @@ export default function UsedPartLabelPage() {
   }, [id]);
 
   const qrImageUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=0&data=${encodeURIComponent(
+    return `https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=0&data=${encodeURIComponent(
       listingUrl
     )}`;
   }, [listingUrl]);
-
-  const formatPrice = (value) => {
-    const num = Number(value || 0);
-    return `$${num.toFixed(2)}`;
-  };
 
   const safeText = (value, fallback = '-') => {
     if (value === null || value === undefined || value === '') return fallback;
     return String(value);
   };
 
-  const getPartNameStyle = (name) => {
+  const formatPrice = (value) => {
+    const num = Number(value || 0);
+    return `$${num.toFixed(2)}`;
+  };
+
+  const fitName = (name) => {
     const text = safeText(name, '-');
-    if (text.length > 30) return { fontSize: '6.5px', lineHeight: 1.05 };
-    if (text.length > 22) return { fontSize: '7px', lineHeight: 1.05 };
-    if (text.length > 16) return { fontSize: '7.5px', lineHeight: 1.05 };
-    return { fontSize: '8px', lineHeight: 1.05 };
+    if (text.length > 30) return { fontSize: '6.4px', lineHeight: 1.05 };
+    if (text.length > 22) return { fontSize: '6.9px', lineHeight: 1.05 };
+    if (text.length > 16) return { fontSize: '7.3px', lineHeight: 1.05 };
+    return { fontSize: '7.8px', lineHeight: 1.05 };
   };
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
@@ -69,9 +69,7 @@ export default function UsedPartLabelPage() {
       </div>
 
       <div style={infoCol}>
-        <div style={brand}>YARIS AUTOCARE</div>
-
-        <div style={{ ...partName, ...getPartNameStyle(part.part_name) }}>
+        <div style={{ ...partName, ...fitName(part.part_name) }}>
           {safeText(part.part_name)}
         </div>
 
@@ -101,9 +99,7 @@ export default function UsedPartLabelPage() {
       <div style={canvasWrap} className="no-print">
         <div style={previewCard}>
           <div style={previewLabelHolder}>
-            <div id="label-50x30-preview" style={labelBox}>
-              {labelContent}
-            </div>
+            <div style={labelBox}>{labelContent}</div>
           </div>
         </div>
       </div>
@@ -112,7 +108,6 @@ export default function UsedPartLabelPage() {
         QR opens: {listingUrl}
       </div>
 
-      {/* Hidden print-only root */}
       <div id="print-root" aria-hidden="true">
         <div id="print-label" style={printShell}>
           <div id="label-50x30-print" style={labelBox}>
@@ -251,7 +246,7 @@ const previewCard = {
 
 const previewLabelHolder = {
   background: '#fff',
-  padding: '8px',
+  padding: '10px',
   borderRadius: '12px',
   display: 'inline-block',
 };
@@ -270,23 +265,26 @@ const labelBox = {
   display: 'flex',
   flexDirection: 'row',
   alignItems: 'stretch',
-  padding: '1.5mm',
+  paddingTop: '4.2mm',
+  paddingRight: '2.6mm',
+  paddingBottom: '2.4mm',
+  paddingLeft: '4.2mm',
   fontFamily: 'Arial, Helvetica, sans-serif',
   overflow: 'hidden',
 };
 
 const qrCol = {
-  width: '15mm',
-  minWidth: '15mm',
+  width: '11.5mm',
+  minWidth: '11.5mm',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginRight: '1.5mm',
+  marginRight: '2.2mm',
 };
 
 const qrWrap = {
-  width: '14mm',
-  height: '14mm',
+  width: '10mm',
+  height: '10mm',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -294,8 +292,8 @@ const qrWrap = {
 };
 
 const qrImg = {
-  width: '14mm',
-  height: '14mm',
+  width: '10mm',
+  height: '10mm',
   display: 'block',
   objectFit: 'contain',
 };
@@ -309,16 +307,6 @@ const infoCol = {
   overflow: 'hidden',
 };
 
-const brand = {
-  fontSize: '6px',
-  fontWeight: '900',
-  lineHeight: 1,
-  letterSpacing: '0.2px',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-};
-
 const partName = {
   fontWeight: '900',
   color: '#000',
@@ -330,7 +318,7 @@ const partName = {
 };
 
 const metaLine = {
-  fontSize: '6px',
+  fontSize: '5.8px',
   fontWeight: '700',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -339,7 +327,7 @@ const metaLine = {
 };
 
 const price = {
-  fontSize: '9px',
+  fontSize: '8px',
   fontWeight: '900',
   lineHeight: 1,
   whiteSpace: 'nowrap',
