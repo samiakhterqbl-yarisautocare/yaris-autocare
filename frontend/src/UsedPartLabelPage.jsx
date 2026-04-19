@@ -14,6 +14,7 @@ export default function UsedPartLabelPage() {
 
   useEffect(() => {
     fetchPart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchPart = async () => {
@@ -33,7 +34,9 @@ export default function UsedPartLabelPage() {
   }, [id]);
 
   const qrImageUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=0&data=${encodeURIComponent(listingUrl)}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=0&data=${encodeURIComponent(
+      listingUrl
+    )}`;
   }, [listingUrl]);
 
   const formatPrice = (value) => {
@@ -48,17 +51,38 @@ export default function UsedPartLabelPage() {
 
   const getPartNameStyle = (name) => {
     const text = safeText(name, '-');
-    if (text.length > 28) {
-      return { fontSize: '7px', lineHeight: 1.05 };
-    }
-    if (text.length > 20) {
-      return { fontSize: '7.5px', lineHeight: 1.05 };
-    }
-    return { fontSize: '8.5px', lineHeight: 1.05 };
+    if (text.length > 30) return { fontSize: '6.5px', lineHeight: 1.05 };
+    if (text.length > 22) return { fontSize: '7px', lineHeight: 1.05 };
+    if (text.length > 16) return { fontSize: '7.5px', lineHeight: 1.05 };
+    return { fontSize: '8px', lineHeight: 1.05 };
   };
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
   if (!part) return <div style={{ padding: 30 }}>Label not found</div>;
+
+  const labelContent = (
+    <>
+      <div style={qrCol}>
+        <div style={qrWrap}>
+          <img src={qrImageUrl} alt="QR Code" style={qrImg} />
+        </div>
+      </div>
+
+      <div style={infoCol}>
+        <div style={brand}>YARIS AUTOCARE</div>
+
+        <div style={{ ...partName, ...getPartNameStyle(part.part_name) }}>
+          {safeText(part.part_name)}
+        </div>
+
+        <div style={metaLine}>SKU: {safeText(part.sku)}</div>
+        <div style={metaLine}>LOC: {safeText(part.location)}</div>
+        <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
+
+        <div style={price}>{formatPrice(part.price)}</div>
+      </div>
+    </>
+  );
 
   return (
     <div style={page}>
@@ -76,25 +100,9 @@ export default function UsedPartLabelPage() {
 
       <div style={canvasWrap} className="no-print">
         <div style={previewCard}>
-          <div id="label-50x30" style={labelBox}>
-            <div style={qrCol}>
-              <div style={qrWrap}>
-                <img src={qrImageUrl} alt="QR Code" style={qrImg} />
-              </div>
-            </div>
-
-            <div style={infoCol}>
-              <div style={brand}>YARIS AUTOCARE</div>
-
-              <div style={{ ...partName, ...getPartNameStyle(part.part_name) }}>
-                {safeText(part.part_name)}
-              </div>
-
-              <div style={metaLine}>SKU: {safeText(part.sku)}</div>
-              <div style={metaLine}>LOC: {safeText(part.location)}</div>
-              <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
-
-              <div style={price}>{formatPrice(part.price)}</div>
+          <div style={previewLabelHolder}>
+            <div id="label-50x30-preview" style={labelBox}>
+              {labelContent}
             </div>
           </div>
         </div>
@@ -102,6 +110,15 @@ export default function UsedPartLabelPage() {
 
       <div style={urlNote} className="no-print">
         QR opens: {listingUrl}
+      </div>
+
+      {/* Hidden print-only root */}
+      <div id="print-root" aria-hidden="true">
+        <div id="print-label" style={printShell}>
+          <div id="label-50x30-print" style={labelBox}>
+            {labelContent}
+          </div>
+        </div>
       </div>
 
       <style>{`
@@ -114,6 +131,16 @@ export default function UsedPartLabelPage() {
           box-sizing: border-box;
         }
 
+        #print-root {
+          position: fixed;
+          left: -99999px;
+          top: 0;
+          width: 50mm;
+          height: 30mm;
+          overflow: hidden;
+          background: #fff;
+        }
+
         @page {
           size: 50mm 30mm;
           margin: 0;
@@ -121,12 +148,12 @@ export default function UsedPartLabelPage() {
 
         @media print {
           html, body {
-            width: 50mm;
-            height: 30mm;
+            width: 50mm !important;
+            height: 30mm !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: hidden;
-            background: #fff;
+            overflow: hidden !important;
+            background: #fff !important;
           }
 
           body * {
@@ -137,28 +164,37 @@ export default function UsedPartLabelPage() {
             display: none !important;
           }
 
-          #label-50x30, #label-50x30 * {
+          #print-root,
+          #print-root * {
             visibility: visible !important;
           }
 
-          #label-50x30 {
-            position: fixed;
-            left: 0;
-            top: 0;
+          #print-root {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 50mm !important;
             height: 30mm !important;
             margin: 0 !important;
-            padding: 1.5mm !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: #fff !important;
+          }
+
+          #print-label,
+          #label-50x30-print {
+            width: 50mm !important;
+            height: 30mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             border: none !important;
             box-shadow: none !important;
             background: #fff !important;
             overflow: hidden !important;
-            page-break-after: avoid !important;
-            page-break-before: avoid !important;
           }
 
           img {
-            image-rendering: pixelated;
+            image-rendering: crisp-edges;
           }
         }
       `}</style>
@@ -211,6 +247,20 @@ const previewCard = {
   background: '#e2e8f0',
   padding: '24px',
   borderRadius: '20px',
+};
+
+const previewLabelHolder = {
+  background: '#fff',
+  padding: '8px',
+  borderRadius: '12px',
+  display: 'inline-block',
+};
+
+const printShell = {
+  width: '50mm',
+  height: '30mm',
+  overflow: 'hidden',
+  background: '#fff',
 };
 
 const labelBox = {
