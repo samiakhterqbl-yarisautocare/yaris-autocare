@@ -2,6 +2,9 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 from django.utils import timezone
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+
 from rest_framework import serializers
 
 from .models import (
@@ -13,6 +16,7 @@ from .models import (
     Invoice,
     InvoiceItem,
     ServiceDetail,
+    StaffProfile,
 )
 
 
@@ -277,3 +281,116 @@ class InvoiceSerializer(serializers.ModelSerializer):
             ServiceDetail.objects.create(invoice=invoice, **service_detail_data)
 
         return invoice
+
+
+class StaffProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StaffProfile
+        fields = ['role', 'phone', 'is_active_staff']
+
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    is_active_staff = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_superuser',
+            'role',
+            'phone',
+            'is_active_staff',
+        ]
+
+    def get_role(self, obj):
+        if hasattr(obj, 'staff_profile'):
+            return obj.staff_profile.role
+        return 'ADMIN' if obj.is_superuser else 'STAFF'
+
+    def get_phone(self, obj):
+        if hasattr(obj, 'staff_profile'):
+            return obj.staff_profile.phone
+        return None
+
+    def get_is_active_staff(self, obj):
+        if hasattr(obj, 'staff_profile'):
+            return obj.staff_profile.is_active_staff
+        return True
+
+
+class LoginSerializer(serializers.Serializer):
+    login = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        login = attrs.get('login', '').strip()
+        password = attrs.get('password')
+
+        user = authenticate(username=login, password=password)
+
+        if not user:
+            try:
+                matched_user = User.objects.get(email__iexact=login)
+                user = authenticate(username=matched_user.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+        if not user:
+            raise serializers.ValidationError('Invalid username/email or password.')
+
+        if not user.is_active:
+            raise serializers.ValidationError('This user account is inactive.')
+
+        if hasattr(user, 'staff_profile') and not user.staff_profile.is_active_staff:
+            raise serializers.ValidationError('Staff access is disabled for this account.')
+
+        attrs['user'] = user
+        return attrs
+
+
+class CreateUserSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(choices=['ADMIN', 'STAFF'], default='STAFF')
+    phone = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('Username already exists.')
+        return value
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('Email already exists.')
+        return value
+
+    def create(self, validated_data):
+        role = validated_data.pop('role', 'STAFF')
+        phone = validated_data.pop('phone', '')
+
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            is_staff=(role == 'ADMIN'),
+            is_superuser=False,
+        )
+
+        profile, _ = StaffProfile.objects.get_or_create(user=user)
+        profile.role = role
+        profile.phone = phone
+        profile.is_active_staff = True
+        profile.save()
+
+        return user

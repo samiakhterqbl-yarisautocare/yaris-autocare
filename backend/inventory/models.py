@@ -3,6 +3,9 @@ import uuid
 
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class DonorCar(models.Model):
@@ -380,3 +383,32 @@ class ServiceDetail(models.Model):
 
     def __str__(self):
         return f"Service Detail - {self.invoice.invoice_number}"
+
+
+class StaffProfile(models.Model):
+    ROLE_CHOICES = [
+        ('ADMIN', 'Admin'),
+        ('STAFF', 'Staff'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='staff_profile')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='STAFF')
+    phone = models.CharField(max_length=30, blank=True, null=True)
+    is_active_staff = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
+
+
+@receiver(post_save, sender=User)
+def create_or_update_staff_profile(sender, instance, created, **kwargs):
+    if created:
+        StaffProfile.objects.create(
+            user=instance,
+            role='ADMIN' if instance.is_superuser else 'STAFF'
+        )
+    else:
+        StaffProfile.objects.get_or_create(
+            user=instance,
+            defaults={'role': 'ADMIN' if instance.is_superuser else 'STAFF'}
+        )

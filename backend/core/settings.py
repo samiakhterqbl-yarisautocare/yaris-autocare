@@ -6,11 +6,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-7h2l)j!7(m%@s&hr=!+he9t$ih_*je)f1ecakl5k(p2@w^&9@!')
+
+SECRET_KEY = os.getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-7h2l)j!7(m%@s&hr=!+he9t$ih_*je)f1ecakl5k(p2@w^&9@!'
+)
+
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS - Added '*' to ensure no connection is blocked
-ALLOWED_HOSTS = ['yaris-autocare-production.up.railway.app', 'yaris-autocare.vercel.app', 'localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = [
+    'yaris-autocare-production.up.railway.app',
+    'yaris-autocare.vercel.app',
+    'localhost',
+    '127.0.0.1',
+    '*',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -19,9 +29,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'storages',
+
     'inventory',
 ]
 
@@ -82,13 +95,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 WHITENOISE_USE_FINDERS = True
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# AWS S3
+# AWS S3 / MEDIA
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'ap-southeast-2')
 
-if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME:
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
@@ -101,13 +114,24 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS & CSRF - This is the bridge between Vercel and Railway
-CORS_ALLOW_ALL_ORIGINS = True 
+# DRF
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+}
+
+# CORS / CSRF
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
 CSRF_TRUSTED_ORIGINS = [
     'https://yaris-autocare-production.up.railway.app',
     'https://yaris-autocare.vercel.app',
-    'https://*.vercel.app'
+    'https://*.vercel.app',
 ]
 
 if not DEBUG:

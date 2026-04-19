@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.models import User
+
 from .models import (
     DonorCar,
     InventoryItem,
@@ -8,6 +10,7 @@ from .models import (
     Invoice,
     InvoiceItem,
     ServiceDetail,
+    StaffProfile,
 )
 
 
@@ -86,3 +89,10 @@ class InvoiceAdmin(admin.ModelAdmin):
         'balance_due',
     )
     inlines = [InvoiceItemInline]
+
+
+@admin.register(StaffProfile)
+class StaffProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'is_active_staff', 'phone')
+    search_fields = ('user__username', 'user__email', 'phone')
+    list_filter = ('role', 'is_active_staff')

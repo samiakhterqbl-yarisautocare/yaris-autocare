@@ -1,10 +1,14 @@
 from django.db.models import Sum, F, Q
+from django.contrib.auth import logout
 
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
 
 from .models import (
     DonorCar,
@@ -21,13 +25,112 @@ from .serializers import (
     AftermarketPartSerializer,
     ProductImageSerializer,
     InvoiceSerializer,
+    LoginSerializer,
+    CurrentUserSerializer,
+    CreateUserSerializer,
 )
 
+
+class IsAdminRole(IsAuthenticated):
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        if user.is_superuser:
+            return True
+
+        if hasattr(user, 'staff_profile'):
+            return user.staff_profile.role == 'ADMIN' and user.staff_profile.is_active_staff
+
+        return False
+
+
+class IsStaffOrAdmin(IsAuthenticated):
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        if user.is_superuser:
+            return True
+
+        if hasattr(user, 'staff_profile'):
+            return user.staff_profile.role in ['ADMIN', 'STAFF'] and user.staff_profile.is_active_staff
+
+        return False
+
+
+# ======================
+# AUTH APIs
+# ======================
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data['user']
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response({
+            'token': token.key,
+            'user': CurrentUserSerializer(user).data,
+        })
+
+
+class LogoutView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if hasattr(request.user, 'auth_token'):
+            request.user.auth_token.delete()
+        logout(request)
+        return Response({'message': 'Logged out successfully'})
+
+
+class CurrentUserView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(CurrentUserSerializer(request.user).data)
+
+
+class CreateStaffUserView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        serializer = CreateUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response({
+            'message': 'User created successfully',
+            'user': CurrentUserSerializer(user).data,
+        }, status=status.HTTP_201_CREATED)
+
+
+# ======================
+# INVENTORY MODULES
+# ======================
 
 class DonorCarListCreateView(generics.ListCreateAPIView):
     queryset = DonorCar.objects.all().order_by('-date_added')
     serializer_class = DonorCarSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsStaffOrAdmin()]
+        return [IsAdminRole()]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -63,6 +166,12 @@ class DonorCarDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DonorCar.objects.all()
     serializer_class = DonorCarSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsStaffOrAdmin()]
+        return [IsAdminRole()]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -74,6 +183,8 @@ class UsedPartListCreateView(generics.ListCreateAPIView):
     queryset = UsedPart.objects.all().order_by('-id')
     serializer_class = UsedPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -166,6 +277,8 @@ class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = UsedPart.objects.all()
     serializer_class = UsedPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -193,10 +306,13 @@ class UsedPartDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         return Response(response_serializer.data)
 
+
 class InventoryItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = InventoryItem.objects.all()
     serializer_class = InventoryItemSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -224,10 +340,13 @@ class InventoryItemDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         return Response(response_serializer.data)
 
+
 class AftermarketListCreateView(generics.ListCreateAPIView):
     queryset = AftermarketPart.objects.all().order_by('-id')
     serializer_class = AftermarketPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -281,6 +400,8 @@ class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AftermarketPart.objects.all()
     serializer_class = AftermarketPartSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -310,6 +431,9 @@ class AftermarketDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class BulkDismantleView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
+
     def post(self, request):
         car_id = request.data.get('car_id')
         parts = request.data.get('parts', [])
@@ -373,6 +497,9 @@ class BulkDismantleView(APIView):
 
 
 class GlobalSearchView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
+
     def get(self, request):
         query = (request.query_params.get('q') or '').strip()
 
@@ -437,6 +564,8 @@ class GlobalSearchView(APIView):
 class InvoiceListCreateView(generics.ListCreateAPIView):
     queryset = Invoice.objects.prefetch_related('items', 'service_detail').all().order_by('-created_at')
     serializer_class = InvoiceSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -445,6 +574,9 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
 
 
 class BusinessSummaryView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
+
     def get(self, request):
         try:
             revenue = Invoice.objects.aggregate(total=Sum('total_amount'))['total'] or 0
@@ -475,6 +607,8 @@ class BusinessSummaryView(APIView):
 
 class LowStockListView(generics.ListAPIView):
     serializer_class = AftermarketPartSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -491,6 +625,8 @@ class ImageUploadView(generics.CreateAPIView):
     queryset = ProductImage.objects.all()
     serializer_class = ProductImageSerializer
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -499,6 +635,8 @@ class ImageUploadView(generics.CreateAPIView):
 
 
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsStaffOrAdmin])
 def set_main_image(request, image_id):
     try:
         image = ProductImage.objects.get(id=image_id)
