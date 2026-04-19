@@ -34,7 +34,7 @@ export default function UsedPartLabelPage() {
   }, [id]);
 
   const qrImageUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=0&data=${encodeURIComponent(
+    return `https://api.qrserver.com/v1/create-qr-code/?size=88x88&margin=0&data=${encodeURIComponent(
       listingUrl
     )}`;
   }, [listingUrl]);
@@ -49,18 +49,18 @@ export default function UsedPartLabelPage() {
     return `$${num.toFixed(2)}`;
   };
 
-  const fitName = (name) => {
+  const getNameFontSize = (name) => {
     const text = safeText(name, '-');
-    if (text.length > 34) return { fontSize: '6.6px' };
-    if (text.length > 24) return { fontSize: '7.2px' };
-    if (text.length > 16) return { fontSize: '7.8px' };
-    return { fontSize: '8.6px' };
+    if (text.length > 34) return '6.3px';
+    if (text.length > 26) return '6.9px';
+    if (text.length > 18) return '7.5px';
+    return '8.2px';
   };
 
   if (loading) return <div style={{ padding: 30 }}>Loading...</div>;
   if (!part) return <div style={{ padding: 30 }}>Label not found</div>;
 
-  const labelContent = (
+  const labelInner = (
     <>
       <div style={qrCol}>
         <div style={qrWrap}>
@@ -68,12 +68,12 @@ export default function UsedPartLabelPage() {
         </div>
       </div>
 
-      <div style={infoCol}>
-        <div style={{ ...partName, ...fitName(part.part_name) }}>
+      <div style={textCol}>
+        <div style={{ ...partName, fontSize: getNameFontSize(part.part_name) }}>
           {safeText(part.part_name)}
         </div>
 
-        <div style={metaGroup}>
+        <div style={detailsWrap}>
           <div style={metaLine}>SKU: {safeText(part.sku)}</div>
           <div style={metaLine}>LOC: {safeText(part.location)}</div>
           <div style={metaLine}>GRADE: {safeText(part.grade)}</div>
@@ -98,11 +98,9 @@ export default function UsedPartLabelPage() {
         </button>
       </div>
 
-      <div style={canvasWrap} className="no-print">
+      <div style={previewWrap} className="no-print">
         <div style={previewCard}>
-          <div style={previewLabelHolder}>
-            <div style={labelBox}>{labelContent}</div>
-          </div>
+          <div style={labelBox}>{labelInner}</div>
         </div>
       </div>
 
@@ -113,7 +111,7 @@ export default function UsedPartLabelPage() {
       <div id="print-root" aria-hidden="true">
         <div id="print-label" style={printShell}>
           <div id="label-50x30-print" style={labelBox}>
-            {labelContent}
+            {labelInner}
           </div>
         </div>
       </div>
@@ -235,21 +233,15 @@ const printBtn = {
   gap: '8px',
 };
 
-const canvasWrap = {
+const previewWrap = {
   display: 'flex',
   justifyContent: 'center',
 };
 
 const previewCard = {
   background: '#e2e8f0',
-  padding: '24px',
-  borderRadius: '20px',
-};
-
-const previewLabelHolder = {
-  background: '#fff',
-  padding: '10px',
-  borderRadius: '12px',
+  padding: '16px',
+  borderRadius: '16px',
   display: 'inline-block',
 };
 
@@ -265,57 +257,57 @@ const labelBox = {
   height: '30mm',
   background: '#fff',
   display: 'flex',
-  flexDirection: 'row',
   alignItems: 'flex-start',
-  paddingTop: '3.6mm',
-  paddingRight: '2.4mm',
-  paddingBottom: '2.1mm',
-  paddingLeft: '3.8mm',
+  paddingTop: '3.2mm',
+  paddingRight: '2.2mm',
+  paddingBottom: '2.2mm',
+  paddingLeft: '3.6mm',
   fontFamily: 'Arial, Helvetica, sans-serif',
   overflow: 'hidden',
 };
 
 const qrCol = {
-  width: '11mm',
-  minWidth: '11mm',
+  width: '10.8mm',
+  minWidth: '10.8mm',
   display: 'flex',
-  alignItems: 'flex-start',
   justifyContent: 'center',
-  marginRight: '1.8mm',
-  marginTop: '1.1mm',
+  alignItems: 'flex-start',
+  marginRight: '1.7mm',
+  marginTop: '0.2mm',
 };
 
 const qrWrap = {
-  width: '9.6mm',
-  height: '9.6mm',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  width: '9.5mm',
+  height: '9.5mm',
   overflow: 'hidden',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
 };
 
 const qrImg = {
-  width: '9.6mm',
-  height: '9.6mm',
+  width: '9.5mm',
+  height: '9.5mm',
   display: 'block',
   objectFit: 'contain',
 };
 
-const infoCol = {
+const textCol = {
   flex: 1,
   minWidth: 0,
-  height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'space-between',
-  overflow: 'hidden',
+  alignItems: 'flex-start',
+  justifyContent: 'flex-start',
+  gap: '0.55mm',
+  paddingTop: '0.1mm',
 };
 
 const partName = {
   fontWeight: '900',
   color: '#000',
   lineHeight: 1,
-  marginBottom: '0.7mm',
+  margin: 0,
   overflow: 'hidden',
   display: '-webkit-box',
   WebkitLineClamp: 2,
@@ -323,20 +315,21 @@ const partName = {
   wordBreak: 'break-word',
 };
 
-const metaGroup = {
+const detailsWrap = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.35mm',
-  marginBottom: '0.6mm',
+  gap: '0.15mm',
+  marginTop: '0.1mm',
 };
 
 const metaLine = {
-  fontSize: '6.8px',
-  fontWeight: '700',
+  fontSize: '6.7px',
+  fontWeight: '800',
   lineHeight: 1,
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
+  margin: 0,
 };
 
 const price = {
@@ -344,7 +337,7 @@ const price = {
   fontWeight: '900',
   lineHeight: 1,
   whiteSpace: 'nowrap',
-  marginTop: '0.3mm',
+  marginTop: '0.6mm',
 };
 
 const urlNote = {
