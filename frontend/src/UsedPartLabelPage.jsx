@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { ArrowLeft, Printer } from 'lucide-react';
+import api from './api';
 
-const API_URL = 'https://yaris-autocare-production.up.railway.app';
 const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 export default function UsedPartLabelPage() {
@@ -19,7 +18,7 @@ export default function UsedPartLabelPage() {
 
   const fetchPart = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/used-parts/${id}/`);
+      const res = await api.get(`/used-parts/${id}/`);
       setPart(res.data);
     } catch (err) {
       console.error(err);
