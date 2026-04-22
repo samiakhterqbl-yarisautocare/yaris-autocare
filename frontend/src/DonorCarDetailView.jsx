@@ -11,6 +11,7 @@ import {
   Hash,
   ChevronRight,
   Printer,
+  Trash2,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -35,6 +36,7 @@ export default function DonorCarDetailView() {
 
   const [car, setCar] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [partSearch, setPartSearch] = useState('');
   const [activeImage, setActiveImage] = useState('');
 
@@ -52,6 +54,28 @@ export default function DonorCarDetailView() {
       setCar(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!car?.id) return;
+
+    const confirmed = window.confirm(
+      `Delete donor car ${car.stock_number || ''}?\n\nThis may also affect linked dismantle parts.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      await axios.delete(`${API_URL}/api/donor-cars/${car.id}/`);
+      alert('Donor car deleted successfully.');
+      navigate('/yard-master');
+    } catch (err) {
+      console.error('Failed to delete donor car:', err?.response?.data || err);
+      alert('Delete failed. Check backend delete endpoint/permissions.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -180,13 +204,28 @@ export default function DonorCarDetailView() {
               <StatCard label="Internal" value={stats.internal} color="#3b82f6" />
             </div>
 
-            <button
-              onClick={() => navigate(`/yard-master/${car.id}/labels`)}
-              style={reprintBtn}
-            >
-              <Printer size={16} />
-              REPRINT LABELS
-            </button>
+            <div style={heroActions}>
+              <button
+                onClick={() => navigate(`/yard-master/${car.id}/labels`)}
+                style={reprintBtn}
+              >
+                <Printer size={16} />
+                REPRINT LABELS
+              </button>
+
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  ...deleteBtn,
+                  opacity: deleting ? 0.7 : 1,
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <Trash2 size={16} />
+                {deleting ? 'DELETING...' : 'DELETE DONOR'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +314,7 @@ export default function DonorCarDetailView() {
                   <div
                     key={part.id}
                     onClick={() =>
-                      navigate(`/dismantle-parts/${part.id}/edit`, {
+                      navigate(`/dismantle-parts/${part.id}`, {
                         state: { part, donorCar: car },
                       })
                     }
@@ -461,8 +500,14 @@ const statLabel = {
   letterSpacing: '0.04em',
 };
 
-const reprintBtn = {
+const heroActions = {
   marginTop: '12px',
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+};
+
+const reprintBtn = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '8px',
@@ -473,6 +518,18 @@ const reprintBtn = {
   padding: '11px 14px',
   fontWeight: '800',
   cursor: 'pointer',
+};
+
+const deleteBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  background: '#ef4444',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '12px',
+  padding: '11px 14px',
+  fontWeight: '800',
 };
 
 const contentGrid = {
