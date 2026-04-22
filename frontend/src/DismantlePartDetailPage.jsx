@@ -11,6 +11,7 @@ import {
   Boxes,
   Camera,
   MapPin,
+  Pencil,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -49,7 +50,14 @@ export default function DismantlePartDetailPage() {
     try {
       setLoading(true);
       const res = await axios.get(`${API_URL}/api/dismantle-parts/${id}/`);
-      setPart(res.data);
+      const data = res.data;
+      setPart(data);
+
+      if (data?.donor_car && typeof data.donor_car === 'object') {
+        setDonorCar(data.donor_car);
+      } else {
+        setDonorCar(null);
+      }
     } catch (err) {
       console.error('Failed to fetch dismantle part detail:', err);
       setPart(null);
@@ -125,10 +133,24 @@ export default function DismantlePartDetailPage() {
 
   return (
     <div style={{ padding: '30px', animation: 'fadeIn 0.3s ease' }}>
-      <button onClick={() => navigate(-1)} style={backBtn}>
-        <ArrowLeft size={16} />
-        BACK
-      </button>
+      <div style={topBar}>
+        <button onClick={() => navigate(-1)} style={backBtn}>
+          <ArrowLeft size={16} />
+          BACK
+        </button>
+
+        <button
+          onClick={() =>
+            navigate(`/dismantle-parts/${id}/edit`, {
+              state: { part, donorCar },
+            })
+          }
+          style={editBtn}
+        >
+          <Pencil size={16} />
+          EDIT PART
+        </button>
+      </div>
 
       <div style={heroCard}>
         <div>
@@ -217,19 +239,29 @@ export default function DismantlePartDetailPage() {
 
           <div style={card}>
             <div style={sectionTitle}>Donor Vehicle</div>
+
             <InfoRow
               icon={<Car size={16} />}
               label="Vehicle"
               value={
                 donorCar
                   ? [donorCar.year, donorCar.make, donorCar.model].filter(Boolean).join(' ')
-                  : [part.donor_car_year, part.donor_car_make, part.donor_car_model].filter(Boolean).join(' ') || 'N/A'
+                  : [part.donor_car_year, part.donor_car_make, part.donor_car_model]
+                      .filter(Boolean)
+                      .join(' ') || 'N/A'
               }
             />
+
             <InfoRow
               icon={<Car size={16} />}
               label="Stock"
               value={donorCar?.stock_number || part.donor_car_stock || 'N/A'}
+            />
+
+            <InfoRow
+              icon={<Car size={16} />}
+              label="VIN"
+              value={donorCar?.vin || part.donor_car_vin || 'N/A'}
             />
           </div>
         </div>
@@ -250,16 +282,37 @@ function InfoRow({ icon, label, value }) {
   );
 }
 
+const topBar = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap',
+  marginBottom: '16px',
+};
+
 const backBtn = {
   border: 'none',
   background: 'none',
   cursor: 'pointer',
   fontWeight: '800',
-  marginBottom: '16px',
   display: 'flex',
   alignItems: 'center',
   gap: '6px',
   color: '#475569',
+};
+
+const editBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  background: '#ef4444',
+  color: '#fff',
+  padding: '10px 16px',
+  borderRadius: '10px',
+  border: 'none',
+  fontWeight: '800',
+  cursor: 'pointer',
 };
 
 const heroCard = {
