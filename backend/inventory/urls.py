@@ -1,8 +1,5 @@
 from django.urls import path
-from rest_framework import generics
 
-from .models import Invoice
-from .serializers import InvoiceSerializer
 from .views import (
     LoginView,
     LogoutView,
@@ -22,7 +19,10 @@ from .views import (
     ImageUploadView,
     set_main_image,
     BusinessSummaryView,
+
     InvoiceListCreateView,
+    InvoiceDetailView,
+    InvoiceSendEmailView,
 )
 
 urlpatterns = [
@@ -61,12 +61,6 @@ urlpatterns = [
 
     # INVOICES
     path('invoices/', InvoiceListCreateView.as_view(), name='invoice-list'),
-    path(
-        'invoices/<int:pk>/',
-        generics.RetrieveDestroyAPIView.as_view(
-            queryset=Invoice.objects.prefetch_related('items', 'service_detail').all(),
-            serializer_class=InvoiceSerializer
-        ),
-        name='invoice-detail'
-    ),
+    path('invoices/<int:pk>/', InvoiceDetailView.as_view(), name='invoice-detail'),
+    path('invoices/<int:pk>/send-email/', InvoiceSendEmailView.as_view(), name='invoice-send-email'),
 ]

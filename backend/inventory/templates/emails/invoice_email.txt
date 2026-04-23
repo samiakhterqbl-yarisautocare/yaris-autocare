@@ -1,0 +1,20 @@
+Hi {{ invoice.customer_name|default:"Customer" }},
+
+Please find attached your {{ document_label|lower }} from Yaris Autocare.
+
+Document Number: {{ invoice.invoice_number }}
+Type: {{ invoice_type_label }}
+Total Amount: ${{ money(invoice.total_amount) }}
+Balance Due: ${{ money(invoice.balance_due) }}
+
+{% if invoice.rego or invoice.make or invoice.model %}
+Vehicle:
+{% if invoice.rego %}Rego: {{ invoice.rego }}{% endif %}
+{% if invoice.make or invoice.model %}{{ invoice.make }} {{ invoice.model }}{% endif %}
+{% endif %}
+
+Thank you,
+Yaris Autocare
+16 Legana Park Drive, Legana TAS 7277
+0449 828 749
+www.yarisautocare.com.au

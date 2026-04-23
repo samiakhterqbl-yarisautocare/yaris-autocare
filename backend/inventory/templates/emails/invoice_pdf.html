@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ document_label }} {{ invoice.invoice_number }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      color: #111827;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .header {
+      margin-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 10px;
+    }
+
+    .brand-row {
+      width: 100%;
+    }
+
+    .brand-left {
+      float: left;
+      width: 58%;
+    }
+
+    .brand-right {
+      float: right;
+      width: 40%;
+      text-align: right;
+    }
+
+    .clear {
+      clear: both;
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-red {
+      color: #d62828;
+    }
+
+    .sub {
+      font-size: 10px;
+      color: #6b7280;
+      margin-top: 3px;
+    }
+
+    .doc-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      text-align: right;
+    }
+
+    .meta-line {
+      font-size: 10px;
+      color: #374151;
+      margin-bottom: 2px;
+      text-align: right;
+    }
+
+    .contact-line {
+      margin-top: 10px;
+      font-size: 10px;
+      color: #4b5563;
+    }
+
+    .two-col {
+      width: 100%;
+      margin-top: 14px;
+      margin-bottom: 14px;
+    }
+
+    .col {
+      width: 48%;
+      display: inline-block;
+      vertical-align: top;
+    }
+
+    .col-right {
+      margin-left: 3%;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #111827;
+      margin: 0 0 8px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .info-table td {
+      padding: 5px 0;
+      vertical-align: top;
+      font-size: 10px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-label {
+      width: 110px;
+      color: #6b7280;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .box {
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      padding: 10px;
+      font-size: 10px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .box-soft {
+      border: 1px solid #d1d5db;
+      background: #fafafa;
+      padding: 10px;
+      font-size: 10px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .service-stats {
+      width: 100%;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat {
+      width: 31%;
+      display: inline-block;
+      vertical-align: top;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      box-sizing: border-box;
+      margin-right: 2%;
+    }
+
+    .stat:last-child {
+      margin-right: 0;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: #6b7280;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 12px;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    table.items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+
+    table.items th,
+    table.items td {
+      border: 1px solid #d1d5db;
+      padding: 7px 6px;
+      font-size: 10px;
+      vertical-align: top;
+    }
+
+    table.items th {
+      background: #f8fafc;
+      text-align: center;
+      font-weight: bold;
+      color: #374151;
+    }
+
+    .desc-cell {
+      text-align: left;
+    }
+
+    .desc-main {
+      font-weight: bold;
+      color: #111827;
+      margin-bottom: 3px;
+    }
+
+    .desc-sub {
+      color: #4b5563;
+      white-space: pre-wrap;
+    }
+
+    .footer {
+      width: 100%;
+      margin-top: 18px;
+    }
+
+    .footer-left {
+      float: left;
+      width: 58%;
+      border: 1px solid #d1d5db;
+      padding: 12px;
+      box-sizing: border-box;
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .footer-right {
+      float: right;
+      width: 38%;
+      border: 1px solid #d1d5db;
+      padding: 12px;
+      box-sizing: border-box;
+      background: #fafafa;
+    }
+
+    .footer-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .total-row {
+      width: 100%;
+      margin-bottom: 6px;
+      font-size: 10px;
+    }
+
+    .total-label {
+      float: left;
+      color: #4b5563;
+    }
+
+    .total-value {
+      float: right;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    .total-big .total-label,
+    .total-big .total-value {
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .danger {
+      color: #b91c1c !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand-row">
+      <div class="brand-left">
+        <div class="brand">YARIS <span class="brand-red">AUTOCARE</span></div>
+        <div class="sub">Operated by Pyramid Enterprises AU Pty Ltd</div>
+        <div class="sub">Car Rental • Mechanical Services • Auto Parts</div>
+        <div class="contact-line">
+          16 Legana Park Drive, Legana TAS 7277 · 0449 828 749 · www.yarisautocare.com.au
+        </div>
+        <div class="contact-line">
+          ABN: 91 650 944 157 · Accreditation No: 419296067 · LMVT Licence: 6130
+        </div>
+      </div>
+
+      <div class="brand-right">
+        <div class="doc-title">{{ document_label }}</div>
+        <div class="meta-line"><strong>No:</strong> {{ invoice.invoice_number }}</div>
+        <div class="meta-line"><strong>Date:</strong> {{ invoice.created_at|date:"d/m/Y" }}</div>
+        <div class="meta-line"><strong>Type:</strong> {{ invoice_type_label }}</div>
+      </div>
+
+      <div class="clear"></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="col">
+      <div class="section-title">Customer Details</div>
+      <table class="info-table">
+        <tr><td class="info-label">Customer</td><td>{{ invoice.customer_name|default:"-" }}</td></tr>
+        <tr><td class="info-label">Phone</td><td>{{ invoice.customer_phone|default:"-" }}</td></tr>
+        <tr><td class="info-label">Email</td><td>{{ invoice.customer_email|default:"-" }}</td></tr>
+        <tr><td class="info-label">Address</td><td>{{ invoice.customer_address|default:"-" }}</td></tr>
+      </table>
+    </div>
+
+    {% if invoice.rego or invoice.make or invoice.model or invoice.vin or invoice.odometer %}
+    <div class="col col-right">
+      <div class="section-title">Vehicle Details</div>
+      <table class="info-table">
+        <tr><td class="info-label">Rego</td><td>{{ invoice.rego|default:"-" }}</td></tr>
+        <tr><td class="info-label">Make</td><td>{{ invoice.make|default:"-" }}</td></tr>
+        <tr><td class="info-label">Model</td><td>{{ invoice.model|default:"-" }}</td></tr>
+        <tr><td class="info-label">VIN</td><td>{{ invoice.vin|default:"-" }}</td></tr>
+        <tr><td class="info-label">Odometer</td><td>{% if invoice.odometer %}{{ invoice.odometer }} km{% else %}-{% endif %}</td></tr>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if invoice.invoice_type == "SERVICING" %}
+    <div class="section-title">Service Details{% if service_template_type %} - {{ service_template_type }}{% endif %}</div>
+
+    <div class="service-stats">
+      <div class="stat">
+        <div class="stat-label">Service At KM</div>
+        <div class="stat-value">{% if service_detail and service_detail.service_at_km %}{{ service_detail.service_at_km }} km{% else %}-{% endif %}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Next Service At KM</div>
+        <div class="stat-value">{% if service_detail and service_detail.next_service_at_km %}{{ service_detail.next_service_at_km }} km{% else %}-{% endif %}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Next Service Date</div>
+        <div class="stat-value">{% if service_detail and service_detail.next_service_date %}{{ service_detail.next_service_date|date:"d/m/Y" }}{% else %}-{% endif %}</div>
+      </div>
+    </div>
+
+    {% if service_checklist %}
+      <div class="section-title">Service Checklist</div>
+      <div class="box-soft">{{ service_checklist }}</div>
+    {% endif %}
+
+    {% if service_detail and service_detail.service_notes %}
+      <div class="section-title">Service Notes</div>
+      <div class="box">{{ service_detail.service_notes }}</div>
+    {% endif %}
+  {% endif %}
+
+  {% if invoice.invoice_type != "SERVICING" or extra_items %}
+    <div class="section-title">
+      {% if invoice.invoice_type == "SERVICING" %}
+        Extra Items
+      {% elif invoice.invoice_type == "USED_PART" %}
+        Parts Details
+      {% else %}
+        Invoice Details
+      {% endif %}
+    </div>
+
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:6%;">#</th>
+          <th style="width:40%;">Description</th>
+          <th style="width:12%;">Type</th>
+          <th style="width:8%;">Qty</th>
+          <th style="width:12%;">Amount</th>
+          <th style="width:10%;">Discount</th>
+          <th style="width:12%;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if invoice.invoice_type == "SERVICING" %}
+          {% for item in extra_items %}
+          <tr>
+            <td style="text-align:center;">{{ forloop.counter }}</td>
+            <td class="desc-cell">
+              <div class="desc-main">{{ item.name|default:"-" }}</div>
+              {% if item.description %}<div class="desc-sub">{{ item.description }}</div>{% endif %}
+            </td>
+            <td style="text-align:center;">{{ item.item_type|default:item.source_type|default:"ITEM" }}</td>
+            <td style="text-align:center;">{{ item.quantity }}</td>
+            <td style="text-align:center;">${{ money(item.unit_price) }}</td>
+            <td style="text-align:center;">${{ money(item.discount) }}</td>
+            <td style="text-align:center;font-weight:bold;">${{ money(item.line_total) }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" style="text-align:center;">No extra items.</td></tr>
+          {% endfor %}
+        {% else %}
+          {% for item in items %}
+          <tr>
+            <td style="text-align:center;">{{ forloop.counter }}</td>
+            <td class="desc-cell">
+              <div class="desc-main">{{ item.name|default:"-" }}</div>
+              {% if item.description %}<div class="desc-sub">{{ item.description }}</div>{% endif %}
+            </td>
+            <td style="text-align:center;">{{ item.item_type|default:item.source_type|default:"ITEM" }}</td>
+            <td style="text-align:center;">{{ item.quantity }}</td>
+            <td style="text-align:center;">${{ money(item.unit_price) }}</td>
+            <td style="text-align:center;">${{ money(item.discount) }}</td>
+            <td style="text-align:center;font-weight:bold;">${{ money(item.line_total) }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" style="text-align:center;">No items found.</td></tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if cleaned_notes %}
+    <div class="section-title">Notes</div>
+    <div class="box">{{ cleaned_notes }}</div>
+  {% endif %}
+
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-title">Payment Details</div>
+      <div>Bank: ANZ Pty. Ltd.</div>
+      <div>Account Name: Pyramid Enterprises AU Pty Ltd</div>
+      <div>BSB: 013270</div>
+      <div>Account No: 430088057</div>
+      <div>Please email the remittance to info@yarisautocare.com.au</div>
+    </div>
+
+    <div class="footer-right">
+      <div class="total-row"><span class="total-label">Subtotal</span><span class="total-value">${{ money(invoice.subtotal) }}</span><div style="clear:both;"></div></div>
+      <div class="total-row"><span class="total-label">GST Included</span><span class="total-value">${{ money(invoice.gst_amount) }}</span><div style="clear:both;"></div></div>
+      <div class="total-row"><span class="total-label">Paid Amount</span><span class="total-value">${{ money(invoice.paid_amount) }}</span><div style="clear:both;"></div></div>
+      <div class="total-row"><span class="total-label">Payment Method</span><span class="total-value">{{ invoice.payment_method|default:"-" }}</span><div style="clear:both;"></div></div>
+      <div class="total-row total-big"><span class="total-label">Total Amount</span><span class="total-value">${{ money(invoice.total_amount) }}</span><div style="clear:both;"></div></div>
+      <div class="total-row total-big"><span class="total-label danger">Balance Due</span><span class="total-value danger">${{ money(invoice.balance_due) }}</span><div style="clear:both;"></div></div>
+    </div>
+
+    <div class="clear"></div>
+  </div>
+</body>
+</html>

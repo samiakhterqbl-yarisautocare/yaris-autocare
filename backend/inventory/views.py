@@ -29,6 +29,7 @@ from .serializers import (
     CurrentUserSerializer,
     CreateUserSerializer,
 )
+from .utils.invoice_email import send_invoice_email
 
 
 class IsAdminRole(IsAuthenticated):
@@ -571,6 +572,44 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+
+class InvoiceDetailView(generics.RetrieveAPIView):
+    queryset = Invoice.objects.prefetch_related('items', 'service_detail').all()
+    serializer_class = InvoiceSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+
+class InvoiceSendEmailView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.prefetch_related('items', 'service_detail').get(pk=pk)
+        except Invoice.DoesNotExist:
+            return Response(
+                {"detail": "Invoice not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            send_invoice_email(invoice)
+            return Response(
+                {"detail": "Invoice email sent successfully."},
+                status=status.HTTP_200_OK
+            )
+        except Exception as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class BusinessSummaryView(APIView):
