@@ -654,3 +654,4 @@ const loadingStyle = {
   color: COLORS.muted,
   fontWeight: '600',
 };
+export default AftermarketDetailPage;
