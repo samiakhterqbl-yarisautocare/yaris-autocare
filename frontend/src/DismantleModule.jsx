@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import axios from 'axios';
 import {
   PlusCircle,
@@ -8,6 +8,14 @@ import {
   Camera,
   Trash2,
   Plus,
+  Car,
+  Tag,
+  Package,
+  Boxes,
+  QrCode,
+  Wrench,
+  CheckCheck,
+  ClipboardList,
 } from 'lucide-react';
 import QRCodeImport from 'react-qr-code';
 
@@ -16,9 +24,18 @@ const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const COLORS = {
   primary: '#ef4444',
+  primaryDark: '#b91c1c',
   dark: '#0f172a',
+  darkSoft: '#111827',
+  text: '#1e293b',
+  muted: '#64748b',
+  soft: '#94a3b8',
   border: '#e2e8f0',
+  borderSoft: '#eef2f7',
   bg: '#f8fafc',
+  white: '#ffffff',
+  success: '#166534',
+  successBg: '#dcfce7',
 };
 
 const CATEGORY_MAP = {
@@ -115,10 +132,24 @@ export default function DismantleModule() {
     notes: '',
   });
 
+  const selectedCount = selectedParts.length;
+
+  const activeCategoryParts = useMemo(() => CATEGORY_MAP[activeTab] || [], [activeTab]);
+
+  const updateCarForm = (field, value) => {
+    setCarForm((prev) => ({ ...prev, [field]: value }));
+  };
+
   const inputStyle = {
-    padding: '12px',
-    borderRadius: '8px',
+    width: '100%',
+    padding: '13px 14px',
+    borderRadius: '12px',
     border: `1px solid ${COLORS.border}`,
+    background: '#fff',
+    fontSize: '14px',
+    color: COLORS.text,
+    outline: 'none',
+    boxSizing: 'border-box',
   };
 
   const handleImageSelect = (e) => {
@@ -221,7 +252,6 @@ export default function DismantleModule() {
 
       await axios.post(`${API_URL}/api/bulk-create/`, payload);
 
-      // Refetch donor car to get actual created part IDs
       const donorRes = await axios.get(`${API_URL}/api/donor-cars/${carData.id}/`);
       const donor = donorRes.data;
 
@@ -248,179 +278,140 @@ export default function DismantleModule() {
 
   if (phase === 'decision') {
     return (
-      <div style={{ padding: '40px' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '16px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <h2 style={{ fontSize: '28px', fontWeight: '900' }}>
-            Dismantle Yard Registry
-          </h2>
-          <span
-            style={{
-              fontSize: '12px',
-              color: '#94a3b8',
-              fontWeight: 'bold',
-              backgroundColor: '#f1f5f9',
-              padding: '4px 10px',
-              borderRadius: '20px',
-            }}
-          >
-            v1.2 - PROD
-          </span>
+      <div style={pageWrap}>
+        <div style={heroHeader}>
+          <div>
+            <div style={eyebrow}>Dismantle Workflow</div>
+            <h1 style={pageTitle}>Dismantle Yard Registry</h1>
+            <p style={pageSubtitle}>
+              Register donor vehicles, select harvestable parts, and generate ready-to-print labels.
+            </p>
+          </div>
+
+          <div style={versionBadge}>Production</div>
         </div>
 
-        <button
-          onClick={() => setPhase('registry')}
-          style={{
-            marginTop: '20px',
-            padding: '40px',
-            borderRadius: '20px',
-            border: `1px solid ${COLORS.border}`,
-            cursor: 'pointer',
-            backgroundColor: '#fff',
-            textAlign: 'left',
-            width: '100%',
-            maxWidth: '420px',
-          }}
-        >
-          <PlusCircle size={40} color={COLORS.primary} />
-          <div
-            style={{ fontWeight: '900', marginTop: '10px', fontSize: '18px' }}
-          >
-            REGISTER NEW DONOR
-          </div>
-        </button>
+        <div style={decisionGrid}>
+          <button onClick={() => setPhase('registry')} style={decisionCard}>
+            <div style={decisionIconWrap}>
+              <PlusCircle size={34} color={COLORS.primary} />
+            </div>
+            <div style={decisionTitle}>Register New Donor</div>
+            <div style={decisionText}>
+              Create a donor vehicle record, upload photos, and move directly into the dismantle checklist.
+            </div>
+          </button>
+        </div>
       </div>
     );
   }
 
   if (phase === 'registry') {
     return (
-      <div style={{ padding: '40px' }}>
-        <button
-          onClick={() => setPhase('decision')}
-          style={{
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            fontWeight: '800',
-            marginBottom: '15px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
+      <div style={pageWrap}>
+        <button onClick={() => setPhase('decision')} style={backBtn}>
           <ArrowLeft size={16} />
-          BACK
+          Back
         </button>
 
-        <div
-          style={{
-            backgroundColor: '#fff',
-            padding: '40px',
-            borderRadius: '20px',
-            border: `1px solid ${COLORS.border}`,
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '20px',
-            }}
-          >
-            <input
-              style={inputStyle}
-              value={carForm.make}
-              onChange={(e) =>
-                setCarForm((prev) => ({ ...prev, make: e.target.value }))
-              }
-              placeholder="Make"
-            />
-            <input
-              style={inputStyle}
-              value={carForm.model}
-              onChange={(e) =>
-                setCarForm((prev) => ({ ...prev, model: e.target.value }))
-              }
-              placeholder="Model"
-            />
-            <input
-              style={inputStyle}
-              value={carForm.year}
-              onChange={(e) =>
-                setCarForm((prev) => ({ ...prev, year: e.target.value }))
-              }
-              placeholder="Year"
-            />
-            <input
-              style={inputStyle}
-              value={carForm.vin}
-              onChange={(e) =>
-                setCarForm((prev) => ({
-                  ...prev,
-                  vin: e.target.value.toUpperCase(),
-                }))
-              }
-              placeholder="VIN (17 chars)"
-            />
-            <input
-              style={inputStyle}
-              value={carForm.rego}
-              onChange={(e) =>
-                setCarForm((prev) => ({
-                  ...prev,
-                  rego: e.target.value.toUpperCase(),
-                }))
-              }
-              placeholder="Rego"
-            />
-            <input
-              style={inputStyle}
-              value={carForm.color}
-              onChange={(e) =>
-                setCarForm((prev) => ({ ...prev, color: e.target.value }))
-              }
-              placeholder="Color"
-            />
+        <div style={heroHeader}>
+          <div>
+            <div style={eyebrow}>Step 1</div>
+            <h1 style={pageTitle}>Donor Vehicle Registration</h1>
+            <p style={pageSubtitle}>
+              Add the donor vehicle details first. This keeps the dismantle process organized and traceable.
+            </p>
+          </div>
+        </div>
 
-            <textarea
-              style={{
-                gridColumn: '1 / -1',
-                padding: '12px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.border}`,
-                height: '80px',
-              }}
-              value={carForm.notes}
-              onChange={(e) =>
-                setCarForm((prev) => ({ ...prev, notes: e.target.value }))
-              }
-              placeholder="Damage notes..."
-            />
+        <div style={contentCard}>
+          <div style={sectionTopRow}>
+            <div style={sectionHeadingWrap}>
+              <div style={sectionIconBox}>
+                <Car size={18} color={COLORS.primary} />
+              </div>
+              <div>
+                <div style={sectionHeading}>Vehicle Information</div>
+                <div style={sectionSubheading}>Required details for stock creation and label generation</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={formGrid}>
+            <Field label="Make">
+              <input
+                style={inputStyle}
+                value={carForm.make}
+                onChange={(e) => updateCarForm('make', e.target.value)}
+                placeholder="Make"
+              />
+            </Field>
+
+            <Field label="Model">
+              <input
+                style={inputStyle}
+                value={carForm.model}
+                onChange={(e) => updateCarForm('model', e.target.value)}
+                placeholder="Model"
+              />
+            </Field>
+
+            <Field label="Year">
+              <input
+                style={inputStyle}
+                value={carForm.year}
+                onChange={(e) => updateCarForm('year', e.target.value)}
+                placeholder="Year"
+              />
+            </Field>
+
+            <Field label="VIN">
+              <input
+                style={inputStyle}
+                value={carForm.vin}
+                onChange={(e) => updateCarForm('vin', e.target.value.toUpperCase())}
+                placeholder="VIN (17 chars)"
+              />
+            </Field>
+
+            <Field label="Rego">
+              <input
+                style={inputStyle}
+                value={carForm.rego}
+                onChange={(e) => updateCarForm('rego', e.target.value.toUpperCase())}
+                placeholder="Rego"
+              />
+            </Field>
+
+            <Field label="Color">
+              <input
+                style={inputStyle}
+                value={carForm.color}
+                onChange={(e) => updateCarForm('color', e.target.value)}
+                placeholder="Color"
+              />
+            </Field>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#f1f5f9',
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Camera size={18} />
-                PHOTOS
+              <Field label="Damage / Internal Notes">
+                <textarea
+                  style={textareaStyle}
+                  value={carForm.notes}
+                  onChange={(e) => updateCarForm('notes', e.target.value)}
+                  placeholder="Damage notes, condition remarks, salvage comments..."
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div style={imageSection}>
+            <div style={sectionHeadingSmall}>Vehicle Photos</div>
+            <div style={sectionSubheading}>Add overview images before starting dismantle</div>
+
+            <div style={{ marginTop: '12px' }}>
+              <button onClick={() => fileInputRef.current?.click()} style={softBtn}>
+                <Camera size={17} />
+                Upload Photos
               </button>
 
               <input
@@ -430,67 +421,39 @@ export default function DismantleModule() {
                 style={{ display: 'none' }}
                 onChange={handleImageSelect}
               />
+            </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '10px',
-                  marginTop: '10px',
-                  flexWrap: 'wrap',
-                }}
-              >
+            {imageFiles.length > 0 && (
+              <div style={imageGrid}>
                 {imageFiles.map((file, index) => (
-                  <div key={`${file.name}-${index}`} style={{ position: 'relative' }}>
+                  <div key={`${file.name}-${index}`} style={imageThumbCard}>
                     <img
                       src={URL.createObjectURL(file)}
                       alt={file.name}
-                      style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                      }}
+                      style={imageThumb}
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      style={{
-                        position: 'absolute',
-                        top: '-8px',
-                        right: '-8px',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        border: 'none',
-                        backgroundColor: COLORS.primary,
-                        color: '#fff',
-                        cursor: 'pointer',
-                      }}
+                      style={thumbDeleteBtn}
                     >
-                      ×
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
 
-          <button
-            onClick={handleCreateCar}
-            disabled={loading}
-            style={{
-              marginTop: '20px',
-              backgroundColor: COLORS.dark,
-              color: '#fff',
-              padding: '12px 30px',
-              borderRadius: '8px',
-              border: 'none',
-              fontWeight: '800',
-              cursor: 'pointer',
-            }}
-          >
-            {loading ? 'SAVING...' : 'REGISTER & HARVEST'}
-          </button>
+          <div style={actionBar}>
+            <button
+              onClick={handleCreateCar}
+              disabled={loading}
+              style={primaryBtn}
+            >
+              {loading ? 'Saving...' : 'Register & Continue'}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -498,218 +461,153 @@ export default function DismantleModule() {
 
   if (phase === 'checklist') {
     return (
-      <div style={{ padding: '40px' }}>
-        <div
-          style={{
-            backgroundColor: COLORS.dark,
-            color: '#fff',
-            padding: '20px',
-            borderRadius: '15px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '20px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0 }}>
-              {carData?.year} {carData?.model}
+      <div style={pageWrap}>
+        <div style={checklistHeaderCard}>
+          <div style={checklistHeaderLeft}>
+            <div style={eyebrowLight}>Step 2</div>
+            <h2 style={checklistTitle}>
+              {carData?.year} {carData?.make} {carData?.model}
             </h2>
-            <span>Stock: {carData?.stock_number}</span>
+            <div style={checklistMetaRow}>
+              <InfoPill icon={<Tag size={13} />} text={`Stock: ${carData?.stock_number || '-'}`} />
+              <InfoPill icon={<Boxes size={13} />} text={`${selectedCount} selected`} />
+            </div>
           </div>
 
           <button
             onClick={handleFinalizeDismantle}
             disabled={loading}
-            style={{
-              backgroundColor: COLORS.primary,
-              color: '#fff',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              fontWeight: '800',
-              cursor: 'pointer',
-            }}
+            style={primaryBtn}
           >
-            {loading ? 'CREATING...' : `GENERATE LABELS (${selectedParts.length})`}
+            {loading ? 'Creating...' : `Generate Labels (${selectedParts.length})`}
           </button>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: '10px',
-            margin: '20px 0',
-            overflowX: 'auto',
-            paddingBottom: '10px',
-          }}
-        >
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              style={{
-                whiteSpace: 'nowrap',
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === cat ? COLORS.dark : '#fff',
-                color: activeTab === cat ? '#fff' : '#64748b',
-                cursor: 'pointer',
-                fontWeight: '700',
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        <div style={checklistLayout}>
+          <div style={leftPanel}>
+            <div style={contentCard}>
+              <div style={sectionTopRow}>
+                <div style={sectionHeadingWrap}>
+                  <div style={sectionIconBox}>
+                    <ClipboardList size={18} color={COLORS.primary} />
+                  </div>
+                  <div>
+                    <div style={sectionHeading}>Part Categories</div>
+                    <div style={sectionSubheading}>Choose a category, then select available parts</div>
+                  </div>
+                </div>
+              </div>
 
-        <div
-          style={{
-            backgroundColor: '#fff',
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: '16px',
-            padding: '16px',
-            marginBottom: '20px',
-          }}
-        >
-          <div
-            style={{
-              fontWeight: '800',
-              marginBottom: '10px',
-              fontSize: '14px',
-            }}
-          >
-            Add custom part to: {activeTab}
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <input
-              value={customPart}
-              onChange={(e) => setCustomPart(e.target.value)}
-              placeholder="Enter custom part name"
-              style={{
-                ...inputStyle,
-                flex: 1,
-                minWidth: '240px',
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') addCustomPart();
-              }}
-            />
-            <button
-              onClick={addCustomPart}
-              style={{
-                backgroundColor: COLORS.primary,
-                color: '#fff',
-                padding: '12px 18px',
-                borderRadius: '8px',
-                border: 'none',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Plus size={16} />
-              ADD CUSTOM
-            </button>
-          </div>
-        </div>
-
-        {selectedParts.length > 0 && (
-          <div
-            style={{
-              backgroundColor: '#fff',
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: '16px',
-              padding: '16px',
-              marginBottom: '20px',
-            }}
-          >
-            <div style={{ fontWeight: '800', marginBottom: '12px' }}>
-              Selected Parts ({selectedParts.length})
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: '10px',
-                flexWrap: 'wrap',
-              }}
-            >
-              {selectedParts.map((part, index) => (
-                <div
-                  key={`${part.name}-${index}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    borderRadius: '999px',
-                    backgroundColor: '#f8fafc',
-                    border: `1px solid ${COLORS.border}`,
-                    fontSize: '13px',
-                    fontWeight: '700',
-                  }}
-                >
-                  <span>{part.name}</span>
-                  <span style={{ color: '#64748b', fontWeight: '600' }}>
-                    ({part.category})
-                  </span>
+              <div style={tabWrap}>
+                {CATEGORIES.map((cat) => (
                   <button
-                    type="button"
-                    onClick={() => removeSelectedPart(part.name)}
+                    key={cat}
+                    onClick={() => setActiveTab(cat)}
                     style={{
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      color: COLORS.primary,
-                      padding: 0,
-                      display: 'flex',
-                      alignItems: 'center',
+                      ...tabBtn,
+                      ...(activeTab === cat ? tabBtnActive : {}),
                     }}
                   >
-                    <Trash2 size={14} />
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div style={customPartCard}>
+                <div style={sectionHeadingSmall}>Add Custom Part</div>
+                <div style={sectionSubheading}>Useful for uncommon or vehicle-specific components</div>
+
+                <div style={customPartRow}>
+                  <input
+                    value={customPart}
+                    onChange={(e) => setCustomPart(e.target.value)}
+                    placeholder={`Enter custom part for ${activeTab}`}
+                    style={{
+                      ...inputStyle,
+                      flex: 1,
+                      minWidth: '220px',
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') addCustomPart();
+                    }}
+                  />
+                  <button onClick={addCustomPart} style={primaryBtnSmall}>
+                    <Plus size={15} />
+                    Add Custom
                   </button>
                 </div>
-              ))}
+              </div>
+
+              <div style={partsGrid}>
+                {activeCategoryParts.map((part) => {
+                  const isSelected = selectedParts.some((p) => p.name === part);
+
+                  return (
+                    <button
+                      key={part}
+                      onClick={() => togglePart(part)}
+                      style={{
+                        ...partCard,
+                        ...(isSelected ? partCardActive : {}),
+                      }}
+                    >
+                      <span style={partLabel}>{part}</span>
+                      {isSelected ? (
+                        <CheckCircle size={18} color={COLORS.primary} />
+                      ) : (
+                        <div style={partCircle} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        )}
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '10px',
-          }}
-        >
-          {CATEGORY_MAP[activeTab].map((part) => {
-            const isSelected = selectedParts.some((p) => p.name === part);
-
-            return (
-              <div
-                key={part}
-                onClick={() => togglePart(part)}
-                style={{
-                  padding: '15px',
-                  borderRadius: '12px',
-                  border: `2px solid ${isSelected ? COLORS.primary : COLORS.border}`,
-                  cursor: 'pointer',
-                  backgroundColor: '#fff',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontWeight: '700', fontSize: '14px' }}>{part}</span>
-                {isSelected && <CheckCircle size={18} color={COLORS.primary} />}
+          <div style={rightPanel}>
+            <div style={contentCard}>
+              <div style={sectionTopRow}>
+                <div style={sectionHeadingWrap}>
+                  <div style={sectionIconBox}>
+                    <CheckCheck size={18} color={COLORS.primary} />
+                  </div>
+                  <div>
+                    <div style={sectionHeading}>Selected Parts</div>
+                    <div style={sectionSubheading}>Review before generating labels</div>
+                  </div>
+                </div>
               </div>
-            );
-          })}
+
+              {selectedParts.length > 0 ? (
+                <div style={selectedList}>
+                  {selectedParts.map((part, index) => (
+                    <div key={`${part.name}-${index}`} style={selectedPartRow}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={selectedPartName}>{part.name}</div>
+                        <div style={selectedPartMeta}>{part.category}</div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedPart(part.name)}
+                        style={removeInlineBtn}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={emptyStateBox}>
+                  <Package size={32} color="#94a3b8" />
+                  <div style={emptyStateTitle}>No parts selected yet</div>
+                  <div style={emptyStateText}>
+                    Select parts from the current category to prepare dismantle labels.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -719,13 +617,14 @@ export default function DismantleModule() {
     const labelParts = createdParts.length > 0 ? createdParts : [];
 
     return (
-      <div style={{ padding: '40px' }}>
+      <div style={pageWrap}>
         <style>
           {`
             @media print {
               body {
                 margin: 0;
                 padding: 0;
+                background: #fff;
               }
 
               @page {
@@ -753,58 +652,30 @@ export default function DismantleModule() {
           `}
         </style>
 
-        <div
-          className="no-print"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginBottom: '20px',
-            gap: '10px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <h2 style={{ fontWeight: '900' }}>Labels Ready</h2>
+        <div style={heroHeader}>
+          <div>
+            <div style={eyebrow}>Step 3</div>
+            <h1 style={pageTitle}>Labels Ready</h1>
+            <p style={pageSubtitle}>
+              Print labels now or move to the next donor vehicle.
+            </p>
+          </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => window.print()}
-              style={{
-                backgroundColor: COLORS.dark,
-                color: '#fff',
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Printer size={18} />
-              PRINT ALL
+          <div style={topButtonRow} className="no-print">
+            <button onClick={() => window.print()} style={primaryBtn}>
+              <Printer size={17} />
+              Print All
             </button>
 
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.border}`,
-                cursor: 'pointer',
-              }}
-            >
-              NEXT CAR
+            <button onClick={() => window.location.reload()} style={softBtn}>
+              Next Car
             </button>
           </div>
         </div>
 
         <div
           className="label-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: '15px',
-          }}
+          style={labelGrid}
         >
           {labelParts.map((part, index) => {
             const qrValue = `${FRONTEND_URL}/used-parts/${part.id}`;
@@ -814,30 +685,9 @@ export default function DismantleModule() {
               <div
                 key={`${part.id}-${index}`}
                 className="print-label"
-                style={{
-                  width: '50mm',
-                  height: '30mm',
-                  border: '1.5px solid #000',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  gap: '2mm',
-                  alignItems: 'center',
-                  backgroundColor: '#fff',
-                  padding: '2mm',
-                  boxSizing: 'border-box',
-                  overflow: 'hidden',
-                }}
+                style={labelCard}
               >
-                <div
-                  style={{
-                    width: '14mm',
-                    minWidth: '14mm',
-                    height: '14mm',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <div style={labelQrWrap}>
                   {QRCodeComponent ? (
                     <QRCodeComponent
                       size={52}
@@ -845,80 +695,17 @@ export default function DismantleModule() {
                       style={{ height: '14mm', width: '14mm' }}
                     />
                   ) : (
-                    <div
-                      style={{
-                        width: '14mm',
-                        height: '14mm',
-                        border: '1px solid #000',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '8px',
-                      }}
-                    >
-                      QR
+                    <div style={qrFallback}>
+                      <QrCode size={16} />
                     </div>
                   )}
                 </div>
 
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    lineHeight: 1.1,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '9px',
-                      fontWeight: '900',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {carData?.stock_number}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: '9px',
-                      fontWeight: '900',
-                      marginTop: '1mm',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {part.part_name}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: '7px',
-                      marginTop: '1mm',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {shortModel}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: '7px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {part.category}
-                  </div>
+                <div style={labelContent}>
+                  <div style={labelStock}>{carData?.stock_number}</div>
+                  <div style={labelPartName}>{part.part_name}</div>
+                  <div style={labelMeta}>{shortModel}</div>
+                  <div style={labelMeta}>{part.category}</div>
                 </div>
               </div>
             );
@@ -926,18 +713,7 @@ export default function DismantleModule() {
         </div>
 
         {labelParts.length === 0 && (
-          <div
-            className="no-print"
-            style={{
-              marginTop: '20px',
-              padding: '16px',
-              borderRadius: '12px',
-              backgroundColor: '#fff7ed',
-              border: '1px solid #fdba74',
-              color: '#9a3412',
-              fontWeight: '700',
-            }}
-          >
+          <div className="no-print" style={warningBox}>
             No created part IDs were found for labels. Check donor car detail API response.
           </div>
         )}
@@ -947,3 +723,605 @@ export default function DismantleModule() {
 
   return null;
 }
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label style={fieldLabel}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function InfoPill({ icon, text }) {
+  return (
+    <div style={infoPill}>
+      {icon}
+      <span>{text}</span>
+    </div>
+  );
+}
+
+const pageWrap = {
+  padding: '24px',
+  maxWidth: '1400px',
+  margin: '0 auto',
+  background: COLORS.bg,
+  minHeight: '100vh',
+};
+
+const heroHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: '18px',
+  flexWrap: 'wrap',
+  marginBottom: '18px',
+};
+
+const eyebrow = {
+  fontSize: '11px',
+  fontWeight: '800',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: COLORS.soft,
+  marginBottom: '6px',
+};
+
+const eyebrowLight = {
+  fontSize: '11px',
+  fontWeight: '800',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: '#fecaca',
+  marginBottom: '6px',
+};
+
+const pageTitle = {
+  margin: 0,
+  fontSize: '30px',
+  fontWeight: '900',
+  color: COLORS.dark,
+  letterSpacing: '-0.03em',
+};
+
+const pageSubtitle = {
+  margin: '8px 0 0',
+  color: COLORS.muted,
+  fontSize: '14px',
+  lineHeight: 1.6,
+  maxWidth: '760px',
+};
+
+const versionBadge = {
+  borderRadius: '999px',
+  padding: '8px 12px',
+  border: `1px solid ${COLORS.border}`,
+  background: '#fff',
+  color: COLORS.dark,
+  fontSize: '12px',
+  fontWeight: '800',
+};
+
+const decisionGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 420px))',
+  gap: '16px',
+};
+
+const decisionCard = {
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '22px',
+  background: '#fff',
+  padding: '26px',
+  textAlign: 'left',
+  cursor: 'pointer',
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)',
+};
+
+const decisionIconWrap = {
+  width: '66px',
+  height: '66px',
+  borderRadius: '18px',
+  background: '#fff5f5',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const decisionTitle = {
+  marginTop: '16px',
+  fontWeight: '900',
+  fontSize: '18px',
+  color: COLORS.dark,
+};
+
+const decisionText = {
+  marginTop: '8px',
+  fontSize: '14px',
+  lineHeight: 1.7,
+  color: COLORS.muted,
+};
+
+const backBtn = {
+  border: 'none',
+  background: 'none',
+  cursor: 'pointer',
+  fontWeight: '800',
+  marginBottom: '14px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  color: COLORS.muted,
+};
+
+const contentCard = {
+  backgroundColor: '#fff',
+  padding: '22px',
+  borderRadius: '22px',
+  border: `1px solid ${COLORS.border}`,
+  boxShadow: '0 8px 26px rgba(15, 23, 42, 0.04)',
+};
+
+const sectionTopRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap',
+  marginBottom: '18px',
+};
+
+const sectionHeadingWrap = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+};
+
+const sectionIconBox = {
+  width: '42px',
+  height: '42px',
+  borderRadius: '14px',
+  background: '#fff5f5',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+};
+
+const sectionHeading = {
+  fontSize: '16px',
+  fontWeight: '800',
+  color: COLORS.dark,
+};
+
+const sectionHeadingSmall = {
+  fontSize: '14px',
+  fontWeight: '800',
+  color: COLORS.dark,
+};
+
+const sectionSubheading = {
+  marginTop: '4px',
+  fontSize: '13px',
+  color: COLORS.muted,
+};
+
+const formGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '16px',
+};
+
+const fieldLabel = {
+  display: 'block',
+  marginBottom: '8px',
+  fontSize: '11px',
+  fontWeight: '800',
+  color: COLORS.soft,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const textareaStyle = {
+  width: '100%',
+  padding: '13px 14px',
+  borderRadius: '12px',
+  border: `1px solid ${COLORS.border}`,
+  background: '#fff',
+  fontSize: '14px',
+  color: COLORS.text,
+  outline: 'none',
+  boxSizing: 'border-box',
+  minHeight: '96px',
+  resize: 'vertical',
+  fontFamily: 'inherit',
+};
+
+const imageSection = {
+  marginTop: '24px',
+  paddingTop: '20px',
+  borderTop: `1px solid ${COLORS.borderSoft}`,
+};
+
+const imageGrid = {
+  display: 'flex',
+  gap: '12px',
+  marginTop: '14px',
+  flexWrap: 'wrap',
+};
+
+const imageThumbCard = {
+  position: 'relative',
+  width: '92px',
+  height: '92px',
+  borderRadius: '14px',
+  overflow: 'hidden',
+  border: `1px solid ${COLORS.border}`,
+  background: '#fff',
+};
+
+const imageThumb = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+};
+
+const thumbDeleteBtn = {
+  position: 'absolute',
+  top: '6px',
+  right: '6px',
+  width: '26px',
+  height: '26px',
+  borderRadius: '999px',
+  border: 'none',
+  backgroundColor: COLORS.primary,
+  color: '#fff',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const actionBar = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  marginTop: '24px',
+};
+
+const primaryBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  backgroundColor: COLORS.dark,
+  color: '#fff',
+  padding: '12px 18px',
+  borderRadius: '12px',
+  border: 'none',
+  fontWeight: '800',
+  cursor: 'pointer',
+  minHeight: '46px',
+};
+
+const primaryBtnSmall = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  backgroundColor: COLORS.primary,
+  color: '#fff',
+  padding: '12px 16px',
+  borderRadius: '12px',
+  border: 'none',
+  fontWeight: '800',
+  cursor: 'pointer',
+  minHeight: '46px',
+};
+
+const softBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  backgroundColor: '#fff',
+  color: COLORS.dark,
+  padding: '12px 16px',
+  borderRadius: '12px',
+  border: `1px solid ${COLORS.border}`,
+  fontWeight: '800',
+  cursor: 'pointer',
+};
+
+const checklistHeaderCard = {
+  background: `linear-gradient(135deg, ${COLORS.dark} 0%, ${COLORS.darkSoft} 100%)`,
+  color: '#fff',
+  borderRadius: '22px',
+  padding: '22px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '18px',
+  flexWrap: 'wrap',
+  marginBottom: '18px',
+};
+
+const checklistHeaderLeft = {
+  minWidth: 0,
+};
+
+const checklistTitle = {
+  margin: 0,
+  fontSize: '28px',
+  fontWeight: '900',
+  letterSpacing: '-0.03em',
+};
+
+const checklistMetaRow = {
+  display: 'flex',
+  gap: '10px',
+  marginTop: '12px',
+  flexWrap: 'wrap',
+};
+
+const infoPill = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '8px 10px',
+  borderRadius: '999px',
+  background: 'rgba(255,255,255,0.08)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  color: '#e2e8f0',
+  fontSize: '12px',
+  fontWeight: '700',
+};
+
+const checklistLayout = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)',
+  gap: '18px',
+};
+
+const leftPanel = {
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const rightPanel = {
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const tabWrap = {
+  display: 'flex',
+  gap: '10px',
+  overflowX: 'auto',
+  paddingBottom: '8px',
+  marginBottom: '18px',
+};
+
+const tabBtn = {
+  whiteSpace: 'nowrap',
+  padding: '10px 14px',
+  borderRadius: '12px',
+  border: `1px solid ${COLORS.border}`,
+  backgroundColor: '#fff',
+  color: COLORS.muted,
+  cursor: 'pointer',
+  fontWeight: '700',
+  fontSize: '13px',
+};
+
+const tabBtnActive = {
+  backgroundColor: COLORS.dark,
+  color: '#fff',
+  border: `1px solid ${COLORS.dark}`,
+};
+
+const customPartCard = {
+  background: '#f8fafc',
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '16px',
+  padding: '16px',
+  marginBottom: '18px',
+};
+
+const customPartRow = {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+  marginTop: '12px',
+};
+
+const partsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: '12px',
+};
+
+const partCard = {
+  padding: '14px 16px',
+  borderRadius: '14px',
+  border: `1px solid ${COLORS.border}`,
+  cursor: 'pointer',
+  backgroundColor: '#fff',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  textAlign: 'left',
+};
+
+const partCardActive = {
+  border: `2px solid ${COLORS.primary}`,
+  background: '#fff5f5',
+};
+
+const partLabel = {
+  fontWeight: '700',
+  fontSize: '14px',
+  color: COLORS.text,
+};
+
+const partCircle = {
+  width: '16px',
+  height: '16px',
+  borderRadius: '999px',
+  border: `2px solid ${COLORS.border}`,
+  flexShrink: 0,
+};
+
+const selectedList = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+};
+
+const selectedPartRow = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  padding: '12px 14px',
+  borderRadius: '14px',
+  border: `1px solid ${COLORS.border}`,
+  background: '#fff',
+};
+
+const selectedPartName = {
+  fontSize: '14px',
+  fontWeight: '800',
+  color: COLORS.dark,
+};
+
+const selectedPartMeta = {
+  fontSize: '12px',
+  color: COLORS.muted,
+  marginTop: '4px',
+};
+
+const removeInlineBtn = {
+  width: '34px',
+  height: '34px',
+  borderRadius: '10px',
+  border: '1px solid #fecaca',
+  background: '#fff5f5',
+  color: '#dc2626',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+};
+
+const emptyStateBox = {
+  border: `1px dashed ${COLORS.border}`,
+  borderRadius: '18px',
+  padding: '28px 18px',
+  textAlign: 'center',
+  background: '#fcfdff',
+};
+
+const emptyStateTitle = {
+  marginTop: '10px',
+  fontWeight: '800',
+  color: COLORS.dark,
+};
+
+const emptyStateText = {
+  marginTop: '6px',
+  color: COLORS.muted,
+  fontSize: '13px',
+  lineHeight: 1.6,
+};
+
+const topButtonRow = {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+};
+
+const labelGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+  gap: '15px',
+};
+
+const labelCard = {
+  width: '50mm',
+  height: '30mm',
+  border: '1.5px solid #000',
+  borderRadius: '4px',
+  display: 'flex',
+  gap: '2mm',
+  alignItems: 'center',
+  backgroundColor: '#fff',
+  padding: '2mm',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
+};
+
+const labelQrWrap = {
+  width: '14mm',
+  minWidth: '14mm',
+  height: '14mm',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const qrFallback = {
+  width: '14mm',
+  height: '14mm',
+  border: '1px solid #000',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '8px',
+};
+
+const labelContent = {
+  flex: 1,
+  minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  lineHeight: 1.1,
+};
+
+const labelStock = {
+  fontSize: '9px',
+  fontWeight: '900',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const labelPartName = {
+  fontSize: '9px',
+  fontWeight: '900',
+  marginTop: '1mm',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+};
+
+const labelMeta = {
+  fontSize: '7px',
+  marginTop: '1mm',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const warningBox = {
+  marginTop: '20px',
+  padding: '16px',
+  borderRadius: '12px',
+  backgroundColor: '#fff7ed',
+  border: '1px solid #fdba74',
+  color: '#9a3412',
+  fontWeight: '700',
+};
