@@ -20,6 +20,9 @@ import {
   Wrench,
   Package,
   Settings,
+  Send,
+  MessageCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -42,43 +45,23 @@ const serviceTypeOptions = [
 
 const paymentMethodOptions = ['Cash', 'Bank Transfer', 'Card', 'EFTPOS', 'Pending'];
 
-const regularServiceRows = [
-  'Oil filter replacement',
-  'Engine oil change',
-  'New Sumpplug washer',
-  'Top-ups (brake, power steering, coolant & windscreen washer fluid)',
-  'Safety checks (Underbody components, Brakes, Globes, horn & tyre pressure)',
-  'Check globes',
-  'Check hoses',
-  'Check drive belt',
-  'Battery load test',
-  'Check tyre pressure',
-  'Check front brake pads & rotors',
-];
+const regularServiceTemplate = `Regular Service Includes:
+• Engine oil & oil filter replacement
+• New sump plug washer
+• Fluid top-ups (coolant, brake, washer, power steering)
+• Safety inspection (brakes, tyres, suspension, lights)
+• Battery test
+• Basic mechanical inspection`;
 
-const majorServiceRows = [
-  'Oil filter replacement',
-  'Engine oil change',
-  'New Sumpplug washer',
-  'Top-ups (brake, power steering, coolant & windscreen washer fluid)',
-  'Safety checks (Underbody components, Brakes, Globes, horn & tyre pressure)',
-  'Check globes',
-  'Check hoses',
-  'Check drive belt',
-  'Battery load test',
-  'Check engine oil leaks',
-  'Check transmission oil leaks',
-  'Check transmission cooler pipes',
-  'Check engine mounts & transmission mounts',
-  'Check exhaust',
-  'Check drive shafts',
-  'Check front shock absorbers',
-  'Check rear shock absorbers',
-  'Check ball joints & tie rods',
-  'Check suspension bushes',
-  'Check tyre pressure',
-  'Check front brake pads & rotors',
-];
+const majorServiceTemplate = `Major Service Includes:
+• Engine oil & oil filter replacement
+• New sump plug washer
+• Full fluid inspection & top-ups
+• Full safety inspection
+• Suspension, bushes, mounts inspection
+• Brake system check
+• Engine & transmission leak check
+• Exhaust & driveline inspection`;
 
 const createBlankRow = () => ({
   item_type: 'MANUAL',
@@ -92,23 +75,39 @@ const createBlankRow = () => ({
   gst_included: true,
 });
 
-const createServiceRows = (rows) =>
-  rows.map((text) => ({
-    item_type: 'SERVICE',
-    source_type: 'MANUAL',
-    source_id: null,
-    name: text,
-    description: '',
-    quantity: 1,
-    unit_price: 0,
-    discount: 0,
-    gst_included: true,
-  }));
+const createServiceRow = (type) => ({
+  item_type: 'SERVICE',
+  source_type: 'MANUAL',
+  source_id: null,
+  name: type === 'MAJOR' ? 'Major Service' : 'Regular Service',
+  description: type === 'MAJOR' ? majorServiceTemplate : regularServiceTemplate,
+  quantity: 1,
+  unit_price: '',
+  discount: 0,
+  gst_included: true,
+});
+
+const COLORS = {
+  primary: '#ef4444',
+  dark: '#0f172a',
+  text: '#1e293b',
+  muted: '#64748b',
+  soft: '#94a3b8',
+  border: '#e2e8f0',
+  borderSoft: '#eef2f7',
+  bg: '#f8fafc',
+  card: '#ffffff',
+  success: '#166534',
+  successBg: '#ecfdf5',
+  danger: '#be123c',
+  dangerBg: '#fff1f2',
+};
 
 export default function SalesModule() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [createdInvoice, setCreatedInvoice] = useState(null);
@@ -145,7 +144,7 @@ export default function SalesModule() {
     notes: '',
   });
 
-  const [rows, setRows] = useState(createServiceRows(regularServiceRows));
+  const [rows, setRows] = useState([createServiceRow('REGULAR')]);
 
   const showVehicleDetails = jobType === 'SERVICING' || jobType === 'WORKSHOP';
   const isServicing = jobType === 'SERVICING';
@@ -211,7 +210,11 @@ export default function SalesModule() {
 
   const removeRow = (index) => {
     if (rows.length === 1) {
-      setRows([createBlankRow()]);
+      if (isServicing) {
+        setRows([createServiceRow(serviceType)]);
+      } else {
+        setRows([createBlankRow()]);
+      }
       return;
     }
     setRows((prev) => prev.filter((_, i) => i !== index));
@@ -225,7 +228,7 @@ export default function SalesModule() {
 
     if (value === 'SERVICING') {
       setServiceType('REGULAR');
-      setRows(createServiceRows(regularServiceRows));
+      setRows([createServiceRow('REGULAR')]);
     } else {
       setRows([createBlankRow()]);
     }
@@ -233,11 +236,7 @@ export default function SalesModule() {
 
   const handleServiceTypeChange = (value) => {
     setServiceType(value);
-    if (value === 'REGULAR') {
-      setRows(createServiceRows(regularServiceRows));
-    } else {
-      setRows(createServiceRows(majorServiceRows));
-    }
+    setRows([createServiceRow(value)]);
   };
 
   const validateForm = () => {
@@ -285,7 +284,6 @@ export default function SalesModule() {
     const combinedNotes = [
       documentType === 'QUOTE' ? 'Document Type: QUOTE' : 'Document Type: TAX INVOICE',
       isServicing ? `Service Type: ${serviceType}` : '',
-      isServicing ? serviceDetail.notes : '',
       payment.notes,
     ]
       .filter(Boolean)
@@ -366,6 +364,20 @@ export default function SalesModule() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!createdInvoice?.id) return;
+    try {
+      setEmailSending(true);
+      await axios.post(`${API_URL}/api/invoices/${createdInvoice.id}/send-email/`);
+      alert('Invoice sent to customer email.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send email. Backend endpoint is required.');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const goToInvoice = () => {
     if (!createdInvoice?.id) return;
     navigate(`/sales/${createdInvoice.id}`);
@@ -373,6 +385,27 @@ export default function SalesModule() {
 
   const goToDashboard = () => {
     navigate('/sales-dashboard');
+  };
+
+  const openWhatsApp = () => {
+    const phone = String(customer.customer_phone || '').replace(/\D/g, '');
+    if (!phone) {
+      alert('Customer phone is required for WhatsApp.');
+      return;
+    }
+
+    const fullNumber = phone.startsWith('61')
+      ? phone
+      : phone.startsWith('0')
+      ? `61${phone.slice(1)}`
+      : phone;
+
+    const docNumber = createdInvoice?.invoice_number || 'your document';
+    const text = encodeURIComponent(
+      `Hi ${customer.customer_name || ''}, your ${documentType === 'QUOTE' ? 'quote' : 'invoice'} ${docNumber} from Yaris Autocare is ready.`
+    );
+
+    window.open(`https://wa.me/${fullNumber}?text=${text}`, '_blank');
   };
 
   const resetForm = () => {
@@ -403,7 +436,7 @@ export default function SalesModule() {
       payment_method: 'Cash',
       notes: '',
     });
-    setRows(createServiceRows(regularServiceRows));
+    setRows([createServiceRow('REGULAR')]);
     setCreatedInvoice(null);
     setSuccessMessage('');
     setErrorMessage('');
@@ -413,19 +446,19 @@ export default function SalesModule() {
     <div style={pageWrap}>
       <div style={headerBar}>
         <div>
-          <h1 style={mainTitle}>Simple Invoice Creator</h1>
+          <h1 style={mainTitle}>Invoice Creator</h1>
           <p style={subTitle}>
-            Create Tax Invoices or Quotes for servicing, parts sales, and workshop jobs.
+            Premium quick-create workflow for servicing, workshop jobs and parts sales.
           </p>
         </div>
 
         <div style={headerActions}>
           <button type="button" style={headerSecondaryBtn} onClick={goToDashboard}>
-            <LayoutList size={16} />
-            Invoices Dashboard
+            <LayoutList size={15} />
+            Dashboard
           </button>
           <div style={headerBadge}>
-            <Receipt size={18} />
+            <Receipt size={16} />
             <span>Yaris Autocare</span>
           </div>
         </div>
@@ -433,16 +466,28 @@ export default function SalesModule() {
 
       {!!successMessage && (
         <div style={successBox}>
-          <div>{successMessage}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={18} />
+            <span>{successMessage}</span>
+          </div>
           {createdInvoice?.id && (
             <div style={successActions}>
               <button type="button" style={successActionBtn} onClick={goToInvoice}>
-                <Eye size={15} />
-                View Document
+                <Eye size={14} />
+                View
               </button>
-              <button type="button" style={successActionBtnAlt} onClick={goToDashboard}>
-                <LayoutList size={15} />
-                Open Dashboard
+              <button type="button" style={successActionBtnAlt} onClick={openWhatsApp}>
+                <MessageCircle size={14} />
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                style={successActionBtnAlt}
+                onClick={handleSendEmail}
+                disabled={emailSending}
+              >
+                <Send size={14} />
+                {emailSending ? 'Sending...' : 'Email'}
               </button>
             </div>
           )}
@@ -453,8 +498,8 @@ export default function SalesModule() {
 
       <div style={layoutGrid}>
         <div style={mainColumn}>
-          <SectionCard title="Step 1 — Document Type" icon={<FileText size={18} color="#ef4444" />}>
-            <div style={choiceGrid}>
+          <SectionCard title="Document Type" icon={<FileText size={16} color="#ef4444" />}>
+            <div style={choiceGrid2}>
               {documentTypeOptions.map((option) => (
                 <button
                   key={option.value}
@@ -474,7 +519,7 @@ export default function SalesModule() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Step 2 — Job Type" icon={<Settings size={18} color="#ef4444" />}>
+          <SectionCard title="Job Type" icon={<Settings size={16} color="#ef4444" />}>
             <div style={choiceGrid3}>
               {jobTypeOptions.map((option) => (
                 <button
@@ -492,25 +537,25 @@ export default function SalesModule() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Customer Details" icon={<User size={18} color="#ef4444" />}>
+          <SectionCard title="Customer Details" icon={<User size={16} color="#ef4444" />}>
             <div style={fieldGrid2}>
               <InputField
-                icon={<User size={15} />}
+                icon={<User size={14} />}
                 labelText="Customer Name"
                 value={customer.customer_name}
                 onChange={(e) => updateCustomer('customer_name', e.target.value)}
                 placeholder="Walk-in Customer"
               />
               <InputField
-                icon={<Phone size={15} />}
+                icon={<Phone size={14} />}
                 labelText="Phone"
                 value={customer.customer_phone}
                 onChange={(e) => updateCustomer('customer_phone', e.target.value)}
                 placeholder="04xxxxxxxx"
               />
               <InputField
-                icon={<Mail size={15} />}
-                labelText="Email (optional)"
+                icon={<Mail size={14} />}
+                labelText="Email"
                 value={customer.customer_email}
                 onChange={(e) => updateCustomer('customer_email', e.target.value)}
                 placeholder="customer@email.com"
@@ -518,7 +563,7 @@ export default function SalesModule() {
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={label}>Address</label>
                 <div style={inputWrap}>
-                  <MapPin size={15} style={inputIcon} />
+                  <MapPin size={14} style={inputIcon} />
                   <textarea
                     value={customer.customer_address}
                     onChange={(e) => updateCustomer('customer_address', e.target.value)}
@@ -532,38 +577,38 @@ export default function SalesModule() {
           </SectionCard>
 
           {showVehicleDetails && (
-            <SectionCard title="Car Details" icon={<Car size={18} color="#ef4444" />}>
+            <SectionCard title="Vehicle Details" icon={<Car size={16} color="#ef4444" />}>
               <div style={fieldGrid3}>
                 <InputField
-                  icon={<Car size={15} />}
+                  icon={<Car size={14} />}
                   labelText="Rego"
                   value={vehicle.rego}
                   onChange={(e) => updateVehicle('rego', e.target.value)}
                   placeholder="ABC123"
                 />
                 <InputField
-                  icon={<Car size={15} />}
+                  icon={<Car size={14} />}
                   labelText="Make"
                   value={vehicle.make}
                   onChange={(e) => updateVehicle('make', e.target.value)}
                   placeholder="Toyota"
                 />
                 <InputField
-                  icon={<Car size={15} />}
+                  icon={<Car size={14} />}
                   labelText="Model"
                   value={vehicle.model}
                   onChange={(e) => updateVehicle('model', e.target.value)}
                   placeholder="Yaris"
                 />
                 <InputField
-                  icon={<Hash size={15} />}
+                  icon={<Hash size={14} />}
                   labelText="VIN"
                   value={vehicle.vin}
                   onChange={(e) => updateVehicle('vin', e.target.value)}
                   placeholder="Vehicle VIN"
                 />
                 <InputField
-                  icon={<Hash size={15} />}
+                  icon={<Hash size={14} />}
                   labelText="Odometer"
                   value={vehicle.odometer}
                   onChange={(e) => updateVehicle('odometer', e.target.value)}
@@ -575,8 +620,8 @@ export default function SalesModule() {
           )}
 
           {isServicing && (
-            <SectionCard title="Service Details" icon={<Wrench size={18} color="#ef4444" />}>
-              <div style={fieldGrid3}>
+            <SectionCard title="Service Details" icon={<Wrench size={16} color="#ef4444" />}>
+              <div style={fieldGrid4}>
                 <div>
                   <label style={label}>Service Type</label>
                   <select
@@ -593,7 +638,7 @@ export default function SalesModule() {
                 </div>
 
                 <InputField
-                  icon={<Hash size={15} />}
+                  icon={<Hash size={14} />}
                   labelText="Service At KM"
                   value={serviceDetail.service_at_km}
                   onChange={(e) => updateServiceDetail('service_at_km', e.target.value)}
@@ -601,7 +646,7 @@ export default function SalesModule() {
                   type="number"
                 />
                 <InputField
-                  icon={<Hash size={15} />}
+                  icon={<Hash size={14} />}
                   labelText="Next Service At KM"
                   value={serviceDetail.next_service_at_km}
                   onChange={(e) => updateServiceDetail('next_service_at_km', e.target.value)}
@@ -609,7 +654,7 @@ export default function SalesModule() {
                   type="number"
                 />
                 <InputField
-                  icon={<CalendarDays size={15} />}
+                  icon={<CalendarDays size={14} />}
                   labelText="Next Service Date"
                   value={serviceDetail.next_service_date}
                   onChange={(e) => updateServiceDetail('next_service_date', e.target.value)}
@@ -617,14 +662,14 @@ export default function SalesModule() {
                 />
               </div>
 
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: '14px' }}>
                 <label style={label}>Service Notes</label>
                 <div style={inputWrap}>
-                  <StickyNote size={15} style={inputIcon} />
+                  <StickyNote size={14} style={inputIcon} />
                   <textarea
                     value={serviceDetail.notes}
                     onChange={(e) => updateServiceDetail('notes', e.target.value)}
-                    placeholder="Write notes here..."
+                    placeholder="Extra service notes"
                     style={textarea}
                     rows={3}
                   />
@@ -636,23 +681,23 @@ export default function SalesModule() {
           <SectionCard
             title={
               isServicing
-                ? `${serviceType === 'MAJOR' ? 'Major' : 'Regular'} Service Rows`
+                ? 'Invoice Items'
                 : isPartsSale
-                ? 'Parts Sale Rows'
+                ? 'Parts Rows'
                 : 'Workshop Rows'
             }
             icon={
               isPartsSale ? (
-                <Package size={18} color="#ef4444" />
+                <Package size={16} color="#ef4444" />
               ) : isWorkshop ? (
-                <Wrench size={18} color="#ef4444" />
+                <Wrench size={16} color="#ef4444" />
               ) : (
-                <Receipt size={18} color="#ef4444" />
+                <Receipt size={16} color="#ef4444" />
               )
             }
             actions={
               <button type="button" style={addBtn} onClick={addRow}>
-                <Plus size={15} />
+                <Plus size={14} />
                 Add Row
               </button>
             }
@@ -661,36 +706,34 @@ export default function SalesModule() {
               {lineItems.map((row, index) => (
                 <div key={index} style={rowCard}>
                   <div style={rowTop}>
-                    <div style={rowTitle}>Row #{index + 1}</div>
+                    <div style={rowTitle}>
+                      {isServicing && index === 0 ? 'Primary Service Row' : `Row ${index + 1}`}
+                    </div>
                     <button type="button" style={removeBtn} onClick={() => removeRow(index)}>
-                      <Trash2 size={15} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
 
-                  <div style={fieldGrid3}>
+                  <div style={fieldGridCompact}>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <InputField
-                        labelText="Description"
+                        labelText="Title"
                         value={row.name}
                         onChange={(e) => updateRow(index, 'name', e.target.value)}
-                        placeholder={
-                          isPartsSale
-                            ? 'Part description'
-                            : isWorkshop
-                            ? 'Labour or parts description'
-                            : 'Service line description'
-                        }
+                        placeholder="Description"
                       />
                     </div>
 
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={label}>Optional Details</label>
+                      <label style={label}>
+                        {isServicing && index === 0 ? 'Checklist / Description' : 'Details'}
+                      </label>
                       <textarea
                         value={row.description}
                         onChange={(e) => updateRow(index, 'description', e.target.value)}
-                        placeholder="Extra detail if needed"
+                        placeholder="Extra details"
                         style={textareaPlain}
-                        rows={2}
+                        rows={isServicing && index === 0 ? 7 : 3}
                       />
                     </div>
 
@@ -717,21 +760,21 @@ export default function SalesModule() {
                     />
 
                     <div>
-                      <label style={label}>GST Included</label>
+                      <label style={label}>GST</label>
                       <select
                         value={row.gst_included ? 'yes' : 'no'}
                         onChange={(e) => updateRow(index, 'gst_included', e.target.value === 'yes')}
                         style={input}
                       >
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
+                        <option value="yes">Included</option>
+                        <option value="no">No GST</option>
                       </select>
                     </div>
+                  </div>
 
-                    <div style={lineTotalBox}>
-                      <div style={lineTotalLabel}>Line Total</div>
-                      <div style={lineTotalValue}>${row.lineTotal.toFixed(2)}</div>
-                    </div>
+                  <div style={lineTotalInline}>
+                    <span>Line Total</span>
+                    <strong>${row.lineTotal.toFixed(2)}</strong>
                   </div>
                 </div>
               ))}
@@ -740,7 +783,7 @@ export default function SalesModule() {
         </div>
 
         <div style={sideColumn}>
-          <SectionCard title="Payment Details" icon={<Receipt size={18} color="#ef4444" />}>
+          <SectionCard title="Payment & Notes" icon={<Receipt size={16} color="#ef4444" />}>
             <div style={fieldGrid1}>
               {documentType === 'INVOICE' && (
                 <InputField
@@ -822,12 +865,12 @@ export default function SalesModule() {
               onClick={handleCreateDocument}
               disabled={loading}
             >
-              <Save size={18} />
-              {loading ? 'Saving...' : documentType === 'QUOTE' ? 'Create Quote' : 'Create Tax Invoice'}
+              <Save size={16} />
+              {loading ? 'Saving...' : documentType === 'QUOTE' ? 'Create Quote' : 'Create Invoice'}
             </button>
 
             <button type="button" style={secondaryBtn} onClick={goToDashboard}>
-              <LayoutList size={16} />
+              <LayoutList size={15} />
               Open Dashboard
             </button>
 
@@ -837,19 +880,31 @@ export default function SalesModule() {
           </div>
 
           {createdInvoice && (
-            <SectionCard title="Last Created Document" icon={<FileText size={18} color="#ef4444" />}>
+            <SectionCard title="Last Created Document" icon={<FileText size={16} color="#ef4444" />}>
               <div style={previewCard}>
                 <PreviewRow label="Number" value={createdInvoice.invoice_number} />
                 <PreviewRow label="Customer" value={createdInvoice.customer_name} />
-                <PreviewRow label="Total" value={`$${parseFloat(createdInvoice.total_amount || 0).toFixed(2)}`} />
+                <PreviewRow
+                  label="Total"
+                  value={`$${parseFloat(createdInvoice.total_amount || 0).toFixed(2)}`}
+                />
                 <div style={previewActions}>
                   <button type="button" style={previewPrimaryBtn} onClick={goToInvoice}>
-                    <Eye size={15} />
+                    <Eye size={14} />
                     View
                   </button>
-                  <button type="button" style={previewSecondaryBtn} onClick={goToDashboard}>
-                    <LayoutList size={15} />
-                    Dashboard
+                  <button type="button" style={previewSecondaryBtn} onClick={openWhatsApp}>
+                    <MessageCircle size={14} />
+                    WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    style={previewSecondaryBtn}
+                    onClick={handleSendEmail}
+                    disabled={emailSending}
+                  >
+                    <Send size={14} />
+                    Email
                   </button>
                 </div>
               </div>
@@ -911,8 +966,8 @@ function PreviewRow({ label, value }) {
 }
 
 const pageWrap = {
-  padding: '24px',
-  background: '#f8fafc',
+  padding: '22px',
+  background: COLORS.bg,
   minHeight: '100vh',
 };
 
@@ -920,29 +975,30 @@ const headerBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  gap: '20px',
+  gap: '18px',
   flexWrap: 'wrap',
-  marginBottom: '24px',
+  marginBottom: '18px',
 };
 
 const headerActions = {
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
+  gap: '10px',
   flexWrap: 'wrap',
 };
 
 const mainTitle = {
   margin: 0,
-  fontSize: '32px',
-  fontWeight: 900,
-  color: '#0f172a',
+  fontSize: '26px',
+  fontWeight: 800,
+  color: COLORS.dark,
+  letterSpacing: '-0.03em',
 };
 
 const subTitle = {
-  margin: '8px 0 0',
-  color: '#64748b',
-  fontSize: '14px',
+  margin: '6px 0 0',
+  color: COLORS.muted,
+  fontSize: '13px',
 };
 
 const headerSecondaryBtn = {
@@ -951,10 +1007,11 @@ const headerSecondaryBtn = {
   gap: '8px',
   border: '1px solid #dbe3ee',
   background: '#fff',
-  color: '#0f172a',
+  color: COLORS.dark,
   borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
+  padding: '10px 13px',
+  fontWeight: 700,
+  fontSize: '13px',
   cursor: 'pointer',
 };
 
@@ -962,37 +1019,38 @@ const headerBadge = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  background: '#111827',
+  background: COLORS.dark,
   color: '#fff',
   borderRadius: '999px',
-  padding: '10px 16px',
+  padding: '9px 14px',
   fontWeight: 700,
+  fontSize: '13px',
 };
 
 const layoutGrid = {
   display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
-  gap: '24px',
+  gridTemplateColumns: 'minmax(0, 1.4fr) minmax(320px, 0.8fr)',
+  gap: '18px',
 };
 
 const mainColumn = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '24px',
+  gap: '18px',
 };
 
 const sideColumn = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '24px',
+  gap: '18px',
 };
 
 const cardStyle = {
-  background: '#ffffff',
+  background: COLORS.card,
   border: '1px solid #e2e8f0',
-  borderRadius: '24px',
-  padding: '24px',
-  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.05)',
+  borderRadius: '20px',
+  padding: '18px',
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)',
 };
 
 const sectionHeader = {
@@ -1001,87 +1059,99 @@ const sectionHeader = {
   alignItems: 'center',
   gap: '12px',
   flexWrap: 'wrap',
-  marginBottom: '18px',
+  marginBottom: '14px',
 };
 
 const sectionTitleWrap = {
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
+  gap: '8px',
 };
 
 const sectionTitle = {
   margin: 0,
-  fontSize: '18px',
-  fontWeight: 800,
-  color: '#0f172a',
+  fontSize: '15px',
+  fontWeight: 700,
+  color: COLORS.dark,
 };
 
-const choiceGrid = {
+const choiceGrid2 = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: '14px',
+  gap: '12px',
 };
 
 const choiceGrid3 = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-  gap: '14px',
+  gap: '12px',
 };
 
 const choiceBtn = {
   textAlign: 'left',
   border: '1px solid #e2e8f0',
   background: '#fff',
-  borderRadius: '18px',
-  padding: '18px',
+  borderRadius: '16px',
+  padding: '16px',
   cursor: 'pointer',
 };
 
 const choiceBtnActive = {
   border: '1px solid #ef4444',
   background: '#fff5f5',
-  boxShadow: '0 0 0 3px rgba(239,68,68,0.08)',
+  boxShadow: '0 0 0 3px rgba(239,68,68,0.06)',
 };
 
 const choiceBtnTitle = {
-  fontSize: '16px',
-  fontWeight: 900,
+  fontSize: '14px',
+  fontWeight: 700,
   color: '#111827',
 };
 
 const choiceBtnText = {
-  fontSize: '13px',
-  color: '#64748b',
-  marginTop: '6px',
+  fontSize: '12px',
+  color: COLORS.muted,
+  marginTop: '5px',
 };
 
 const label = {
   display: 'block',
-  marginBottom: '8px',
-  fontSize: '12px',
-  fontWeight: 800,
-  color: '#64748b',
-  letterSpacing: '0.04em',
+  marginBottom: '7px',
+  fontSize: '11px',
+  fontWeight: 700,
+  color: COLORS.soft,
+  letterSpacing: '0.05em',
   textTransform: 'uppercase',
 };
 
 const fieldGrid1 = {
   display: 'grid',
   gridTemplateColumns: '1fr',
-  gap: '16px',
+  gap: '14px',
 };
 
 const fieldGrid2 = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-  gap: '16px',
+  gap: '14px',
 };
 
 const fieldGrid3 = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-  gap: '16px',
+  gap: '14px',
+};
+
+const fieldGrid4 = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+  gap: '14px',
+};
+
+const fieldGridCompact = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+  gap: '14px',
 };
 
 const inputWrap = {
@@ -1090,9 +1160,9 @@ const inputWrap = {
 
 const inputIcon = {
   position: 'absolute',
-  left: '14px',
-  top: '14px',
-  color: '#94a3b8',
+  left: '12px',
+  top: '12px',
+  color: COLORS.soft,
   display: 'flex',
   alignItems: 'center',
 };
@@ -1100,40 +1170,40 @@ const inputIcon = {
 const sharedInputStyle = {
   width: '100%',
   border: '1px solid #dbe3ee',
-  borderRadius: '14px',
-  fontSize: '14px',
+  borderRadius: '12px',
+  fontSize: '13px',
   background: '#fff',
-  color: '#0f172a',
+  color: COLORS.dark,
   outline: 'none',
   boxSizing: 'border-box',
 };
 
 const input = {
   ...sharedInputStyle,
-  padding: '13px 14px',
+  padding: '11px 12px',
 };
 
 const inputBare = {
   ...sharedInputStyle,
-  padding: '13px 14px',
+  padding: '11px 12px',
 };
 
 const inputWithIcon = {
   ...sharedInputStyle,
-  padding: '13px 14px 13px 42px',
+  padding: '11px 12px 11px 38px',
 };
 
 const textarea = {
   ...sharedInputStyle,
-  padding: '13px 14px 13px 42px',
-  minHeight: '96px',
+  padding: '11px 12px 11px 38px',
+  minHeight: '90px',
   resize: 'vertical',
   fontFamily: 'inherit',
 };
 
 const textareaPlain = {
   ...sharedInputStyle,
-  padding: '13px 14px',
+  padding: '11px 12px',
   minHeight: '84px',
   resize: 'vertical',
   fontFamily: 'inherit',
@@ -1144,24 +1214,25 @@ const addBtn = {
   alignItems: 'center',
   gap: '8px',
   border: 'none',
-  background: '#ef4444',
+  background: COLORS.primary,
   color: '#fff',
-  borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
+  borderRadius: '10px',
+  padding: '9px 12px',
+  fontWeight: 700,
+  fontSize: '12px',
   cursor: 'pointer',
 };
 
 const rowsWrap = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '18px',
+  gap: '14px',
 };
 
 const rowCard = {
   border: '1px solid #e2e8f0',
-  borderRadius: '20px',
-  padding: '18px',
+  borderRadius: '16px',
+  padding: '14px',
   background: '#fcfcfd',
 };
 
@@ -1170,18 +1241,18 @@ const rowTop = {
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: '12px',
-  marginBottom: '16px',
+  marginBottom: '12px',
 };
 
 const rowTitle = {
-  fontSize: '14px',
-  fontWeight: 900,
+  fontSize: '13px',
+  fontWeight: 700,
   color: '#111827',
 };
 
 const removeBtn = {
-  width: '38px',
-  height: '38px',
+  width: '34px',
+  height: '34px',
   borderRadius: '10px',
   border: '1px solid #fecaca',
   background: '#fff5f5',
@@ -1192,77 +1263,65 @@ const removeBtn = {
   cursor: 'pointer',
 };
 
-const lineTotalBox = {
-  borderRadius: '16px',
-  background: '#111827',
-  color: '#fff',
-  padding: '14px',
+const lineTotalInline = {
+  marginTop: '12px',
+  borderTop: `1px solid ${COLORS.borderSoft}`,
+  paddingTop: '10px',
   display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-};
-
-const lineTotalLabel = {
-  fontSize: '11px',
-  color: '#94a3b8',
-  textTransform: 'uppercase',
-  fontWeight: 700,
-};
-
-const lineTotalValue = {
-  fontSize: '24px',
-  fontWeight: 900,
-  marginTop: '6px',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  fontSize: '13px',
+  color: COLORS.muted,
 };
 
 const summaryCard = {
-  background: '#0f172a',
+  background: COLORS.dark,
   color: '#fff',
-  borderRadius: '24px',
-  padding: '24px',
-  boxShadow: '0 15px 35px rgba(15, 23, 42, 0.2)',
+  borderRadius: '20px',
+  padding: '18px',
+  boxShadow: '0 14px 30px rgba(15, 23, 42, 0.16)',
 };
 
 const summaryDocType = {
-  fontSize: '12px',
+  fontSize: '11px',
   letterSpacing: '0.08em',
   color: '#fca5a5',
-  fontWeight: 900,
-  marginBottom: '8px',
+  fontWeight: 800,
+  marginBottom: '6px',
 };
 
 const summaryJobType = {
-  fontSize: '18px',
-  fontWeight: 900,
-  marginBottom: '18px',
+  fontSize: '16px',
+  fontWeight: 800,
+  marginBottom: '14px',
 };
 
 const summaryRow = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '10px 0',
+  padding: '9px 0',
   borderBottom: '1px solid rgba(148, 163, 184, 0.16)',
-  fontSize: '14px',
+  fontSize: '13px',
 };
 
 const summaryRowTotal = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '16px 0 10px',
-  fontSize: '18px',
-  fontWeight: 900,
+  padding: '14px 0 8px',
+  fontSize: '17px',
+  fontWeight: 800,
 };
 
 const summaryRowBalance = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '8px 0 18px',
-  fontSize: '16px',
+  padding: '6px 0 14px',
+  fontSize: '15px',
   color: '#fca5a5',
-  fontWeight: 900,
+  fontWeight: 800,
 };
 
 const primaryBtn = {
@@ -1270,16 +1329,16 @@ const primaryBtn = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  gap: '10px',
-  padding: '16px',
-  background: '#ef4444',
+  gap: '8px',
+  padding: '14px',
+  background: COLORS.primary,
   color: '#fff',
   border: 'none',
-  borderRadius: '14px',
-  fontWeight: 900,
-  fontSize: '15px',
+  borderRadius: '12px',
+  fontWeight: 800,
+  fontSize: '14px',
   cursor: 'pointer',
-  marginTop: '8px',
+  marginTop: '6px',
 };
 
 const secondaryBtn = {
@@ -1287,52 +1346,52 @@ const secondaryBtn = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  gap: '10px',
-  padding: '14px',
+  gap: '8px',
+  padding: '12px',
   marginTop: '10px',
   background: '#fff',
-  color: '#0f172a',
+  color: COLORS.dark,
   border: '1px solid rgba(203, 213, 225, 0.25)',
-  borderRadius: '14px',
-  fontWeight: 800,
+  borderRadius: '12px',
+  fontWeight: 700,
   cursor: 'pointer',
 };
 
 const ghostBtn = {
   width: '100%',
-  padding: '14px',
+  padding: '12px',
   marginTop: '10px',
   background: 'transparent',
   color: '#cbd5e1',
   border: '1px solid rgba(203, 213, 225, 0.25)',
-  borderRadius: '14px',
-  fontWeight: 800,
+  borderRadius: '12px',
+  fontWeight: 700,
   cursor: 'pointer',
 };
 
 const previewCard = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '12px',
+  gap: '10px',
   border: '1px solid #e2e8f0',
-  borderRadius: '18px',
-  padding: '16px',
+  borderRadius: '14px',
+  padding: '14px',
   background: '#f8fafc',
 };
 
 const previewRow = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: '16px',
-  fontSize: '14px',
+  gap: '14px',
+  fontSize: '13px',
   color: '#334155',
 };
 
 const previewActions = {
   display: 'flex',
-  gap: '10px',
+  gap: '8px',
   flexWrap: 'wrap',
-  marginTop: '8px',
+  marginTop: '6px',
 };
 
 const previewPrimaryBtn = {
@@ -1340,12 +1399,13 @@ const previewPrimaryBtn = {
   alignItems: 'center',
   gap: '8px',
   border: 'none',
-  background: '#ef4444',
+  background: COLORS.primary,
   color: '#fff',
-  borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
+  borderRadius: '10px',
+  padding: '10px 12px',
+  fontWeight: 700,
   cursor: 'pointer',
+  fontSize: '12px',
 };
 
 const previewSecondaryBtn = {
@@ -1354,28 +1414,29 @@ const previewSecondaryBtn = {
   gap: '8px',
   border: '1px solid #dbe3ee',
   background: '#fff',
-  color: '#0f172a',
-  borderRadius: '12px',
-  padding: '11px 14px',
-  fontWeight: 800,
+  color: COLORS.dark,
+  borderRadius: '10px',
+  padding: '10px 12px',
+  fontWeight: 700,
   cursor: 'pointer',
+  fontSize: '12px',
 };
 
 const successBox = {
-  marginBottom: '18px',
-  background: '#ecfdf5',
+  marginBottom: '16px',
+  background: COLORS.successBg,
   border: '1px solid #bbf7d0',
-  color: '#166534',
-  padding: '14px 16px',
+  color: COLORS.success,
+  padding: '12px 14px',
   borderRadius: '14px',
   fontWeight: 700,
 };
 
 const successActions = {
   display: 'flex',
-  gap: '10px',
+  gap: '8px',
   flexWrap: 'wrap',
-  marginTop: '12px',
+  marginTop: '10px',
 };
 
 const successActionBtn = {
@@ -1386,9 +1447,10 @@ const successActionBtn = {
   background: '#16a34a',
   color: '#fff',
   borderRadius: '10px',
-  padding: '10px 12px',
-  fontWeight: 800,
+  padding: '9px 11px',
+  fontWeight: 700,
   cursor: 'pointer',
+  fontSize: '12px',
 };
 
 const successActionBtnAlt = {
@@ -1399,17 +1461,18 @@ const successActionBtnAlt = {
   background: '#fff',
   color: '#166534',
   borderRadius: '10px',
-  padding: '10px 12px',
-  fontWeight: 800,
+  padding: '9px 11px',
+  fontWeight: 700,
   cursor: 'pointer',
+  fontSize: '12px',
 };
 
 const errorBox = {
-  marginBottom: '18px',
-  background: '#fff1f2',
+  marginBottom: '16px',
+  background: COLORS.dangerBg,
   border: '1px solid #fecdd3',
-  color: '#be123c',
-  padding: '14px 16px',
+  color: COLORS.danger,
+  padding: '12px 14px',
   borderRadius: '14px',
   fontWeight: 700,
 };
