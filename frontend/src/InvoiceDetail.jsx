@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
+const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 export default function InvoiceDetail() {
   const invoiceId = useMemo(() => {
@@ -131,21 +132,39 @@ export default function InvoiceDetail() {
       ? `61${phone.slice(1)}`
       : phone;
 
-    const text = encodeURIComponent(
-      `Hi ${invoice?.customer_name || ''}, your ${documentLabel.toLowerCase()} ${invoice?.invoice_number || ''} from Yaris Autocare is ready.`
-    );
+    const invoiceLink = `${FRONTEND_URL}/sales/${invoiceId}`;
+    const message = `Hi ${invoice?.customer_name || ''},
 
-    window.open(`https://wa.me/${fullNumber}?text=${text}`, '_blank');
+Your ${documentLabel.toLowerCase()} ${invoice?.invoice_number || ''} from Yaris Autocare is ready.
+
+View here:
+${invoiceLink}
+
+Thank you,
+Yaris Autocare`;
+
+    window.open(`https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleSendEmail = async () => {
+    if (!invoice?.customer_email?.trim()) {
+      alert('Customer email is missing.');
+      return;
+    }
+
     try {
       setEmailSending(true);
-      await axios.post(`${API_URL}/api/invoices/${invoiceId}/send-email/`);
+      await axios.post(`${API_URL}/api/invoices/${invoiceId}/send-email/`, {
+        email: invoice.customer_email.trim(),
+      });
       alert('Invoice sent to customer email.');
     } catch (error) {
-      console.error(error);
-      alert('Failed to send email. Backend endpoint is required.');
+      console.error(error?.response?.data || error);
+      alert(
+        error?.response?.data?.detail ||
+          error?.response?.data?.message ||
+          'Failed to send email. Backend endpoint is required.'
+      );
     } finally {
       setEmailSending(false);
     }
@@ -210,192 +229,212 @@ export default function InvoiceDetail() {
       </div>
 
       <div style={documentWrap} className="print-area">
-        <div style={headerWrap}>
-          <div style={logoArea}>
-            <img
-              src="/image.png"
-              alt="Yaris Autocare"
-              style={logoImage}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            <div style={brandFallback}>
-              YARIS <span style={{ color: '#d62828' }}>AUTOCARE</span>
-            </div>
-            <div style={operatedText}>Operated by Pyramid Enterprises AU Pty Ltd</div>
-            <div style={serviceLine}>Car Rental • Mechanical Services • Auto Parts</div>
-          </div>
+        <table className="print-shell" style={printShellTable}>
+          <thead>
+            <tr>
+              <td style={printShellCell}>
+                <PrintHeader />
+              </td>
+            </tr>
+          </thead>
 
-          <div style={contactStrip}>
-            <div style={contactCol}>
-              <div style={contactLabel}>Address:</div>
-              <div>16 Legana Park Drive, Legana TAS 7277</div>
-            </div>
-            <div style={contactColMiddle}>
-              <div style={contactLabel}>Phone:</div>
-              <div>0449 828 749</div>
-            </div>
-            <div style={contactColRight}>
-              <div>www.yarisautocare.com.au</div>
-            </div>
-          </div>
-
-          <div style={abnStrip}>
-            <span>ABN: 91 650 944 157</span>
-            <span>|</span>
-            <span>Accreditation No: 419296067</span>
-            <span>|</span>
-            <span>LMVT Licence: 6130</span>
-          </div>
-        </div>
-
-        <div style={documentMetaRow}>
-          <div style={docTypeTitle}>{documentLabel}</div>
-          <div style={metaBlock}>
-            <div><strong>Document No:</strong> {invoice.invoice_number}</div>
-            <div><strong>Date:</strong> {formatDate(invoice.created_at)}</div>
-            <div><strong>Time:</strong> {formatTime(invoice.created_at)}</div>
-            <div><strong>Type:</strong> {formatInvoiceType(invoice.invoice_type)}</div>
-          </div>
-        </div>
-
-        <div style={detailsGrid}>
-          <div>
-            <SectionTitle title="Customer Details" />
-            <SimpleRow label="Customer" value={invoice.customer_name || '-'} />
-            <SimpleRow label="Phone" value={invoice.customer_phone || '-'} />
-            <SimpleRow label="Email" value={invoice.customer_email || '-'} />
-            <SimpleRow label="Address" value={invoice.customer_address || '-'} multiline />
-          </div>
-
-          {showVehicleSection && (
-            <div>
-              <SectionTitle title="Vehicle Details" />
-              <SimpleRow label="Rego" value={invoice.rego || '-'} />
-              <SimpleRow label="Make" value={invoice.make || '-'} />
-              <SimpleRow label="Model" value={invoice.model || '-'} />
-              <SimpleRow label="VIN" value={invoice.vin || '-'} />
-              <SimpleRow
-                label="Odometer"
-                value={invoice.odometer ? `${invoice.odometer} km` : '-'}
-              />
-            </div>
-          )}
-        </div>
-
-        {invoice.invoice_type === 'SERVICING' && (
-          <div style={sectionBlock}>
-            <SectionTitle title={`Service Details${serviceTemplateType ? ` - ${serviceTemplateType}` : ''}`} />
-            <div style={serviceGrid}>
-              <SimpleStat
-                label="Service At KM"
-                value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'}
-              />
-              <SimpleStat
-                label="Next Service At KM"
-                value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'}
-              />
-              <SimpleStat
-                label="Next Service Date"
-                value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
-              />
-            </div>
-
-            {serviceChecklistText && (
-              <div style={{ marginTop: '14px' }}>
-                <SectionTitle title="Service Checklist" small />
-                <div style={checklistBox}>
-                  {serviceChecklistText}
+          <tbody>
+            <tr>
+              <td style={printShellCell}>
+                <div style={documentMetaRow}>
+                  <div style={docTypeTitle}>{documentLabel}</div>
+                  <div style={metaBlock}>
+                    <div><strong>Document No:</strong> {invoice.invoice_number}</div>
+                    <div><strong>Date:</strong> {formatDate(invoice.created_at)}</div>
+                    <div><strong>Time:</strong> {formatTime(invoice.created_at)}</div>
+                    <div><strong>Type:</strong> {formatInvoiceType(invoice.invoice_type)}</div>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {serviceDetail?.service_notes && (
-              <div style={{ marginTop: '12px' }}>
-                <SectionTitle title="Service Notes" small />
-                <div style={notesBox}>{serviceDetail.service_notes}</div>
-              </div>
-            )}
-          </div>
-        )}
+                <div style={detailsGrid}>
+                  <div>
+                    <SectionTitle title="Customer Details" />
+                    <SimpleRow label="Customer" value={invoice.customer_name || '-'} />
+                    <SimpleRow label="Phone" value={invoice.customer_phone || '-'} />
+                    <SimpleRow label="Email" value={invoice.customer_email || '-'} />
+                    <SimpleRow label="Address" value={invoice.customer_address || '-'} multiline />
+                  </div>
 
-        {(invoice.invoice_type !== 'SERVICING' || extraItems.length > 0) && (
-          <div style={sectionBlock}>
-            <SectionTitle
-              title={
-                invoice.invoice_type === 'SERVICING'
-                  ? 'Extra Items'
-                  : invoice.invoice_type === 'USED_PART'
-                  ? 'Parts Details'
-                  : 'Invoice Details'
-              }
-            />
+                  {showVehicleSection && (
+                    <div>
+                      <SectionTitle title="Vehicle Details" />
+                      <SimpleRow label="Rego" value={invoice.rego || '-'} />
+                      <SimpleRow label="Make" value={invoice.make || '-'} />
+                      <SimpleRow label="Model" value={invoice.model || '-'} />
+                      <SimpleRow label="VIN" value={invoice.vin || '-'} />
+                      <SimpleRow
+                        label="Odometer"
+                        value={invoice.odometer ? `${invoice.odometer} km` : '-'}
+                      />
+                    </div>
+                  )}
+                </div>
 
-            <table style={table}>
-              <thead>
-                <tr>
-                  <th style={thNo}>#</th>
-                  <th style={thDesc}>Description</th>
-                  <th style={th}>Type</th>
-                  <th style={th}>Qty</th>
-                  <th style={th}>Amount</th>
-                  <th style={th}>Discount</th>
-                  <th style={th}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(invoice.invoice_type === 'SERVICING' ? extraItems : items).length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={emptyTd}>No extra items.</td>
-                  </tr>
-                ) : (
-                  (invoice.invoice_type === 'SERVICING' ? extraItems : items).map((item, index) => (
-                    <tr key={item.id || index}>
-                      <td style={tdNo}>{index + 1}</td>
-                      <td style={tdDesc}>
-                        <div style={descMain}>{item.name || '-'}</div>
-                        {item.description ? <div style={descSub}>{item.description}</div> : null}
-                      </td>
-                      <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
-                      <td style={td}>{formatQty(item.quantity)}</td>
-                      <td style={td}>${formatMoney(item.unit_price)}</td>
-                      <td style={td}>${formatMoney(item.discount)}</td>
-                      <td style={tdStrong}>${formatMoney(item.line_total)}</td>
-                    </tr>
-                  ))
+                {invoice.invoice_type === 'SERVICING' && (
+                  <div style={sectionBlock}>
+                    <SectionTitle
+                      title={`Service Details${serviceTemplateType ? ` - ${serviceTemplateType}` : ''}`}
+                    />
+                    <div style={serviceGrid}>
+                      <SimpleStat
+                        label="Service At KM"
+                        value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'}
+                      />
+                      <SimpleStat
+                        label="Next Service At KM"
+                        value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'}
+                      />
+                      <SimpleStat
+                        label="Next Service Date"
+                        value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
+                      />
+                    </div>
+
+                    {serviceChecklistText && (
+                      <div style={{ marginTop: '14px' }}>
+                        <SectionTitle title="Service Checklist" small />
+                        <div style={checklistBox}>{serviceChecklistText}</div>
+                      </div>
+                    )}
+
+                    {serviceDetail?.service_notes && (
+                      <div style={{ marginTop: '12px' }}>
+                        <SectionTitle title="Service Notes" small />
+                        <div style={notesBox}>{serviceDetail.service_notes}</div>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
-        )}
 
-        {filteredNotes && (
-          <div style={sectionBlock}>
-            <SectionTitle title="Notes" />
-            <div style={notesBox}>{filteredNotes}</div>
-          </div>
-        )}
+                {(invoice.invoice_type !== 'SERVICING' || extraItems.length > 0) && (
+                  <div style={sectionBlock}>
+                    <SectionTitle
+                      title={
+                        invoice.invoice_type === 'SERVICING'
+                          ? 'Extra Items'
+                          : invoice.invoice_type === 'USED_PART'
+                          ? 'Parts Details'
+                          : 'Invoice Details'
+                      }
+                    />
 
-        <div style={footerGrid}>
-          <div style={paymentBox}>
-            <div style={footerHeading}>Payment Details</div>
-            <div>Bank: ANZ Pty. Ltd.</div>
-            <div>Account Name: Pyramid Enterprises AU Pty Ltd</div>
-            <div>BSB: 013270</div>
-            <div>Account No: 430088057</div>
-            <div>Please email the remittance to info@yarisautocare.com.au</div>
-          </div>
+                    <table style={table}>
+                      <thead>
+                        <tr>
+                          <th style={thNo}>#</th>
+                          <th style={thDesc}>Description</th>
+                          <th style={th}>Type</th>
+                          <th style={th}>Qty</th>
+                          <th style={th}>Amount</th>
+                          <th style={th}>Discount</th>
+                          <th style={th}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(invoice.invoice_type === 'SERVICING' ? extraItems : items).length === 0 ? (
+                          <tr>
+                            <td colSpan={7} style={emptyTd}>No extra items.</td>
+                          </tr>
+                        ) : (
+                          (invoice.invoice_type === 'SERVICING' ? extraItems : items).map((item, index) => (
+                            <tr key={item.id || index}>
+                              <td style={tdNo}>{index + 1}</td>
+                              <td style={tdDesc}>
+                                <div style={descMain}>{item.name || '-'}</div>
+                                {item.description ? <div style={descSub}>{item.description}</div> : null}
+                              </td>
+                              <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
+                              <td style={td}>{formatQty(item.quantity)}</td>
+                              <td style={td}>${formatMoney(item.unit_price)}</td>
+                              <td style={td}>${formatMoney(item.discount)}</td>
+                              <td style={tdStrong}>${formatMoney(item.line_total)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-          <div style={totalsBox}>
-            <TotalRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
-            <TotalRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
-            <TotalRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
-            <TotalRow label="Payment Method" value={invoice.payment_method || '-'} />
-            <TotalRowBig label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
-            <TotalRowBig label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} danger />
-          </div>
+                {filteredNotes && (
+                  <div style={sectionBlock}>
+                    <SectionTitle title="Notes" />
+                    <div style={notesBox}>{filteredNotes}</div>
+                  </div>
+                )}
+
+                <div style={footerGrid}>
+                  <div style={paymentBox}>
+                    <div style={footerHeading}>Payment Details</div>
+                    <div>Bank: ANZ Pty. Ltd.</div>
+                    <div>Account Name: Pyramid Enterprises AU Pty Ltd</div>
+                    <div>BSB: 013270</div>
+                    <div>Account No: 430088057</div>
+                    <div>Please email the remittance to info@yarisautocare.com.au</div>
+                  </div>
+
+                  <div style={totalsBox}>
+                    <TotalRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
+                    <TotalRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
+                    <TotalRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
+                    <TotalRow label="Payment Method" value={invoice.payment_method || '-'} />
+                    <TotalRowBig label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
+                    <TotalRowBig label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} danger />
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PrintHeader() {
+  return (
+    <div style={headerWrap}>
+      <div style={logoArea}>
+        <img
+          src="/image.png"
+          alt="Yaris Autocare"
+          style={logoImage}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+        <div style={brandFallback}>
+          YARIS <span style={{ color: '#d62828' }}>AUTOCARE</span>
         </div>
+        <div style={operatedText}>Operated by Pyramid Enterprises AU Pty Ltd</div>
+        <div style={serviceLine}>Car Rental • Mechanical Services • Auto Parts</div>
+      </div>
+
+      <div style={contactStrip}>
+        <div style={contactCol}>
+          <div style={contactLabel}>Address:</div>
+          <div>16 Legana Park Drive, Legana TAS 7277</div>
+        </div>
+        <div style={contactColMiddle}>
+          <div style={contactLabel}>Phone:</div>
+          <div>0449 828 749</div>
+        </div>
+        <div style={contactColRight}>
+          <div>www.yarisautocare.com.au</div>
+        </div>
+      </div>
+
+      <div style={abnStrip}>
+        <span>ABN: 91 650 944 157</span>
+        <span>|</span>
+        <span>Accreditation No: 419296067</span>
+        <span>|</span>
+        <span>LMVT Licence: 6130</span>
       </div>
     </div>
   );
@@ -558,6 +597,16 @@ const documentWrap = {
   boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
 };
 
+const printShellTable = {
+  width: '100%',
+  borderCollapse: 'collapse',
+};
+
+const printShellCell = {
+  padding: 0,
+  verticalAlign: 'top',
+};
+
 const headerWrap = {
   textAlign: 'center',
   marginBottom: '18px',
@@ -670,6 +719,8 @@ const detailsGrid = {
 
 const sectionBlock = {
   marginBottom: '18px',
+  pageBreakInside: 'avoid',
+  breakInside: 'avoid',
 };
 
 const sectionTitleStyle = {
@@ -939,6 +990,32 @@ const printStyles = `
       box-shadow: none !important;
       border: none !important;
       background: #fff !important;
+    }
+
+    .print-shell {
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+
+    .print-shell thead {
+      display: table-header-group !important;
+    }
+
+    .print-shell tfoot {
+      display: table-footer-group !important;
+    }
+
+    table {
+      page-break-inside: auto;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+
+    td, th {
+      page-break-inside: avoid;
     }
 
     @page {
