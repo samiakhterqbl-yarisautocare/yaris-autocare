@@ -599,10 +599,21 @@ class InvoiceSendEmailView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        try:
-            send_invoice_email(invoice)
+        email = request.data.get("email") or invoice.customer_email
+
+        if not email:
             return Response(
-                {"detail": "Invoice email sent successfully."},
+                {"detail": "Customer email is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            send_invoice_email(invoice, recipient_email=email)
+            return Response(
+                {
+                    "detail": "Invoice email sent successfully.",
+                    "sent_to": email,
+                },
                 status=status.HTTP_200_OK
             )
         except Exception as exc:
