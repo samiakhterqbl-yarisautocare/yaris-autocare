@@ -12,7 +12,9 @@ import {
   Tag,
   Layers,
   Package,
-  Calendar
+  Calendar,
+  Trash2,
+  Boxes,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -27,20 +29,30 @@ const resolveImageUrl = (imageUrl) => {
 
 const COLORS = {
   primary: '#ef4444',
-  primarySoft: '#fef2f2',
   dark: '#0f172a',
+  text: '#1e293b',
+  muted: '#64748b',
+  soft: '#94a3b8',
   border: '#e2e8f0',
+  borderSoft: '#eef2f7',
   bg: '#f8fafc',
-  slate: '#64748b',
-  lightText: '#94a3b8'
+  white: '#ffffff',
+  success: '#166534',
+  successBg: '#dcfce7',
+  warning: '#92400e',
+  warningBg: '#fef3c7',
+  danger: '#991b1b',
+  dangerBg: '#fee2e2',
 };
 
 const AftermarketDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -71,10 +83,39 @@ const AftermarketDetailPage = () => {
     const qty = Number(product.quantity) || 0;
     const min = Number(product.min_stock_level) || 0;
 
-    if (qty <= 0) return { label: 'Out of Stock', color: '#991b1b', bg: '#fee2e2' };
-    if (qty <= min) return { label: 'Low Stock', color: '#92400e', bg: '#fef3c7' };
-    return { label: product.status || 'Available', color: '#166534', bg: '#dcfce7' };
+    if (qty <= 0) {
+      return { label: 'Out of Stock', color: COLORS.danger, bg: COLORS.dangerBg };
+    }
+    if (qty <= min) {
+      return { label: 'Low Stock', color: COLORS.warning, bg: COLORS.warningBg };
+    }
+    return {
+      label: product.status || 'Available',
+      color: COLORS.success,
+      bg: COLORS.successBg,
+    };
   }, [product]);
+
+  const handleDelete = async () => {
+    if (!product?.id) return;
+
+    const confirmed = window.confirm(
+      `Delete this product?\n\n${product.part_name || 'Unnamed Product'}`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      await axios.delete(`${API_URL}/api/aftermarket/${product.id}/`);
+      alert('Product deleted successfully.');
+      navigate('/aftermarket');
+    } catch (error) {
+      console.error('Failed to delete product:', error?.response?.data || error);
+      alert('Delete failed. Check backend delete endpoint/permissions.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return <div style={loadingStyle}>Loading product details...</div>;
@@ -86,175 +127,245 @@ const AftermarketDetailPage = () => {
 
   return (
     <div style={pageStyle}>
-      <div style={headerRow}>
+      <div style={topBar}>
         <button onClick={() => navigate('/aftermarket')} style={backBtn}>
-          <ArrowLeft size={18} />
-          Back to Inventory
+          <ArrowLeft size={15} />
+          BACK TO INVENTORY
         </button>
 
-        <button onClick={() => navigate(`/aftermarket/edit/${id}`)} style={editBtn}>
-          <Edit2 size={16} />
-          Edit Product
-        </button>
+        <div style={topActions}>
+          <button onClick={() => navigate(`/aftermarket/edit/${id}`)} style={editBtn}>
+            <Edit2 size={14} />
+            Edit
+          </button>
+
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              ...deleteBtn,
+              opacity: deleting ? 0.7 : 1,
+              cursor: deleting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <Trash2 size={14} />
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+
+      <div style={heroCard}>
+        <div style={heroLeft}>
+          <div style={eyebrow}>AFTERMARKET PRODUCT</div>
+          <div style={titleRow}>
+            <h1 style={productTitle}>{product.part_name}</h1>
+            <div style={priceTag}>${Number(product.sale_price || 0).toFixed(2)}</div>
+          </div>
+
+          <div style={metaRow}>
+            <span style={metaMono}>SKU: {product.sku || '-'}</span>
+            <span style={dot}>•</span>
+            <span style={metaMono}>LABEL: {product.label_id || '-'}</span>
+          </div>
+
+          <div style={chipRow}>
+            <StatusChip
+              label={stockState?.label || '-'}
+              bg={stockState?.bg}
+              color={stockState?.color}
+            />
+            <MiniChip icon={<Boxes size={13} />} text={`${product.quantity ?? 0} in stock`} />
+            <MiniChip icon={<Layers size={13} />} text={product.category || 'No category'} />
+            <MiniChip icon={<MapPin size={13} />} text={product.location || 'No location'} />
+          </div>
+        </div>
+      </div>
+
+      <div style={statsGrid}>
+        <StatCard label="Supplier" value={product.supplier || '-'} icon={<Truck size={14} />} />
+        <StatCard
+          label="Cost Price"
+          value={`$${Number(product.cost_price || 0).toFixed(2)}`}
+          icon={<DollarSign size={14} />}
+        />
+        <StatCard
+          label="Min Stock"
+          value={String(product.min_stock_level ?? 0)}
+          icon={<AlertCircle size={14} />}
+        />
+        <StatCard
+          label="Created"
+          value={product.created_at ? new Date(product.created_at).toLocaleDateString() : '-'}
+          icon={<Calendar size={14} />}
+        />
       </div>
 
       <div style={mainGrid}>
-        <div>
-          <div style={mainImageCard}>
-            {selectedImage?.image ? (
-              <img
-                src={resolveImageUrl(selectedImage.image)}
-                alt={product.part_name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div style={{ color: '#cbd5e1', textAlign: 'center' }}>
-                <Package size={64} />
-                <p style={{ fontWeight: '700', marginTop: '10px' }}>No product image</p>
+        <div style={leftCol}>
+          <SectionCard title="Photo Gallery" icon={<Package size={15} />}>
+            <div style={mainImageCard}>
+              {selectedImage?.image ? (
+                <img
+                  src={resolveImageUrl(selectedImage.image)}
+                  alt={product.part_name}
+                  style={mainImageStyle}
+                />
+              ) : (
+                <div style={emptyMedia}>
+                  <Package size={42} />
+                  <div style={{ marginTop: '10px' }}>No product image</div>
+                </div>
+              )}
+            </div>
+
+            {Array.isArray(product.images) && product.images.length > 0 && (
+              <div style={thumbStrip}>
+                {product.images.map((img) => (
+                  <button
+                    key={img.id}
+                    onClick={() => setSelectedImage(img)}
+                    style={{
+                      ...thumbBtn,
+                      border:
+                        selectedImage?.id === img.id
+                          ? `2px solid ${COLORS.primary}`
+                          : `1px solid ${COLORS.border}`,
+                    }}
+                  >
+                    <img
+                      src={resolveImageUrl(img.image)}
+                      alt="thumb"
+                      style={thumbImage}
+                    />
+                  </button>
+                ))}
               </div>
             )}
-          </div>
+          </SectionCard>
 
-          {Array.isArray(product.images) && product.images.length > 0 && (
-            <div style={thumbStrip}>
-              {product.images.map((img) => (
-                <button
-                  key={img.id}
-                  onClick={() => setSelectedImage(img)}
-                  style={{
-                    ...thumbBtn,
-                    border:
-                      selectedImage?.id === img.id
-                        ? `2px solid ${COLORS.primary}`
-                        : `1px solid ${COLORS.border}`
-                  }}
-                >
-                  <img
-                    src={resolveImageUrl(img.image)}
-                    alt="thumb"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div style={cardStyle}>
-            <h3 style={sectionTitle}>
-              <ClipboardList size={20} color={COLORS.primary} />
-              Product Description
-            </h3>
-            <p style={descriptionStyle}>
+          <SectionCard title="Description" icon={<ClipboardList size={15} />}>
+            <div style={descriptionStyle}>
               {product.description || 'No description available for this product.'}
-            </p>
-          </div>
+            </div>
+          </SectionCard>
         </div>
 
-        <div>
-          <div style={{ marginBottom: '24px' }}>
-            <h1 style={productTitle}>{product.part_name}</h1>
-            <div style={chipRow}>
-              <span style={chip}>SKU: {product.sku || '-'}</span>
-              <span style={chip}>Label ID: {product.label_id || '-'}</span>
-            </div>
-          </div>
+        <div style={rightCol}>
+          <SectionCard title="Product Information" icon={<Tag size={15} />}>
+            <InfoRow label="Category" value={product.category || '-'} />
+            <InfoRow label="Supplier" value={product.supplier || '-'} />
+            <InfoRow label="Location" value={product.location || '-'} />
+            <InfoRow label="Status" value={product.status || '-'} />
+            <InfoRow label="Quantity" value={String(product.quantity ?? 0)} />
+            <InfoRow label="Minimum Stock" value={String(product.min_stock_level ?? 0)} />
+          </SectionCard>
 
-          <div style={infoGrid}>
-            <DetailBox label="Category" value={product.category || '-'} icon={<Layers size={16} />} />
-            <DetailBox label="Supplier" value={product.supplier || '-'} icon={<Truck size={16} />} />
-            <DetailBox label="Location" value={product.location || '-'} icon={<MapPin size={16} />} />
-            <DetailBox label="Status" value={product.status || '-'} icon={<Tag size={16} />} />
-            <DetailBox
+          <SectionCard title="Pricing" icon={<DollarSign size={15} />}>
+            <InfoRow
               label="Cost Price"
               value={`$${Number(product.cost_price || 0).toFixed(2)}`}
-              icon={<DollarSign size={16} />}
             />
-            <DetailBox
+            <InfoRow
               label="Sale Price"
               value={`$${Number(product.sale_price || 0).toFixed(2)}`}
-              icon={<DollarSign size={16} />}
             />
-            <DetailBox
+          </SectionCard>
+
+          <SectionCard title="System Info" icon={<Calendar size={15} />}>
+            <InfoRow label="SKU" value={product.sku || '-'} mono />
+            <InfoRow label="Label ID" value={product.label_id || '-'} mono />
+            <InfoRow
               label="Created"
-              value={product.created_at ? new Date(product.created_at).toLocaleDateString() : '-'}
-              icon={<Calendar size={16} />}
+              value={product.created_at ? new Date(product.created_at).toLocaleString() : '-'}
             />
-            <DetailBox
-              label="Minimum Stock"
-              value={String(product.min_stock_level ?? 0)}
-              icon={<AlertCircle size={16} />}
+            <InfoRow
+              label="Updated"
+              value={product.updated_at ? new Date(product.updated_at).toLocaleString() : '-'}
             />
-          </div>
-
-          <div style={stockCard}>
-            <h4 style={stockLabel}>Current Stock</h4>
-            <div style={stockValue}>{product.quantity ?? 0} Units</div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: stockState.bg,
-                color: stockState.color,
-                borderRadius: '999px',
-                padding: '8px 12px',
-                fontWeight: '800',
-                fontSize: '13px'
-              }}
-            >
-              <AlertCircle size={14} />
-              {stockState.label}
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-            <h3 style={sectionTitle}>Inventory Notes</h3>
-            <div style={noteRow}>
-              <div style={noteLabel}>Reorder Alert Level</div>
-              <div style={noteValue}>{product.min_stock_level ?? 0}</div>
-            </div>
-            <div style={noteRow}>
-              <div style={noteLabel}>Available Quantity</div>
-              <div style={noteValue}>{product.quantity ?? 0}</div>
-            </div>
-            <div style={noteRow}>
-              <div style={noteLabel}>Category</div>
-              <div style={noteValue}>{product.category || '-'}</div>
-            </div>
-            <div style={noteRow}>
-              <div style={noteLabel}>Supplier</div>
-              <div style={noteValue}>{product.supplier || '-'}</div>
-            </div>
-          </div>
+          </SectionCard>
         </div>
       </div>
     </div>
   );
 };
 
-const DetailBox = ({ label, value, icon }) => (
-  <div style={detailBox}>
-    <div style={detailLabel}>{label}</div>
-    <div style={detailValue}>
-      {React.cloneElement(icon, { color: COLORS.primary, size: 16 })}
-      {value}
+const SectionCard = ({ title, icon, children }) => (
+  <div style={cardStyle}>
+    <div style={sectionHeader}>
+      <div style={sectionTitle}>
+        {icon}
+        <span>{title}</span>
+      </div>
+    </div>
+    <div style={sectionBody}>{children}</div>
+  </div>
+);
+
+const InfoRow = ({ label, value, mono = false }) => (
+  <div style={infoRow}>
+    <div style={infoLabel}>{label}</div>
+    <div
+      style={{
+        ...infoValue,
+        fontFamily: mono ? 'monospace' : 'inherit',
+      }}
+    >
+      {value || '-'}
     </div>
   </div>
 );
 
+const MiniChip = ({ icon, text }) => (
+  <div style={miniChip}>
+    {icon}
+    <span>{text}</span>
+  </div>
+);
+
+const StatusChip = ({ label, bg, color }) => (
+  <div
+    style={{
+      ...miniChip,
+      background: bg || '#f8fafc',
+      color: color || COLORS.text,
+      border: 'none',
+    }}
+  >
+    <span>{label}</span>
+  </div>
+);
+
+const StatCard = ({ label, value, icon }) => (
+  <div style={statCard}>
+    <div style={statTop}>
+      {icon}
+      <span>{label}</span>
+    </div>
+    <div style={statValue}>{value || '-'}</div>
+  </div>
+);
+
 const pageStyle = {
-  padding: '30px',
-  maxWidth: '1300px',
+  padding: '22px',
+  maxWidth: '1280px',
   margin: '0 auto',
   backgroundColor: COLORS.bg,
-  minHeight: '100vh'
+  minHeight: '100vh',
 };
 
-const headerRow = {
+const topBar = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  marginBottom: '24px'
+  gap: '12px',
+  marginBottom: '14px',
+  flexWrap: 'wrap',
+};
+
+const topActions = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap',
 };
 
 const backBtn = {
@@ -263,187 +374,283 @@ const backBtn = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  color: COLORS.slate,
+  color: COLORS.muted,
   cursor: 'pointer',
-  fontWeight: '800'
+  fontWeight: '700',
+  fontSize: '12px',
+  letterSpacing: '0.04em',
 };
 
 const editBtn = {
   backgroundColor: COLORS.dark,
   color: '#fff',
   border: 'none',
-  padding: '11px 18px',
-  borderRadius: '12px',
-  fontWeight: '900',
+  padding: '9px 12px',
+  borderRadius: '10px',
+  fontWeight: '700',
+  fontSize: '12px',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
-  gap: '8px'
+  gap: '6px',
+};
+
+const deleteBtn = {
+  backgroundColor: '#fff5f5',
+  color: '#dc2626',
+  border: '1px solid #fecaca',
+  padding: '9px 12px',
+  borderRadius: '10px',
+  fontWeight: '700',
+  fontSize: '12px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+};
+
+const heroCard = {
+  background: 'linear-gradient(135deg, #ffffff 0%, #fbfcfe 100%)',
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '18px',
+  padding: '18px',
+  marginBottom: '12px',
+};
+
+const heroLeft = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+};
+
+const eyebrow = {
+  fontSize: '11px',
+  fontWeight: '700',
+  color: COLORS.soft,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+};
+
+const titleRow = {
+  display: 'flex',
+  gap: '12px',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+};
+
+const productTitle = {
+  margin: 0,
+  fontSize: '28px',
+  fontWeight: '800',
+  color: COLORS.dark,
+  letterSpacing: '-0.03em',
+  lineHeight: 1.1,
+};
+
+const priceTag = {
+  padding: '8px 12px',
+  borderRadius: '999px',
+  background: '#f8fafc',
+  border: `1px solid ${COLORS.border}`,
+  color: COLORS.primary,
+  fontWeight: '800',
+  fontSize: '15px',
+};
+
+const metaRow = {
+  display: 'flex',
+  gap: '10px',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+};
+
+const metaMono = {
+  color: COLORS.muted,
+  fontWeight: '600',
+  fontSize: '12px',
+  fontFamily: 'monospace',
+};
+
+const dot = {
+  color: '#cbd5e1',
+};
+
+const chipRow = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap',
+  marginTop: '2px',
+};
+
+const miniChip = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  border: `1px solid ${COLORS.border}`,
+  background: '#fff',
+  borderRadius: '999px',
+  padding: '7px 10px',
+  fontSize: '12px',
+  fontWeight: '600',
+  color: COLORS.text,
+};
+
+const statsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: '10px',
+  marginBottom: '14px',
+};
+
+const statCard = {
+  background: '#fff',
+  border: `1px solid ${COLORS.border}`,
+  borderRadius: '14px',
+  padding: '12px 14px',
+};
+
+const statTop = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '11px',
+  color: COLORS.soft,
+  fontWeight: '700',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  marginBottom: '8px',
+};
+
+const statValue = {
+  fontSize: '15px',
+  color: COLORS.text,
+  fontWeight: '700',
 };
 
 const mainGrid = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1.1fr',
-  gap: '32px'
+  gridTemplateColumns: 'minmax(0, 1.15fr) minmax(320px, 0.85fr)',
+  gap: '16px',
+};
+
+const leftCol = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px',
+};
+
+const rightCol = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px',
+};
+
+const cardStyle = {
+  backgroundColor: '#fff',
+  borderRadius: '18px',
+  border: `1px solid ${COLORS.border}`,
+  overflow: 'hidden',
+};
+
+const sectionHeader = {
+  padding: '14px 16px',
+  borderBottom: `1px solid ${COLORS.borderSoft}`,
+  background: '#fcfdff',
+};
+
+const sectionTitle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '13px',
+  fontWeight: '700',
+  color: COLORS.dark,
+};
+
+const sectionBody = {
+  padding: '16px',
 };
 
 const mainImageCard = {
   backgroundColor: '#fff',
-  borderRadius: '22px',
+  borderRadius: '14px',
   border: `1px solid ${COLORS.border}`,
-  height: '420px',
+  height: '400px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginBottom: '16px',
-  overflow: 'hidden'
+  overflow: 'hidden',
+};
+
+const mainImageStyle = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+};
+
+const emptyMedia = {
+  color: '#cbd5e1',
+  textAlign: 'center',
+  fontWeight: '600',
+  fontSize: '13px',
 };
 
 const thumbStrip = {
   display: 'flex',
   gap: '10px',
-  marginBottom: '20px',
-  flexWrap: 'wrap'
+  marginTop: '12px',
+  flexWrap: 'wrap',
 };
 
 const thumbBtn = {
-  width: '82px',
-  height: '82px',
+  width: '74px',
+  height: '74px',
   borderRadius: '12px',
   overflow: 'hidden',
   cursor: 'pointer',
   backgroundColor: '#fff',
-  padding: 0
+  padding: 0,
 };
 
-const cardStyle = {
-  backgroundColor: '#fff',
-  padding: '24px',
-  borderRadius: '20px',
-  border: `1px solid ${COLORS.border}`
-};
-
-const sectionTitle = {
-  margin: '0 0 14px 0',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  fontSize: '18px',
-  fontWeight: '900',
-  color: COLORS.dark
+const thumbImage = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
 };
 
 const descriptionStyle = {
   margin: 0,
-  fontSize: '15px',
+  fontSize: '13px',
   color: '#475569',
-  lineHeight: 1.7
+  lineHeight: 1.7,
+  fontWeight: '500',
 };
 
-const productTitle = {
-  margin: 0,
-  fontSize: '34px',
-  fontWeight: '900',
-  color: COLORS.dark,
-  letterSpacing: '-0.8px'
-};
-
-const chipRow = {
-  display: 'flex',
-  gap: '10px',
-  flexWrap: 'wrap',
-  marginTop: '12px'
-};
-
-const chip = {
-  display: 'inline-block',
-  backgroundColor: COLORS.primarySoft,
-  color: COLORS.primary,
-  padding: '7px 12px',
-  borderRadius: '10px',
-  fontWeight: '800',
-  fontSize: '13px'
-};
-
-const infoGrid = {
+const infoRow = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '14px',
-  marginBottom: '24px'
-};
-
-const detailBox = {
-  padding: '18px',
-  backgroundColor: '#fff',
-  borderRadius: '16px',
-  border: `1px solid ${COLORS.border}`
-};
-
-const detailLabel = {
-  fontSize: '11px',
-  fontWeight: '800',
-  color: COLORS.slate,
-  marginBottom: '8px',
-  textTransform: 'uppercase'
-};
-
-const detailValue = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  fontWeight: '800',
-  color: COLORS.dark,
-  fontSize: '15px'
-};
-
-const stockCard = {
-  backgroundColor: COLORS.dark,
-  padding: '28px',
-  borderRadius: '24px',
-  color: '#fff',
-  marginBottom: '24px',
-  textAlign: 'center'
-};
-
-const stockLabel = {
-  margin: 0,
-  fontSize: '12px',
-  color: COLORS.lightText,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase'
-};
-
-const stockValue = {
-  fontSize: '40px',
-  fontWeight: '900',
-  margin: '10px 0 14px 0'
-};
-
-const noteRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
+  gridTemplateColumns: '120px 1fr',
   gap: '12px',
-  padding: '12px 0',
-  borderBottom: `1px solid ${COLORS.border}`
+  padding: '10px 0',
+  borderBottom: `1px solid ${COLORS.borderSoft}`,
 };
 
-const noteLabel = {
-  fontSize: '14px',
-  color: COLORS.slate,
-  fontWeight: '700'
+const infoLabel = {
+  fontSize: '11px',
+  fontWeight: '700',
+  color: COLORS.soft,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
 };
 
-const noteValue = {
-  fontSize: '14px',
-  color: COLORS.dark,
-  fontWeight: '800'
+const infoValue = {
+  fontSize: '13px',
+  color: COLORS.text,
+  fontWeight: '600',
+  wordBreak: 'break-word',
 };
 
 const loadingStyle = {
   padding: '40px',
   textAlign: 'center',
-  color: COLORS.slate,
-  fontWeight: '700'
+  color: COLORS.muted,
+  fontWeight: '600',
 };
-
-export default AftermarketDetailPage;
