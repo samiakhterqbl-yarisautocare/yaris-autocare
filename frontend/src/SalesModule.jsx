@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
+const FRONTEND_URL = 'https://yaris-autocare.vercel.app';
 
 const documentTypeOptions = [
   { value: 'INVOICE', label: 'Tax Invoice' },
@@ -355,9 +356,11 @@ export default function SalesModule() {
       );
     } catch (error) {
       console.error(error);
-      const apiError = error?.response?.data
-        ? JSON.stringify(error.response.data)
-        : 'Error creating document.';
+      const apiError =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        JSON.stringify(error?.response?.data || {}) ||
+        'Error creating document.';
       setErrorMessage(apiError);
     } finally {
       setLoading(false);
@@ -365,14 +368,27 @@ export default function SalesModule() {
   };
 
   const handleSendEmail = async () => {
-    if (!createdInvoice?.id) return;
+    const invoiceId = createdInvoice?.id;
+    if (!invoiceId) return;
+
+    if (!customer.customer_email?.trim()) {
+      alert('Customer email is required.');
+      return;
+    }
+
     try {
       setEmailSending(true);
-      await axios.post(`${API_URL}/api/invoices/${createdInvoice.id}/send-email/`);
+      await axios.post(`${API_URL}/api/invoices/${invoiceId}/send-email/`, {
+        email: customer.customer_email.trim(),
+      });
       alert('Invoice sent to customer email.');
     } catch (err) {
-      console.error(err);
-      alert('Failed to send email. Backend endpoint is required.');
+      console.error(err?.response?.data || err);
+      alert(
+        err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          'Failed to send email. Check backend endpoint.'
+      );
     } finally {
       setEmailSending(false);
     }
@@ -394,6 +410,11 @@ export default function SalesModule() {
       return;
     }
 
+    if (!createdInvoice?.id) {
+      alert('Create invoice first.');
+      return;
+    }
+
     const fullNumber = phone.startsWith('61')
       ? phone
       : phone.startsWith('0')
@@ -401,11 +422,20 @@ export default function SalesModule() {
       : phone;
 
     const docNumber = createdInvoice?.invoice_number || 'your document';
-    const text = encodeURIComponent(
-      `Hi ${customer.customer_name || ''}, your ${documentType === 'QUOTE' ? 'quote' : 'invoice'} ${docNumber} from Yaris Autocare is ready.`
-    );
+    const invoiceLink = `${FRONTEND_URL}/sales/${createdInvoice.id}`;
+    const message = `Hi ${customer.customer_name || ''},
 
-    window.open(`https://wa.me/${fullNumber}?text=${text}`, '_blank');
+Your ${documentType === 'QUOTE' ? 'quote' : 'invoice'} from Yaris Autocare is ready.
+
+Document No: ${docNumber}
+
+View here:
+${invoiceLink}
+
+Thank you,
+Yaris Autocare`;
+
+    window.open(`https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const resetForm = () => {
@@ -847,7 +877,10 @@ export default function SalesModule() {
             <div style={summaryRow}>
               <span>Paid</span>
               <strong>
-                ${documentType === 'QUOTE' ? '0.00' : (parseFloat(payment.paid_amount || 0) || 0).toFixed(2)}
+                $
+                {documentType === 'QUOTE'
+                  ? '0.00'
+                  : (parseFloat(payment.paid_amount || 0) || 0).toFixed(2)}
               </strong>
             </div>
             <div style={summaryRowTotal}>
