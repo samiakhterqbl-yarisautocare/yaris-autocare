@@ -1,19 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Car,
-  CalendarDays,
-  StickyNote,
-  Wrench,
-  Hash,
   Printer,
   ArrowLeft,
-  FileText,
-  Building2,
+  MessageCircle,
+  Send,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
@@ -32,6 +23,7 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
 
   useEffect(() => {
     fetchInvoice();
@@ -75,41 +67,11 @@ export default function InvoiceDetail() {
   }, [invoice]);
 
   const serviceTemplateType = useMemo(() => {
-    if (!invoice || invoice.invoice_type !== 'SERVICING') return '';
-
-    const itemNames = items.map((item) => (item.name || '').toLowerCase());
-
-    const majorTemplate = [
-      'oil filter replacement',
-      'engine oil change',
-      'new sumpplug washer',
-      'new sump plug washer',
-      'top-ups (brake, power steering, coolant & windscreen washer fluid)',
-      'safety checks (underbody components, brakes, globes, horn & tyre pressure)',
-      'check globes',
-      'check hoses',
-      'check drive belt',
-      'battery load test',
-      'check engine oil leaks',
-      'check transmission oil leaks',
-      'check transmission cooler pipes',
-      'check engine mounts & transmission mounts',
-      'check exhaust',
-      'check drive shafts',
-      'check front shock absorbers',
-      'check rear shock absorbers',
-      'check ball joints & tie rods',
-      'check suspension bushes',
-      'check tyre pressure',
-      'check front brake pads & rotors',
-    ];
-
-    const matches = majorTemplate.filter((line) => itemNames.includes(line)).length;
-
-    if (matches >= 12) return 'Major Service';
-    if (matches >= 5) return 'Regular Service';
-    return 'Custom Service';
-  }, [invoice, items]);
+    const notes = String(invoice?.notes || '').toUpperCase();
+    if (notes.includes('SERVICE TYPE: MAJOR')) return 'Major Service';
+    if (notes.includes('SERVICE TYPE: REGULAR')) return 'Regular Service';
+    return '';
+  }, [invoice]);
 
   const showVehicleSection = useMemo(() => {
     if (!invoice) return false;
@@ -141,6 +103,54 @@ export default function InvoiceDetail() {
     return lines.join('\n\n');
   }, [invoice]);
 
+  const serviceItems = useMemo(() => {
+    if (invoice?.invoice_type !== 'SERVICING') return [];
+    return items.filter((item) => item.item_type === 'SERVICE' || item.source_type === 'MANUAL');
+  }, [invoice, items]);
+
+  const extraItems = useMemo(() => {
+    if (invoice?.invoice_type !== 'SERVICING') return items;
+    return items.filter((item) => !(item.item_type === 'SERVICE' || item.source_type === 'MANUAL'));
+  }, [invoice, items]);
+
+  const serviceChecklistText = useMemo(() => {
+    if (!serviceItems.length) return '';
+    return serviceItems[0]?.description || '';
+  }, [serviceItems]);
+
+  const openWhatsApp = () => {
+    const phone = String(invoice?.customer_phone || '').replace(/\D/g, '');
+    if (!phone) {
+      alert('Customer phone is missing.');
+      return;
+    }
+
+    const fullNumber = phone.startsWith('61')
+      ? phone
+      : phone.startsWith('0')
+      ? `61${phone.slice(1)}`
+      : phone;
+
+    const text = encodeURIComponent(
+      `Hi ${invoice?.customer_name || ''}, your ${documentLabel.toLowerCase()} ${invoice?.invoice_number || ''} from Yaris Autocare is ready.`
+    );
+
+    window.open(`https://wa.me/${fullNumber}?text=${text}`, '_blank');
+  };
+
+  const handleSendEmail = async () => {
+    try {
+      setEmailSending(true);
+      await axios.post(`${API_URL}/api/invoices/${invoiceId}/send-email/`);
+      alert('Invoice sent to customer email.');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to send email. Backend endpoint is required.');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={pageWrap}>
@@ -171,7 +181,7 @@ export default function InvoiceDetail() {
 
       <div style={topBar} className="no-print">
         <button type="button" style={backBtn} onClick={() => window.history.back()}>
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} />
           Back
         </button>
 
@@ -179,15 +189,27 @@ export default function InvoiceDetail() {
           <button type="button" style={secondaryBtn} onClick={fetchInvoice}>
             Refresh
           </button>
+          <button type="button" style={secondaryBtn} onClick={openWhatsApp}>
+            <MessageCircle size={15} />
+            WhatsApp
+          </button>
+          <button
+            type="button"
+            style={secondaryBtn}
+            onClick={handleSendEmail}
+            disabled={emailSending}
+          >
+            <Send size={15} />
+            {emailSending ? 'Sending...' : 'Email'}
+          </button>
           <button type="button" style={printBtn} onClick={() => window.print()}>
-            <Printer size={16} />
-            Print / Save PDF
+            <Printer size={15} />
+            Print / PDF
           </button>
         </div>
       </div>
 
       <div style={documentWrap} className="print-area">
-        {/* HEADER */}
         <div style={headerWrap}>
           <div style={logoArea}>
             <img
@@ -198,7 +220,9 @@ export default function InvoiceDetail() {
                 e.currentTarget.style.display = 'none';
               }}
             />
-            <div style={brandFallback}>YARIS <span style={{ color: '#d62828' }}>AUTOCARE</span></div>
+            <div style={brandFallback}>
+              YARIS <span style={{ color: '#d62828' }}>AUTOCARE</span>
+            </div>
             <div style={operatedText}>Operated by Pyramid Enterprises AU Pty Ltd</div>
             <div style={serviceLine}>Car Rental • Mechanical Services • Auto Parts</div>
           </div>
@@ -226,7 +250,6 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {/* DOCUMENT META */}
         <div style={documentMetaRow}>
           <div style={docTypeTitle}>{documentLabel}</div>
           <div style={metaBlock}>
@@ -237,7 +260,6 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {/* CUSTOMER / VEHICLE */}
         <div style={detailsGrid}>
           <div>
             <SectionTitle title="Customer Details" />
@@ -249,7 +271,7 @@ export default function InvoiceDetail() {
 
           {showVehicleSection && (
             <div>
-              <SectionTitle title="Car Details" />
+              <SectionTitle title="Vehicle Details" />
               <SimpleRow label="Rego" value={invoice.rego || '-'} />
               <SimpleRow label="Make" value={invoice.make || '-'} />
               <SimpleRow label="Model" value={invoice.model || '-'} />
@@ -262,15 +284,32 @@ export default function InvoiceDetail() {
           )}
         </div>
 
-        {/* SERVICE DETAILS */}
         {invoice.invoice_type === 'SERVICING' && (
           <div style={sectionBlock}>
             <SectionTitle title={`Service Details${serviceTemplateType ? ` - ${serviceTemplateType}` : ''}`} />
             <div style={serviceGrid}>
-              <SimpleStat label="Service At KM" value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'} />
-              <SimpleStat label="Next Service At KM" value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'} />
-              <SimpleStat label="Next Service Date" value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'} />
+              <SimpleStat
+                label="Service At KM"
+                value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'}
+              />
+              <SimpleStat
+                label="Next Service At KM"
+                value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'}
+              />
+              <SimpleStat
+                label="Next Service Date"
+                value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
+              />
             </div>
+
+            {serviceChecklistText && (
+              <div style={{ marginTop: '14px' }}>
+                <SectionTitle title="Service Checklist" small />
+                <div style={checklistBox}>
+                  {serviceChecklistText}
+                </div>
+              </div>
+            )}
 
             {serviceDetail?.service_notes && (
               <div style={{ marginTop: '12px' }}>
@@ -281,56 +320,56 @@ export default function InvoiceDetail() {
           </div>
         )}
 
-        {/* ITEMS TABLE */}
-        <div style={sectionBlock}>
-          <SectionTitle
-            title={
-              invoice.invoice_type === 'SERVICING'
-                ? 'Service Details'
-                : invoice.invoice_type === 'USED_PART'
-                ? 'Parts Details'
-                : 'Invoice Details'
-            }
-          />
+        {(invoice.invoice_type !== 'SERVICING' || extraItems.length > 0) && (
+          <div style={sectionBlock}>
+            <SectionTitle
+              title={
+                invoice.invoice_type === 'SERVICING'
+                  ? 'Extra Items'
+                  : invoice.invoice_type === 'USED_PART'
+                  ? 'Parts Details'
+                  : 'Invoice Details'
+              }
+            />
 
-          <table style={table}>
-            <thead>
-              <tr>
-                <th style={thNo}>#</th>
-                <th style={thDesc}>Description</th>
-                <th style={th}>Type</th>
-                <th style={th}>Qty</th>
-                <th style={th}>Amount</th>
-                <th style={th}>Discount</th>
-                <th style={th}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
+            <table style={table}>
+              <thead>
                 <tr>
-                  <td colSpan={7} style={emptyTd}>No items found.</td>
+                  <th style={thNo}>#</th>
+                  <th style={thDesc}>Description</th>
+                  <th style={th}>Type</th>
+                  <th style={th}>Qty</th>
+                  <th style={th}>Amount</th>
+                  <th style={th}>Discount</th>
+                  <th style={th}>Total</th>
                 </tr>
-              ) : (
-                items.map((item, index) => (
-                  <tr key={item.id || index}>
-                    <td style={tdNo}>{index + 1}</td>
-                    <td style={tdDesc}>
-                      <div style={descMain}>{item.name || '-'}</div>
-                      {item.description ? <div style={descSub}>{item.description}</div> : null}
-                    </td>
-                    <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
-                    <td style={td}>{formatQty(item.quantity)}</td>
-                    <td style={td}>${formatMoney(item.unit_price)}</td>
-                    <td style={td}>${formatMoney(item.discount)}</td>
-                    <td style={tdStrong}>${formatMoney(item.line_total)}</td>
+              </thead>
+              <tbody>
+                {(invoice.invoice_type === 'SERVICING' ? extraItems : items).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={emptyTd}>No extra items.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  (invoice.invoice_type === 'SERVICING' ? extraItems : items).map((item, index) => (
+                    <tr key={item.id || index}>
+                      <td style={tdNo}>{index + 1}</td>
+                      <td style={tdDesc}>
+                        <div style={descMain}>{item.name || '-'}</div>
+                        {item.description ? <div style={descSub}>{item.description}</div> : null}
+                      </td>
+                      <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
+                      <td style={td}>{formatQty(item.quantity)}</td>
+                      <td style={td}>${formatMoney(item.unit_price)}</td>
+                      <td style={td}>${formatMoney(item.discount)}</td>
+                      <td style={tdStrong}>${formatMoney(item.line_total)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {/* NOTES */}
         {filteredNotes && (
           <div style={sectionBlock}>
             <SectionTitle title="Notes" />
@@ -338,7 +377,6 @@ export default function InvoiceDetail() {
           </div>
         )}
 
-        {/* FOOTER */}
         <div style={footerGrid}>
           <div style={paymentBox}>
             <div style={footerHeading}>Payment Details</div>
@@ -466,11 +504,6 @@ const topBar = {
   flexWrap: 'wrap',
 };
 
-const topBarLeft = {
-  display: 'flex',
-  alignItems: 'center',
-};
-
 const topBarRight = {
   display: 'flex',
   alignItems: 'center',
@@ -492,6 +525,9 @@ const backBtn = {
 };
 
 const secondaryBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
   border: '1px solid #d1d5db',
   background: '#fff',
   color: '#111827',
@@ -692,6 +728,16 @@ const statValue = {
 
 const notesBox = {
   border: '1px solid #d1d5db',
+  padding: '12px',
+  whiteSpace: 'pre-wrap',
+  lineHeight: 1.7,
+  fontSize: '14px',
+  color: '#111827',
+};
+
+const checklistBox = {
+  border: '1px solid #d1d5db',
+  background: '#fafafa',
   padding: '12px',
   whiteSpace: 'pre-wrap',
   lineHeight: 1.7,
