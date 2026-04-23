@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -10,14 +10,15 @@ import {
   X,
   ChevronRight,
   AlertTriangle,
-  Settings,
   ExternalLink,
   Car,
   Receipt,
   LogOut,
   Phone,
   MapPin,
-  ShieldCheck
+  ShieldCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import LoginPage from './LoginPage';
@@ -67,6 +68,18 @@ const BUSINESS = {
 };
 
 const DJANGO_ADMIN_URL = 'https://yaris-autocare-production.up.railway.app/admin/';
+const MOBILE_BREAKPOINT = 1024;
+
+const NAV_ITEMS = [
+  { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+  { to: '/used-parts', icon: <Package size={18} />, label: 'Used Parts' },
+  { to: '/aftermarket', icon: <Wrench size={18} />, label: 'Aftermarket' },
+  { to: '/low-stock', icon: <AlertTriangle size={18} />, label: 'Low Stock' },
+  { to: '/dismantle', icon: <Scissors size={18} />, label: 'Dismantle Yard' },
+  { to: '/yard-master', icon: <Car size={18} />, label: 'Yard Master' },
+  { to: '/sales', icon: <ShoppingCart size={18} />, label: 'Create Sale / Invoice' },
+  { to: '/sales-dashboard', icon: <Receipt size={18} />, label: 'Invoices Dashboard' },
+];
 
 export default function App() {
   return (
@@ -104,9 +117,42 @@ function AppRoutes() {
 }
 
 function MainLayout() {
-  const [isOpen, setIsOpen] = useState(true);
+  const location = useLocation();
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= MOBILE_BREAKPOINT);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
+
+      if (mobile) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobile && isSidebarOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, isSidebarOpen]);
 
   const initials =
     `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.trim().toUpperCase() ||
@@ -118,75 +164,137 @@ function MainLayout() {
     user?.username ||
     'Staff User';
 
+  const activeTitle = getPageTitle(location.pathname);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
   };
 
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen((prev) => !prev);
+      return;
+    }
+    setIsDesktopCollapsed((prev) => !prev);
+  };
+
+  const closeSidebar = () => {
+    if (isMobile) setIsSidebarOpen(false);
+  };
+
+  const desktopSidebarWidth = isDesktopCollapsed ? 92 : 280;
+  const actualSidebarWidth = isMobile ? 0 : desktopSidebarWidth;
+
   return (
     <div style={layoutWrap}>
+      {isMobile && isSidebarOpen && (
+        <div style={mobileOverlay} onClick={closeSidebar} />
+      )}
+
       <aside
         style={{
           ...sidebar,
-          width: isOpen ? '280px' : '0px',
-          minWidth: isOpen ? '280px' : '0px',
-          padding: isOpen ? '0' : '0',
+          ...(isMobile
+            ? {
+                ...sidebarMobile,
+                transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+              }
+            : {
+                width: `${actualSidebarWidth}px`,
+                minWidth: `${actualSidebarWidth}px`,
+              }),
         }}
       >
         <div style={sidebarTop}>
-          <Link to="/" style={brandLink}>
+          <Link to="/" style={brandLink} onClick={closeSidebar}>
             <div style={brandWrap}>
               <img src={logo} alt="Yaris Autocare" style={logoStyle} />
-              <div style={{ minWidth: 0 }}>
-                <div style={brandTitle}>YARIS <span style={{ color: COLORS.primary }}>AUTOCARE</span></div>
-                <div style={brandSubtitle}>{BUSINESS.subtitle}</div>
-              </div>
+              {!isDesktopCollapsed || isMobile ? (
+                <div style={{ minWidth: 0 }}>
+                  <div style={brandTitle}>
+                    YARIS <span style={{ color: COLORS.primary }}>AUTOCARE</span>
+                  </div>
+                  <div style={brandSubtitle}>{BUSINESS.subtitle}</div>
+                </div>
+              ) : null}
             </div>
           </Link>
+
+          {isMobile && (
+            <button onClick={closeSidebar} style={mobileCloseBtn}>
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         <nav style={navWrap}>
-          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="Dashboard" />
-          <NavItem to="/used-parts" icon={<Package size={18} />} label="Used Parts" />
-          <NavItem to="/aftermarket" icon={<Wrench size={18} />} label="Aftermarket" />
-          <NavItem to="/low-stock" icon={<AlertTriangle size={18} />} label="Low Stock" />
-          <NavItem to="/dismantle" icon={<Scissors size={18} />} label="Dismantle Yard" />
-          <NavItem to="/yard-master" icon={<Car size={18} />} label="Yard Master" />
-          <NavItem to="/sales" icon={<ShoppingCart size={18} />} label="Create Sale / Invoice" />
-          <NavItem to="/sales-dashboard" icon={<Receipt size={18} />} label="Invoices Dashboard" />
+          {NAV_ITEMS.map((item) => (
+            <NavItem
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              collapsed={!isMobile && isDesktopCollapsed}
+              onNavigate={closeSidebar}
+            />
+          ))}
         </nav>
 
         <div style={sidebarBottom}>
-          <div style={businessCard}>
-            <div style={businessCardTitle}>Business Details</div>
+          {!isDesktopCollapsed || isMobile ? (
+            <div style={businessCard}>
+              <div style={businessCardTitle}>Business Details</div>
 
-            <div style={businessLine}>
-              <Phone size={14} />
-              <span>{BUSINESS.phone}</span>
+              <div style={businessLine}>
+                <Phone size={14} />
+                <span>{BUSINESS.phone}</span>
+              </div>
+
+              <div style={businessLine}>
+                <MapPin size={14} />
+                <span>{BUSINESS.location}</span>
+              </div>
+
+              {isAdmin && (
+                <a
+                  href={DJANGO_ADMIN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={adminLink}
+                >
+                  <ShieldCheck size={14} />
+                  <span style={{ flex: 1 }}>System Admin</span>
+                  <ExternalLink size={12} />
+                </a>
+              )}
             </div>
-
-            <div style={businessLine}>
-              <MapPin size={14} />
-              <span>{BUSINESS.location}</span>
+          ) : (
+            <div style={collapsedBottomWrap}>
+              {isAdmin && (
+                <a
+                  href={DJANGO_ADMIN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={collapsedIconBtn}
+                  title="System Admin"
+                >
+                  <ShieldCheck size={16} />
+                </a>
+              )}
             </div>
+          )}
 
-            {isAdmin && (
-              <a
-                href={DJANGO_ADMIN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={adminLink}
-              >
-                <ShieldCheck size={14} />
-                <span style={{ flex: 1 }}>System Admin</span>
-                <ExternalLink size={12} />
-              </a>
-            )}
-          </div>
-
-          <button onClick={handleLogout} style={logoutBtn}>
+          <button
+            onClick={handleLogout}
+            style={{
+              ...logoutBtn,
+              ...(isDesktopCollapsed && !isMobile ? collapsedLogoutBtn : {}),
+            }}
+            title="Log Out"
+          >
             <LogOut size={16} />
-            <span>Log Out</span>
+            {(!isDesktopCollapsed || isMobile) && <span>Log Out</span>}
           </button>
         </div>
       </aside>
@@ -194,17 +302,31 @@ function MainLayout() {
       <div style={contentShell}>
         <header style={topbar}>
           <div style={topbarLeft}>
-            <button onClick={() => setIsOpen(!isOpen)} style={menuBtn}>
-              {isOpen ? <X size={20} /> : <Menu size={20} />}
+            <button onClick={toggleSidebar} style={menuBtn}>
+              {isMobile ? (
+                isSidebarOpen ? <X size={20} /> : <Menu size={20} />
+              ) : isDesktopCollapsed ? (
+                <PanelLeftOpen size={18} />
+              ) : (
+                <PanelLeftClose size={18} />
+              )}
             </button>
 
-            <div>
-              <div style={topbarTitle}>Yaris Autocare Inventory System</div>
-              <div style={topbarSub}>Secure internal dashboard</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={topbarTitle}>{activeTitle}</div>
+              <div style={topbarSub}>Yaris Autocare Inventory System</div>
             </div>
           </div>
 
           <div style={topbarRight}>
+            {!isMobile && (
+              <div style={topbarPills}>
+                <QuickLink to="/used-parts" label="Used Parts" />
+                <QuickLink to="/aftermarket" label="Aftermarket" />
+                <QuickLink to="/sales" label="New Invoice" />
+              </div>
+            )}
+
             <div style={userInfo}>
               <div style={userRole}>{user?.role || 'STAFF'} ACCESS</div>
               <div style={userName}>{displayName}</div>
@@ -213,6 +335,15 @@ function MainLayout() {
             <div style={avatar}>{initials}</div>
           </div>
         </header>
+
+        {isMobile && (
+          <div style={mobileQuickNav}>
+            <QuickLink to="/" label="Dashboard" compact />
+            <QuickLink to="/used-parts" label="Used Parts" compact />
+            <QuickLink to="/aftermarket" label="Aftermarket" compact />
+            <QuickLink to="/sales" label="Invoice" compact />
+          </div>
+        )}
 
         <main style={mainArea}>
           <Suspense fallback={<div style={{ fontWeight: '700' }}>Loading Module...</div>}>
@@ -250,7 +381,27 @@ function MainLayout() {
   );
 }
 
-function NavItem({ to, icon, label }) {
+function QuickLink({ to, label, compact = false }) {
+  const location = useLocation();
+  const active = location.pathname === to;
+
+  return (
+    <Link
+      to={to}
+      style={{
+        ...quickLink,
+        ...(compact ? quickLinkCompact : {}),
+        background: active ? '#fee2e2' : '#fff',
+        color: active ? '#b91c1c' : '#334155',
+        border: active ? '1px solid #fecaca' : `1px solid ${COLORS.border}`,
+      }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function NavItem({ to, icon, label, collapsed = false, onNavigate }) {
   const location = useLocation();
 
   const isActive =
@@ -260,20 +411,41 @@ function NavItem({ to, icon, label }) {
   return (
     <Link
       to={to}
+      onClick={onNavigate}
+      title={collapsed ? label : ''}
       style={{
         ...navItem,
+        justifyContent: collapsed ? 'center' : 'space-between',
         backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
         color: isActive ? '#ffffff' : '#cbd5e1',
         borderLeft: isActive ? `4px solid ${COLORS.primary}` : '4px solid transparent',
+        padding: collapsed ? '14px 10px' : '14px 20px',
       }}
     >
-      <div style={navItemLeft}>
+      <div
+        style={{
+          ...navItemLeft,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          width: '100%',
+        }}
+      >
         {icon}
-        <span>{label}</span>
+        {!collapsed && <span>{label}</span>}
       </div>
-      {isActive && <ChevronRight size={14} />}
+      {!collapsed && isActive && <ChevronRight size={14} />}
     </Link>
   );
+}
+
+function getPageTitle(pathname) {
+  if (pathname.startsWith('/used-parts')) return 'Used Parts';
+  if (pathname.startsWith('/aftermarket')) return 'Aftermarket';
+  if (pathname.startsWith('/low-stock')) return 'Low Stock';
+  if (pathname.startsWith('/dismantle')) return 'Dismantle Yard';
+  if (pathname.startsWith('/yard-master')) return 'Yard Master';
+  if (pathname.startsWith('/sales-dashboard')) return 'Invoices Dashboard';
+  if (pathname.startsWith('/sales')) return 'Create Sale / Invoice';
+  return 'Dashboard';
 }
 
 const layoutWrap = {
@@ -282,6 +454,7 @@ const layoutWrap = {
   height: '100vh',
   overflow: 'hidden',
   background: COLORS.bg,
+  position: 'relative',
 };
 
 const sidebar = {
@@ -293,16 +466,40 @@ const sidebar = {
   overflow: 'hidden',
   color: '#fff',
   borderRight: '1px solid rgba(255,255,255,0.06)',
+  zIndex: 40,
+};
+
+const sidebarMobile = {
+  position: 'fixed',
+  left: 0,
+  top: 0,
+  width: '290px',
+  minWidth: '290px',
+  maxWidth: '82vw',
+  boxShadow: '0 18px 60px rgba(0,0,0,0.35)',
+};
+
+const mobileOverlay = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 23, 42, 0.52)',
+  zIndex: 30,
 };
 
 const sidebarTop = {
   padding: '20px 18px 16px',
   borderBottom: '1px solid rgba(255,255,255,0.07)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '10px',
 };
 
 const brandLink = {
   textDecoration: 'none',
   color: 'inherit',
+  flex: 1,
+  minWidth: 0,
 };
 
 const brandWrap = {
@@ -318,6 +515,7 @@ const logoStyle = {
   objectFit: 'cover',
   border: '1px solid rgba(255,255,255,0.12)',
   background: '#fff',
+  flexShrink: 0,
 };
 
 const brandTitle = {
@@ -326,6 +524,9 @@ const brandTitle = {
   color: '#fff',
   lineHeight: 1.1,
   letterSpacing: '-0.02em',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 };
 
 const brandSubtitle = {
@@ -337,19 +538,33 @@ const brandSubtitle = {
   letterSpacing: '0.04em',
 };
 
+const mobileCloseBtn = {
+  width: '38px',
+  height: '38px',
+  borderRadius: '10px',
+  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'rgba(255,255,255,0.06)',
+  color: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  flexShrink: 0,
+};
+
 const navWrap = {
   flex: 1,
   padding: '16px 0',
+  overflowY: 'auto',
 };
 
 const navItem = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '14px 20px',
   textDecoration: 'none',
   fontSize: '14px',
   fontWeight: '700',
+  transition: 'all 0.16s ease',
 };
 
 const navItemLeft = {
@@ -404,6 +619,24 @@ const adminLink = {
   marginTop: '4px',
 };
 
+const collapsedBottomWrap = {
+  display: 'flex',
+  justifyContent: 'center',
+};
+
+const collapsedIconBtn = {
+  width: '48px',
+  height: '48px',
+  borderRadius: '14px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textDecoration: 'none',
+  color: '#fca5a5',
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.08)',
+};
+
 const logoutBtn = {
   display: 'flex',
   alignItems: 'center',
@@ -418,6 +651,10 @@ const logoutBtn = {
   fontWeight: '800',
 };
 
+const collapsedLogoutBtn = {
+  padding: '12px',
+};
+
 const contentShell = {
   flex: 1,
   minWidth: 0,
@@ -427,20 +664,24 @@ const contentShell = {
 };
 
 const topbar = {
-  height: '76px',
+  minHeight: '76px',
   background: '#ffffffcc',
   backdropFilter: 'blur(8px)',
   borderBottom: `1px solid ${COLORS.border}`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '0 24px',
+  padding: '12px 20px',
+  gap: '12px',
+  flexWrap: 'wrap',
 };
 
 const topbarLeft = {
   display: 'flex',
   alignItems: 'center',
   gap: '14px',
+  minWidth: 0,
+  flex: '1 1 280px',
 };
 
 const menuBtn = {
@@ -453,12 +694,16 @@ const menuBtn = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  flexShrink: 0,
 };
 
 const topbarTitle = {
   fontSize: '16px',
   fontWeight: '900',
   color: '#0f172a',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 };
 
 const topbarSub = {
@@ -471,6 +716,38 @@ const topbarRight = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
+  marginLeft: 'auto',
+  flexWrap: 'wrap',
+};
+
+const topbarPills = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  flexWrap: 'wrap',
+};
+
+const quickLink = {
+  textDecoration: 'none',
+  padding: '9px 12px',
+  borderRadius: '999px',
+  fontWeight: '700',
+  fontSize: '12px',
+  whiteSpace: 'nowrap',
+};
+
+const quickLinkCompact = {
+  padding: '8px 11px',
+  fontSize: '11px',
+};
+
+const mobileQuickNav = {
+  display: 'flex',
+  gap: '8px',
+  padding: '10px 16px',
+  borderBottom: `1px solid ${COLORS.border}`,
+  background: '#fff',
+  overflowX: 'auto',
 };
 
 const userInfo = {
@@ -501,6 +778,7 @@ const avatar = {
   alignItems: 'center',
   justifyContent: 'center',
   fontWeight: '900',
+  flexShrink: 0,
 };
 
 const mainArea = {
