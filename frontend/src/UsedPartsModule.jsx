@@ -16,33 +16,34 @@ import {
   Wind,
   Eye,
   X,
+  Trash2,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const CATEGORY_OPTIONS = [
-  { name: 'All', icon: <Package size={16} />, slug: 'All' },
-  { name: 'Engine', icon: <Car size={16} />, slug: 'Engine' },
-  { name: 'Transmission', icon: <Layers size={16} />, slug: 'Transmission' },
-  { name: 'Suspension', icon: <Disc size={16} />, slug: 'Suspension' },
-  { name: 'Steering', icon: <Wrench size={16} />, slug: 'Steering' },
-  { name: 'Brakes', icon: <Disc size={16} />, slug: 'Brakes' },
-  { name: 'Electrical', icon: <Zap size={16} />, slug: 'Electrical' },
-  { name: 'Lighting', icon: <Zap size={16} />, slug: 'Lighting' },
-  { name: 'Interior', icon: <Wind size={16} />, slug: 'Interior' },
-  { name: 'Exterior', icon: <Car size={16} />, slug: 'Exterior' },
-  { name: 'Body Panels', icon: <Car size={16} />, slug: 'Body Panels' },
-  { name: 'Cooling', icon: <Wind size={16} />, slug: 'Cooling' },
-  { name: 'Fuel System', icon: <Wrench size={16} />, slug: 'Fuel System' },
-  { name: 'Exhaust', icon: <Wrench size={16} />, slug: 'Exhaust' },
-  { name: 'Wheels & Tyres', icon: <Disc size={16} />, slug: 'Wheels & Tyres' },
-  { name: 'Doors & Windows', icon: <Layers size={16} />, slug: 'Doors & Windows' },
-  { name: 'Mirrors', icon: <Layers size={16} />, slug: 'Mirrors' },
-  { name: 'AC & Heating', icon: <Wind size={16} />, slug: 'AC & Heating' },
-  { name: 'Sensors', icon: <Zap size={16} />, slug: 'Sensors' },
-  { name: 'ECU / Modules', icon: <Zap size={16} />, slug: 'ECU / Modules' },
-  { name: 'Accessories', icon: <Tag size={16} />, slug: 'Accessories' },
-  { name: 'Other', icon: <Package size={16} />, slug: 'Other' },
+  { name: 'All', icon: <Package size={14} />, slug: 'All' },
+  { name: 'Engine', icon: <Car size={14} />, slug: 'Engine' },
+  { name: 'Transmission', icon: <Layers size={14} />, slug: 'Transmission' },
+  { name: 'Suspension', icon: <Disc size={14} />, slug: 'Suspension' },
+  { name: 'Steering', icon: <Wrench size={14} />, slug: 'Steering' },
+  { name: 'Brakes', icon: <Disc size={14} />, slug: 'Brakes' },
+  { name: 'Electrical', icon: <Zap size={14} />, slug: 'Electrical' },
+  { name: 'Lighting', icon: <Zap size={14} />, slug: 'Lighting' },
+  { name: 'Interior', icon: <Wind size={14} />, slug: 'Interior' },
+  { name: 'Exterior', icon: <Car size={14} />, slug: 'Exterior' },
+  { name: 'Body Panels', icon: <Car size={14} />, slug: 'Body Panels' },
+  { name: 'Cooling', icon: <Wind size={14} />, slug: 'Cooling' },
+  { name: 'Fuel System', icon: <Wrench size={14} />, slug: 'Fuel System' },
+  { name: 'Exhaust', icon: <Wrench size={14} />, slug: 'Exhaust' },
+  { name: 'Wheels & Tyres', icon: <Disc size={14} />, slug: 'Wheels & Tyres' },
+  { name: 'Doors & Windows', icon: <Layers size={14} />, slug: 'Doors & Windows' },
+  { name: 'Mirrors', icon: <Layers size={14} />, slug: 'Mirrors' },
+  { name: 'AC & Heating', icon: <Wind size={14} />, slug: 'AC & Heating' },
+  { name: 'Sensors', icon: <Zap size={14} />, slug: 'Sensors' },
+  { name: 'ECU / Modules', icon: <Zap size={14} />, slug: 'ECU / Modules' },
+  { name: 'Accessories', icon: <Tag size={14} />, slug: 'Accessories' },
+  { name: 'Other', icon: <Package size={14} />, slug: 'Other' },
 ];
 
 const SALE_STATUS_OPTIONS = ['All', 'AVAILABLE', 'RESERVED', 'SOLD', 'REMOVED', 'DAMAGED', 'HOLD'];
@@ -54,6 +55,7 @@ export default function UsedPartsModule() {
 
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -92,6 +94,24 @@ export default function UsedPartsModule() {
       setParts([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (partId, partName) => {
+    const confirmed = window.confirm(
+      `Delete this used part?\n\n${partName || 'Unnamed Part'}`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(partId);
+      await axios.delete(`${API_URL}/api/used-parts/${partId}/`);
+      setParts((prev) => prev.filter((item) => item.id !== partId));
+    } catch (error) {
+      console.error('Error deleting part:', error?.response?.data || error);
+      alert('Delete failed. Check backend delete endpoint/permissions.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -147,6 +167,8 @@ export default function UsedPartsModule() {
         return statusDamaged;
       case 'HOLD':
         return statusHold;
+      case 'REMOVED':
+        return statusRemoved;
       default:
         return statusDefault;
     }
@@ -161,33 +183,33 @@ export default function UsedPartsModule() {
     <div style={page}>
       <div style={headerRow}>
         <div>
-          <h1 style={pageTitle}>Used Parts Inventory</h1>
+          <h1 style={pageTitle}>Used Parts</h1>
           <p style={pageSubtitle}>
-            Manage individual used parts with photos, grading, pricing and stock status.
+            Compact inventory view for stock, pricing, fitment and status.
           </p>
         </div>
 
         <button onClick={() => navigate('/used-parts/add')} style={addBtn}>
-          <Plus size={18} />
-          ADD USED PART
+          <Plus size={16} />
+          ADD PART
         </button>
       </div>
 
       <div style={summaryGrid}>
-        <SummaryCard title="Total Parts" value={summary.total} />
-        <SummaryCard title="Available" value={summary.available} accent="#16a34a" />
+        <SummaryCard title="Total" value={summary.total} />
+        <SummaryCard title="Available" value={summary.available} accent="#15803d" />
         <SummaryCard title="Sold" value={summary.sold} accent="#dc2626" />
-        <SummaryCard title="Reserved" value={summary.reserved} accent="#d97706" />
-        <SummaryCard title="Internal Use" value={summary.internal} accent="#475569" />
+        <SummaryCard title="Reserved" value={summary.reserved} accent="#b45309" />
+        <SummaryCard title="Internal" value={summary.internal} accent="#475569" />
       </div>
 
       <div style={toolbarCard}>
         <div style={toolbarTop}>
           <div style={searchWrap}>
-            <Search size={18} style={searchIcon} />
+            <Search size={16} style={searchIcon} />
             <input
               type="text"
-              placeholder="Search by name, SKU, make, model, location, notes..."
+              placeholder="Search part, SKU, make, model, location..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               style={searchInput}
@@ -196,8 +218,8 @@ export default function UsedPartsModule() {
 
           <div style={toolbarButtons}>
             <button onClick={() => setShowFilters(!showFilters)} style={filterBtn}>
-              <Filter size={16} />
-              {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'}
+              <Filter size={14} />
+              {showFilters ? 'HIDE FILTERS' : 'FILTERS'}
               {activeFilterCount > 0 ? <span style={filterCount}>{activeFilterCount}</span> : null}
             </button>
           </div>
@@ -271,7 +293,7 @@ export default function UsedPartsModule() {
                   value={filters.make}
                   onChange={(e) => setFilters({ ...filters, make: e.target.value })}
                   style={input}
-                  placeholder="e.g. Toyota"
+                  placeholder="Toyota"
                 />
               </div>
 
@@ -282,7 +304,7 @@ export default function UsedPartsModule() {
                   value={filters.model}
                   onChange={(e) => setFilters({ ...filters, model: e.target.value })}
                   style={input}
-                  placeholder="e.g. Yaris"
+                  placeholder="Yaris"
                 />
               </div>
 
@@ -293,7 +315,7 @@ export default function UsedPartsModule() {
                   value={filters.location}
                   onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                   style={input}
-                  placeholder="e.g. A1B3"
+                  placeholder="A1B3"
                 />
               </div>
             </div>
@@ -301,7 +323,7 @@ export default function UsedPartsModule() {
             <div style={filterActionRow}>
               <button onClick={resetFilters} style={clearBtn}>
                 <X size={14} />
-                RESET FILTERS
+                RESET
               </button>
             </div>
           </div>
@@ -316,12 +338,12 @@ export default function UsedPartsModule() {
         <div style={emptyStateCard}>Loading used parts...</div>
       ) : parts.length === 0 ? (
         <div style={emptyStateCard}>
-          <Package size={34} />
+          <Package size={28} />
           <h3 style={emptyTitle}>No used parts found</h3>
           <p style={emptyText}>Try changing filters or add your first used part.</p>
           <button onClick={() => navigate('/used-parts/add')} style={addBtnSmall}>
-            <Plus size={16} />
-            ADD USED PART
+            <Plus size={15} />
+            ADD PART
           </button>
         </div>
       ) : (
@@ -337,7 +359,7 @@ export default function UsedPartsModule() {
                   <th style={th}>Grade</th>
                   <th style={th}>Status</th>
                   <th style={thPrice}>Price</th>
-                  <th style={thAction}>Action</th>
+                  <th style={thAction}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -357,7 +379,7 @@ export default function UsedPartsModule() {
                               <img src={imageUrl} alt={part.part_name} style={thumb} />
                             ) : (
                               <div style={thumbPlaceholder}>
-                                <Package size={18} />
+                                <Package size={16} />
                               </div>
                             )}
                           </div>
@@ -382,7 +404,7 @@ export default function UsedPartsModule() {
                       <td style={td}>
                         <div style={fitmentWrap}>
                           <span style={inlineMeta}>
-                            <Car size={13} />
+                            <Car size={12} />
                             {[part.make, part.model, part.variant].filter(Boolean).join(' ') || '-'}
                           </span>
                           {(part.year_from || part.year_to) && (
@@ -395,7 +417,7 @@ export default function UsedPartsModule() {
 
                       <td style={td}>
                         <div style={inlineMeta}>
-                          <MapPin size={13} />
+                          <MapPin size={12} />
                           {part.location || '-'}
                         </div>
                         {part.shelf_code ? <div style={mutedMini}>{part.shelf_code}</div> : null}
@@ -414,17 +436,36 @@ export default function UsedPartsModule() {
                       <td style={tdPrice}>{formatPrice(part.price)}</td>
 
                       <td style={tdAction}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/used-parts/${part.id}`);
-                          }}
-                          style={openBtn}
-                        >
-                          <Eye size={14} />
-                          Open
-                        </button>
+                        <div style={actionWrap}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/used-parts/${part.id}`);
+                            }}
+                            style={openBtn}
+                          >
+                            <Eye size={13} />
+                            Open
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(part.id, part.part_name);
+                            }}
+                            disabled={deletingId === part.id}
+                            style={{
+                              ...deleteBtn,
+                              opacity: deletingId === part.id ? 0.7 : 1,
+                              cursor: deletingId === part.id ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <Trash2 size={13} />
+                            {deletingId === part.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -448,7 +489,7 @@ function SummaryCard({ title, value, accent = '#0f172a' }) {
 }
 
 const page = {
-  padding: '28px',
+  padding: '22px',
 };
 
 const headerRow = {
@@ -456,43 +497,47 @@ const headerRow = {
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: '16px',
-  marginBottom: '22px',
+  marginBottom: '18px',
   flexWrap: 'wrap',
 };
 
 const pageTitle = {
   margin: 0,
-  fontSize: '30px',
-  fontWeight: '900',
+  fontSize: '24px',
+  fontWeight: '800',
   color: '#0f172a',
+  letterSpacing: '-0.02em',
 };
 
 const pageSubtitle = {
-  marginTop: '8px',
+  marginTop: '6px',
   color: '#64748b',
   fontWeight: '500',
+  fontSize: '13px',
 };
 
 const addBtn = {
   backgroundColor: '#ef4444',
   color: '#fff',
   border: 'none',
-  padding: '14px 20px',
-  borderRadius: '14px',
-  fontWeight: '800',
+  padding: '11px 16px',
+  borderRadius: '12px',
+  fontWeight: '700',
+  fontSize: '13px',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
+  gap: '8px',
 };
 
 const addBtnSmall = {
   backgroundColor: '#ef4444',
   color: '#fff',
   border: 'none',
-  padding: '12px 16px',
-  borderRadius: '12px',
-  fontWeight: '800',
+  padding: '10px 14px',
+  borderRadius: '10px',
+  fontWeight: '700',
+  fontSize: '13px',
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
@@ -501,38 +546,39 @@ const addBtnSmall = {
 
 const summaryGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-  gap: '14px',
-  marginBottom: '20px',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))',
+  gap: '10px',
+  marginBottom: '16px',
 };
 
 const summaryCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '18px',
-  padding: '18px',
+  borderRadius: '14px',
+  padding: '14px',
 };
 
 const summaryTitle = {
-  fontSize: '12px',
-  fontWeight: '800',
+  fontSize: '11px',
+  fontWeight: '700',
   color: '#64748b',
-  marginBottom: '8px',
+  marginBottom: '6px',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
 };
 
 const summaryValue = {
-  fontSize: '30px',
-  fontWeight: '900',
+  fontSize: '22px',
+  fontWeight: '800',
+  lineHeight: 1.1,
 };
 
 const toolbarCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '22px',
-  padding: '18px',
-  marginBottom: '22px',
+  borderRadius: '18px',
+  padding: '14px',
+  marginBottom: '16px',
 };
 
 const toolbarTop = {
@@ -552,12 +598,12 @@ const toolbarButtons = {
 const searchWrap = {
   position: 'relative',
   flex: 1,
-  minWidth: '280px',
+  minWidth: '260px',
 };
 
 const searchIcon = {
   position: 'absolute',
-  left: '16px',
+  left: '14px',
   top: '50%',
   transform: 'translateY(-50%)',
   color: '#94a3b8',
@@ -565,20 +611,22 @@ const searchIcon = {
 
 const searchInput = {
   width: '100%',
-  padding: '14px 16px 14px 46px',
-  borderRadius: '14px',
+  padding: '12px 14px 12px 40px',
+  borderRadius: '12px',
   border: '1px solid #e2e8f0',
   background: '#fff',
-  fontSize: '14px',
+  fontSize: '13px',
   outline: 'none',
+  boxSizing: 'border-box',
 };
 
 const filterBtn = {
-  padding: '14px 16px',
-  borderRadius: '14px',
+  padding: '12px 14px',
+  borderRadius: '12px',
   border: '1px solid #e2e8f0',
   background: '#fff',
-  fontWeight: '800',
+  fontWeight: '700',
+  fontSize: '13px',
   color: '#334155',
   cursor: 'pointer',
   display: 'flex',
@@ -587,13 +635,13 @@ const filterBtn = {
 };
 
 const filterCount = {
-  minWidth: '20px',
-  height: '20px',
+  minWidth: '18px',
+  height: '18px',
   borderRadius: '999px',
   background: '#0f172a',
   color: '#fff',
-  fontSize: '11px',
-  fontWeight: '800',
+  fontSize: '10px',
+  fontWeight: '700',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -601,80 +649,81 @@ const filterCount = {
 
 const chipWrap = {
   display: 'flex',
-  gap: '10px',
+  gap: '8px',
   flexWrap: 'wrap',
-  marginTop: '14px',
+  marginTop: '12px',
 };
 
 const categoryChip = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '8px',
-  padding: '10px 12px',
+  gap: '6px',
+  padding: '8px 10px',
   borderRadius: '999px',
   border: '1px solid #e2e8f0',
   background: '#fff',
   color: '#334155',
-  fontWeight: '700',
+  fontWeight: '600',
   cursor: 'pointer',
-  fontSize: '13px',
+  fontSize: '12px',
 };
 
 const activeChip = {
   ...categoryChip,
-  background: '#0f172a',
+  background: '#111827',
   color: '#fff',
-  border: '1px solid #0f172a',
+  border: '1px solid #111827',
 };
 
 const filtersPanel = {
-  marginTop: '16px',
+  marginTop: '14px',
   borderTop: '1px solid #e2e8f0',
-  paddingTop: '16px',
+  paddingTop: '14px',
 };
 
 const filtersGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-  gap: '14px',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+  gap: '12px',
 };
 
 const fieldGroup = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '8px',
+  gap: '6px',
 };
 
 const label = {
-  fontSize: '12px',
-  fontWeight: '800',
+  fontSize: '11px',
+  fontWeight: '700',
   color: '#334155',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
 };
 
 const input = {
-  padding: '12px 14px',
-  borderRadius: '12px',
+  padding: '10px 12px',
+  borderRadius: '10px',
   border: '1px solid #cbd5e1',
   outline: 'none',
-  fontSize: '14px',
+  fontSize: '13px',
   background: '#fff',
 };
 
 const filterActionRow = {
-  marginTop: '16px',
+  marginTop: '14px',
   display: 'flex',
   justifyContent: 'flex-end',
 };
 
 const clearBtn = {
-  padding: '11px 14px',
-  borderRadius: '12px',
+  padding: '10px 12px',
+  borderRadius: '10px',
   border: '1px solid #cbd5e1',
   background: '#fff',
   color: '#334155',
-  fontWeight: '800',
+  fontWeight: '700',
+  fontSize: '12px',
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
@@ -682,15 +731,15 @@ const clearBtn = {
 };
 
 const sectionHeaderRow = {
-  marginBottom: '12px',
+  marginBottom: '10px',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
 };
 
 const sectionTitle = {
-  fontSize: '18px',
-  fontWeight: '900',
+  fontSize: '16px',
+  fontWeight: '700',
   color: '#0f172a',
   margin: 0,
 };
@@ -698,7 +747,7 @@ const sectionTitle = {
 const tableCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '22px',
+  borderRadius: '18px',
   overflow: 'hidden',
 };
 
@@ -709,24 +758,24 @@ const tableWrap = {
 const table = {
   width: '100%',
   borderCollapse: 'collapse',
-  minWidth: '1200px',
+  minWidth: '1140px',
 };
 
 const thBase = {
   textAlign: 'left',
-  fontSize: '12px',
-  fontWeight: '800',
+  fontSize: '11px',
+  fontWeight: '700',
   color: '#64748b',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
-  padding: '14px 16px',
+  padding: '12px 14px',
   background: '#f8fafc',
   borderBottom: '1px solid #e2e8f0',
 };
 
 const thPart = {
   ...thBase,
-  minWidth: '300px',
+  minWidth: '280px',
 };
 
 const th = {
@@ -736,13 +785,13 @@ const th = {
 const thPrice = {
   ...thBase,
   textAlign: 'right',
-  minWidth: '110px',
+  minWidth: '100px',
 };
 
 const thAction = {
   ...thBase,
   textAlign: 'center',
-  minWidth: '120px',
+  minWidth: '170px',
 };
 
 const tr = {
@@ -751,9 +800,9 @@ const tr = {
 };
 
 const tdBase = {
-  padding: '14px 16px',
+  padding: '12px 14px',
   verticalAlign: 'middle',
-  fontSize: '14px',
+  fontSize: '13px',
   color: '#0f172a',
 };
 
@@ -768,8 +817,8 @@ const td = {
 const tdPrice = {
   ...tdBase,
   textAlign: 'right',
-  fontWeight: '900',
-  fontSize: '20px',
+  fontWeight: '700',
+  fontSize: '16px',
   color: '#16a34a',
 };
 
@@ -781,13 +830,13 @@ const tdAction = {
 const partCell = {
   display: 'flex',
   alignItems: 'center',
-  gap: '14px',
+  gap: '12px',
 };
 
 const thumbWrap = {
-  width: '78px',
-  height: '62px',
-  borderRadius: '12px',
+  width: '68px',
+  height: '54px',
+  borderRadius: '10px',
   overflow: 'hidden',
   background: '#f8fafc',
   border: '1px solid #f1f5f9',
@@ -814,8 +863,8 @@ const partInfo = {
 };
 
 const partName = {
-  fontSize: '18px',
-  fontWeight: '900',
+  fontSize: '14px',
+  fontWeight: '700',
   color: '#0f172a',
   lineHeight: 1.2,
 };
@@ -825,34 +874,35 @@ const partSubRow = {
   gap: '8px',
   alignItems: 'center',
   flexWrap: 'wrap',
-  marginTop: '6px',
+  marginTop: '5px',
 };
 
 const smallCategoryBadge = {
-  padding: '4px 9px',
+  padding: '3px 8px',
   borderRadius: '999px',
   background: '#f1f5f9',
   color: '#475569',
-  fontWeight: '800',
+  fontWeight: '700',
   fontSize: '10px',
   whiteSpace: 'nowrap',
 };
 
 const mutedMini = {
-  fontSize: '12px',
+  fontSize: '11px',
   color: '#64748b',
-  fontWeight: '600',
+  fontWeight: '500',
 };
 
 const monoText = {
-  fontWeight: '800',
+  fontWeight: '700',
   color: '#0f172a',
+  fontSize: '12px',
 };
 
 const fitmentWrap = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '5px',
+  gap: '4px',
 };
 
 const inlineMeta = {
@@ -860,25 +910,26 @@ const inlineMeta = {
   alignItems: 'center',
   gap: '6px',
   color: '#334155',
-  fontWeight: '700',
+  fontWeight: '600',
+  fontSize: '12px',
 };
 
 const gradeBadge = {
   display: 'inline-flex',
   alignItems: 'center',
-  padding: '6px 10px',
+  padding: '5px 9px',
   borderRadius: '999px',
   background: '#eff6ff',
   color: '#1d4ed8',
-  fontWeight: '800',
-  fontSize: '12px',
+  fontWeight: '700',
+  fontSize: '11px',
 };
 
 const statusBase = {
-  padding: '6px 10px',
+  padding: '5px 9px',
   borderRadius: '999px',
-  fontWeight: '800',
-  fontSize: '11px',
+  fontWeight: '700',
+  fontSize: '10px',
   whiteSpace: 'nowrap',
   display: 'inline-flex',
   alignItems: 'center',
@@ -915,20 +966,48 @@ const statusHold = {
   color: '#6d28d9',
 };
 
+const statusRemoved = {
+  ...statusBase,
+  background: '#e2e8f0',
+  color: '#475569',
+};
+
 const statusDefault = {
   ...statusBase,
   background: '#f1f5f9',
   color: '#475569',
 };
 
+const actionWrap = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  flexWrap: 'wrap',
+};
+
 const openBtn = {
-  padding: '10px 14px',
-  borderRadius: '12px',
-  border: 'none',
-  background: '#0f172a',
-  color: '#fff',
-  fontWeight: '800',
+  padding: '8px 11px',
+  borderRadius: '10px',
+  border: '1px solid #dbe2ea',
+  background: '#fff',
+  color: '#0f172a',
+  fontWeight: '700',
+  fontSize: '12px',
   cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+};
+
+const deleteBtn = {
+  padding: '8px 11px',
+  borderRadius: '10px',
+  border: '1px solid #fecaca',
+  background: '#fff5f5',
+  color: '#dc2626',
+  fontWeight: '700',
+  fontSize: '12px',
   display: 'inline-flex',
   alignItems: 'center',
   gap: '6px',
@@ -937,19 +1016,20 @@ const openBtn = {
 const emptyStateCard = {
   background: '#fff',
   border: '1px solid #e2e8f0',
-  borderRadius: '20px',
-  padding: '40px 24px',
+  borderRadius: '18px',
+  padding: '34px 20px',
   textAlign: 'center',
   color: '#64748b',
 };
 
 const emptyTitle = {
-  fontSize: '20px',
-  fontWeight: '900',
+  fontSize: '18px',
+  fontWeight: '700',
   color: '#0f172a',
-  margin: '12px 0 8px 0',
+  margin: '10px 0 8px 0',
 };
 
 const emptyText = {
-  marginBottom: '18px',
+  marginBottom: '16px',
+  fontSize: '13px',
 };
