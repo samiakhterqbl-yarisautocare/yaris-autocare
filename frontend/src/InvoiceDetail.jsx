@@ -920,16 +920,10 @@ const errorCard = {
 };
 
 const printStyles = `
-  @media (max-width: 768px) {
-    .invoice-page {
-      padding: 18px !important;
-    }
-  }
-
   @media print {
     @page {
       size: A4;
-      margin: 10mm;
+      margin: 8mm;
     }
 
     html,
@@ -937,7 +931,8 @@ const printStyles = `
       background: #fff !important;
       margin: 0 !important;
       padding: 0 !important;
-      width: 100% !important;
+      width: 210mm !important;
+      min-height: 297mm !important;
     }
 
     body * {
@@ -954,20 +949,21 @@ const printStyles = `
     }
 
     .invoice-page {
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: 190mm !important;
-      max-width: 190mm !important;
+      position: static !important;
+      width: 194mm !important;
+      max-width: 194mm !important;
+      min-height: auto !important;
       margin: 0 auto !important;
       padding: 0 !important;
       box-shadow: none !important;
       background: #fff !important;
       color: #000 !important;
       font-size: 11px !important;
+      box-sizing: border-box !important;
     }
 
     * {
+      box-sizing: border-box !important;
       -webkit-print-color-adjust: economy !important;
       print-color-adjust: economy !important;
     }
@@ -975,10 +971,6 @@ const printStyles = `
     table {
       page-break-inside: auto !important;
       break-inside: auto !important;
-    }
-
-    thead {
-      display: table-header-group !important;
     }
 
     tr {
