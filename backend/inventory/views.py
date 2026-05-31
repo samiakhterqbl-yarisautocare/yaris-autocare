@@ -574,7 +574,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
         return context
 
 
-class InvoiceDetailView(generics.RetrieveAPIView):
+class InvoiceDetailView(generics.RetrieveDestroyAPIView):
     queryset = Invoice.objects.prefetch_related('items', 'service_detail').all()
     serializer_class = InvoiceSerializer
     authentication_classes = [TokenAuthentication]
@@ -584,7 +584,6 @@ class InvoiceDetailView(generics.RetrieveAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
-
 
 class InvoiceSendEmailView(APIView):
     authentication_classes = [TokenAuthentication]
