@@ -33,9 +33,7 @@ export default function InvoiceDetail() {
 
   useEffect(() => {
     if (invoice && shouldAutoPrint) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
+      const timer = setTimeout(() => window.print(), 500);
       return () => clearTimeout(timer);
     }
   }, [invoice, shouldAutoPrint]);
@@ -79,11 +77,11 @@ export default function InvoiceDetail() {
     if (invoice.invoice_type === 'USED_PART') return false;
     return Boolean(
       invoice.rego ||
-        invoice.make ||
-        invoice.model ||
-        invoice.year ||
-        invoice.vin ||
-        invoice.odometer
+      invoice.make ||
+      invoice.model ||
+      invoice.year ||
+      invoice.vin ||
+      invoice.odometer
     );
   }, [invoice]);
 
@@ -91,7 +89,7 @@ export default function InvoiceDetail() {
     const raw = String(invoice?.notes || '').trim();
     if (!raw) return '';
 
-    const lines = raw
+    return raw
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
@@ -99,9 +97,8 @@ export default function InvoiceDetail() {
         (line) =>
           !line.toUpperCase().startsWith('DOCUMENT TYPE:') &&
           !line.toUpperCase().startsWith('SERVICE TYPE:')
-      );
-
-    return lines.join('\n\n');
+      )
+      .join('\n');
   }, [invoice]);
 
   const serviceItems = useMemo(() => {
@@ -129,19 +126,24 @@ export default function InvoiceDetail() {
     const fullNumber = phone.startsWith('61')
       ? phone
       : phone.startsWith('0')
-      ? `61${phone.slice(1)}`
-      : phone;
+        ? `61${phone.slice(1)}`
+        : phone;
 
     const invoiceLink = `${FRONTEND_URL}/sales/${invoiceId}`;
+
     const message = `Hi ${invoice?.customer_name || ''},
 
 Your ${documentLabel.toLowerCase()} ${invoice?.invoice_number || ''} from Yaris Autocare is ready.
+
+Total: $${formatMoney(invoice?.total_amount)}
+Balance Due: $${formatMoney(invoice?.balance_due)}
 
 View here:
 ${invoiceLink}
 
 Thank you,
-Yaris Autocare`;
+Yaris Autocare
+0449 828 749`;
 
     window.open(`https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -162,8 +164,8 @@ Yaris Autocare`;
       console.error(error?.response?.data || error);
       alert(
         error?.response?.data?.detail ||
-          error?.response?.data?.message ||
-          'Failed to send email. Backend endpoint is required.'
+        error?.response?.data?.message ||
+        'Failed to send email.'
       );
     } finally {
       setEmailSending(false);
@@ -194,6 +196,8 @@ Yaris Autocare`;
     );
   }
 
+  const visibleItems = invoice.invoice_type === 'SERVICING' ? extraItems : items;
+
   return (
     <div style={pageWrap}>
       <style>{printStyles}</style>
@@ -208,10 +212,12 @@ Yaris Autocare`;
           <button type="button" style={secondaryBtn} onClick={fetchInvoice}>
             Refresh
           </button>
+
           <button type="button" style={secondaryBtn} onClick={openWhatsApp}>
             <MessageCircle size={15} />
             WhatsApp
           </button>
+
           <button
             type="button"
             style={secondaryBtn}
@@ -221,6 +227,7 @@ Yaris Autocare`;
             <Send size={15} />
             {emailSending ? 'Sending...' : 'Email'}
           </button>
+
           <button type="button" style={printBtn} onClick={() => window.print()}>
             <Printer size={15} />
             Print / PDF
@@ -228,215 +235,201 @@ Yaris Autocare`;
         </div>
       </div>
 
-      <div style={documentWrap} className="print-area">
-        <table className="print-shell" style={printShellTable}>
-          <thead>
-            <tr>
-              <td style={printShellCell}>
-                <PrintHeader />
-              </td>
-            </tr>
-          </thead>
+      <main className="invoice-page" style={documentWrap}>
+        <PrintHeader />
 
-          <tbody>
-            <tr>
-              <td style={printShellCell}>
-                <div style={documentMetaRow}>
-                  <div style={docTypeTitle}>{documentLabel}</div>
-                  <div style={metaBlock}>
-                    <div><strong>Document No:</strong> {invoice.invoice_number}</div>
-                    <div><strong>Date:</strong> {formatDate(invoice.created_at)}</div>
-                    <div><strong>Time:</strong> {formatTime(invoice.created_at)}</div>
-                    <div><strong>Type:</strong> {formatInvoiceType(invoice.invoice_type)}</div>
-                  </div>
-                </div>
+        <section style={documentMetaRow}>
+          <div>
+            <div style={docTypeTitle}>{documentLabel}</div>
+            <div style={mutedText}>Document prepared for customer record</div>
+          </div>
 
-                <div style={detailsGrid}>
-                  <div>
-                    <SectionTitle title="Customer Details" />
-                    <SimpleRow label="Customer" value={invoice.customer_name || '-'} />
-                    <SimpleRow label="Phone" value={invoice.customer_phone || '-'} />
-                    <SimpleRow label="Email" value={invoice.customer_email || '-'} />
-                    <SimpleRow label="Address" value={invoice.customer_address || '-'} multiline />
-                  </div>
+          <div style={metaBlock}>
+            <InfoLine label="Document No" value={invoice.invoice_number} />
+            <InfoLine label="Date" value={formatDate(invoice.created_at)} />
+            <InfoLine label="Time" value={formatTime(invoice.created_at)} />
+            <InfoLine label="Type" value={formatInvoiceType(invoice.invoice_type)} />
+          </div>
+        </section>
 
-                  {showVehicleSection && (
-                    <div>
-                      <SectionTitle title="Vehicle Details" />
-                      <SimpleRow label="Rego" value={invoice.rego || '-'} />
-                      <SimpleRow label="Make" value={invoice.make || '-'} />
-                      <SimpleRow label="Model" value={invoice.model || '-'} />
-                      <SimpleRow label="VIN" value={invoice.vin || '-'} />
-                      <SimpleRow
-                        label="Odometer"
-                        value={invoice.odometer ? `${invoice.odometer} km` : '-'}
-                      />
-                    </div>
-                  )}
-                </div>
+        <section style={detailsGrid}>
+          <div style={plainPanel}>
+            <SectionTitle title="Bill To" />
+            <SimpleRow label="Customer" value={invoice.customer_name || '-'} />
+            <SimpleRow label="Phone" value={invoice.customer_phone || '-'} />
+            <SimpleRow label="Email" value={invoice.customer_email || '-'} />
+            <SimpleRow label="Address" value={invoice.customer_address || '-'} multiline />
+          </div>
 
-                {invoice.invoice_type === 'SERVICING' && (
-                  <div style={sectionBlock}>
-                    <SectionTitle
-                      title={`Service Details${serviceTemplateType ? ` - ${serviceTemplateType}` : ''}`}
-                    />
-                    <div style={serviceGrid}>
-                      <SimpleStat
-                        label="Service At KM"
-                        value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'}
-                      />
-                      <SimpleStat
-                        label="Next Service At KM"
-                        value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'}
-                      />
-                      <SimpleStat
-                        label="Next Service Date"
-                        value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
-                      />
-                    </div>
+          {showVehicleSection && (
+            <div style={plainPanel}>
+              <SectionTitle title="Vehicle" />
+              <SimpleRow label="Rego" value={invoice.rego || '-'} />
+              <SimpleRow label="Make" value={invoice.make || '-'} />
+              <SimpleRow label="Model" value={invoice.model || '-'} />
+              <SimpleRow label="VIN" value={invoice.vin || '-'} />
+              <SimpleRow
+                label="Odometer"
+                value={invoice.odometer ? `${invoice.odometer} km` : '-'}
+              />
+            </div>
+          )}
+        </section>
 
-                    {serviceChecklistText && (
-                      <div style={{ marginTop: '14px' }}>
-                        <SectionTitle title="Service Checklist" small />
-                        <div style={checklistBox}>{serviceChecklistText}</div>
-                      </div>
-                    )}
+        {invoice.invoice_type === 'SERVICING' && (
+          <section style={sectionBlock}>
+            <SectionTitle
+              title={`Service Details${serviceTemplateType ? ` - ${serviceTemplateType}` : ''}`}
+            />
 
-                    {serviceDetail?.service_notes && (
-                      <div style={{ marginTop: '12px' }}>
-                        <SectionTitle title="Service Notes" small />
-                        <div style={notesBox}>{serviceDetail.service_notes}</div>
-                      </div>
-                    )}
-                  </div>
+            <div style={serviceGrid}>
+              <SimpleStat
+                label="Service At KM"
+                value={serviceDetail?.service_at_km ? `${serviceDetail.service_at_km} km` : '-'}
+              />
+              <SimpleStat
+                label="Next Service At KM"
+                value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'}
+              />
+              <SimpleStat
+                label="Next Service Date"
+                value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
+              />
+            </div>
+
+            {serviceChecklistText && (
+              <div style={{ marginTop: 10 }}>
+                <SectionTitle title="Service Checklist" small />
+                <div style={notesBox}>{serviceChecklistText}</div>
+              </div>
+            )}
+
+            {serviceDetail?.service_notes && (
+              <div style={{ marginTop: 10 }}>
+                <SectionTitle title="Service Notes" small />
+                <div style={notesBox}>{serviceDetail.service_notes}</div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {(invoice.invoice_type !== 'SERVICING' || visibleItems.length > 0) && (
+          <section style={sectionBlock}>
+            <SectionTitle
+              title={
+                invoice.invoice_type === 'SERVICING'
+                  ? 'Extra Items'
+                  : invoice.invoice_type === 'USED_PART'
+                    ? 'Parts Details'
+                    : 'Invoice Details'
+              }
+            />
+
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th style={thNo}>#</th>
+                  <th style={thDesc}>Description</th>
+                  <th style={th}>Type</th>
+                  <th style={th}>Qty</th>
+                  <th style={th}>Amount</th>
+                  <th style={th}>Discount</th>
+                  <th style={th}>Total</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {visibleItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={emptyTd}>No items.</td>
+                  </tr>
+                ) : (
+                  visibleItems.map((item, index) => (
+                    <tr key={item.id || index}>
+                      <td style={tdNo}>{index + 1}</td>
+                      <td style={tdDesc}>
+                        <div style={descMain}>{item.name || '-'}</div>
+                        {item.description ? <div style={descSub}>{item.description}</div> : null}
+                      </td>
+                      <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
+                      <td style={td}>{formatQty(item.quantity)}</td>
+                      <td style={td}>${formatMoney(item.unit_price)}</td>
+                      <td style={td}>${formatMoney(item.discount)}</td>
+                      <td style={tdStrong}>${formatMoney(item.line_total)}</td>
+                    </tr>
+                  ))
                 )}
+              </tbody>
+            </table>
+          </section>
+        )}
 
-                {(invoice.invoice_type !== 'SERVICING' || extraItems.length > 0) && (
-                  <div style={sectionBlock}>
-                    <SectionTitle
-                      title={
-                        invoice.invoice_type === 'SERVICING'
-                          ? 'Extra Items'
-                          : invoice.invoice_type === 'USED_PART'
-                          ? 'Parts Details'
-                          : 'Invoice Details'
-                      }
-                    />
+        {filteredNotes && (
+          <section style={sectionBlock}>
+            <SectionTitle title="Notes" />
+            <div style={notesBox}>{filteredNotes}</div>
+          </section>
+        )}
 
-                    <table style={table}>
-                      <thead>
-                        <tr>
-                          <th style={thNo}>#</th>
-                          <th style={thDesc}>Description</th>
-                          <th style={th}>Type</th>
-                          <th style={th}>Qty</th>
-                          <th style={th}>Amount</th>
-                          <th style={th}>Discount</th>
-                          <th style={th}>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(invoice.invoice_type === 'SERVICING' ? extraItems : items).length === 0 ? (
-                          <tr>
-                            <td colSpan={7} style={emptyTd}>No extra items.</td>
-                          </tr>
-                        ) : (
-                          (invoice.invoice_type === 'SERVICING' ? extraItems : items).map((item, index) => (
-                            <tr key={item.id || index}>
-                              <td style={tdNo}>{index + 1}</td>
-                              <td style={tdDesc}>
-                                <div style={descMain}>{item.name || '-'}</div>
-                                {item.description ? <div style={descSub}>{item.description}</div> : null}
-                              </td>
-                              <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
-                              <td style={td}>{formatQty(item.quantity)}</td>
-                              <td style={td}>${formatMoney(item.unit_price)}</td>
-                              <td style={td}>${formatMoney(item.discount)}</td>
-                              <td style={tdStrong}>${formatMoney(item.line_total)}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+        <section className="invoice-footer-block" style={footerGrid}>
+          <div style={paymentBox}>
+            <SectionTitle title="Payment Details" small />
+            <SimpleText label="Bank" value="ANZ Pty. Ltd." />
+            <SimpleText label="Account Name" value="Pyramid Enterprises AU Pty Ltd" />
+            <SimpleText label="BSB" value="013270" />
+            <SimpleText label="Account No" value="430088057" />
+            <div style={smallNote}>Please email remittance to info@yarisautocare.com.au</div>
+          </div>
 
-                {filteredNotes && (
-                  <div style={sectionBlock}>
-                    <SectionTitle title="Notes" />
-                    <div style={notesBox}>{filteredNotes}</div>
-                  </div>
-                )}
+          <div style={totalsBox}>
+            <TotalRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
+            <TotalRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
+            <TotalRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
+            <TotalRow label="Payment Method" value={invoice.payment_method || '-'} />
+            <TotalRowBig label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
+            <TotalRowBig label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} danger />
+          </div>
+        </section>
 
-                <div style={footerGrid}>
-                  <div style={paymentBox}>
-                    <div style={footerHeading}>Payment Details</div>
-                    <div>Bank: ANZ Pty. Ltd.</div>
-                    <div>Account Name: Pyramid Enterprises AU Pty Ltd</div>
-                    <div>BSB: 013270</div>
-                    <div>Account No: 430088057</div>
-                    <div>Please email the remittance to info@yarisautocare.com.au</div>
-                  </div>
-
-                  <div style={totalsBox}>
-                    <TotalRow label="Subtotal" value={`$${formatMoney(invoice.subtotal)}`} />
-                    <TotalRow label="GST Included" value={`$${formatMoney(invoice.gst_amount)}`} />
-                    <TotalRow label="Paid Amount" value={`$${formatMoney(invoice.paid_amount)}`} />
-                    <TotalRow label="Payment Method" value={invoice.payment_method || '-'} />
-                    <TotalRowBig label="Total Amount" value={`$${formatMoney(invoice.total_amount)}`} />
-                    <TotalRowBig label="Balance Due" value={`$${formatMoney(invoice.balance_due)}`} danger />
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div style={bottomNote}>
+          Thank you for your business. Please contact Yaris Autocare on 0449 828 749 for any invoice enquiries.
+        </div>
+      </main>
     </div>
   );
 }
 
 function PrintHeader() {
   return (
-    <div style={headerWrap}>
-      <div style={logoArea}>
-        <img
-          src="/image.png"
-          alt="Yaris Autocare"
-          style={logoImage}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-        <div style={brandFallback}>
-          YARIS <span style={{ color: '#d62828' }}>AUTOCARE</span>
+    <header style={headerWrap}>
+      <div style={brandRow}>
+        <div style={brandName}>
+          YARIS <span style={{ color: '#b91c1c' }}>AUTOCARE</span>
         </div>
-        <div style={operatedText}>Operated by Pyramid Enterprises AU Pty Ltd</div>
-        <div style={serviceLine}>Car Rental • Mechanical Services • Auto Parts</div>
+        <div style={businessMeta}>
+          <div>Operated by Pyramid Enterprises AU Pty Ltd</div>
+          <div>Car Rental • Mechanical Services • Auto Parts</div>
+        </div>
       </div>
 
       <div style={contactStrip}>
-        <div style={contactCol}>
-          <div style={contactLabel}>Address:</div>
-          <div>16 Legana Park Drive, Legana TAS 7277</div>
+        <div>
+          <strong>Address:</strong> 16 Legana Park Drive, Legana TAS 7277
         </div>
-        <div style={contactColMiddle}>
-          <div style={contactLabel}>Phone:</div>
-          <div>0449 828 749</div>
+        <div>
+          <strong>Phone:</strong> 0449 828 749
         </div>
-        <div style={contactColRight}>
-          <div>www.yarisautocare.com.au</div>
+        <div>
+          <strong>Web:</strong> www.yarisautocare.com.au
         </div>
       </div>
 
       <div style={abnStrip}>
-        <span>ABN: 91 650 944 157</span>
-        <span>|</span>
-        <span>Accreditation No: 419296067</span>
-        <span>|</span>
-        <span>LMVT Licence: 6130</span>
+        ABN: 91 650 944 157 &nbsp; | &nbsp;
+        Accreditation No: 419296067 &nbsp; | &nbsp;
+        LMVT Licence: 6130
       </div>
-    </div>
+    </header>
   );
 }
 
@@ -445,10 +438,19 @@ function SectionTitle({ title, small = false }) {
     <div
       style={{
         ...sectionTitleStyle,
-        ...(small ? { fontSize: '15px', marginBottom: '8px' } : {}),
+        ...(small ? { fontSize: 13, marginBottom: 6 } : {}),
       }}
     >
       {title}
+    </div>
+  );
+}
+
+function InfoLine({ label, value }) {
+  return (
+    <div style={infoLine}>
+      <span>{label}:</span>
+      <strong>{value || '-'}</strong>
     </div>
   );
 }
@@ -460,6 +462,14 @@ function SimpleRow({ label, value, multiline = false }) {
       <div style={{ ...simpleValue, ...(multiline ? { whiteSpace: 'pre-wrap' } : {}) }}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function SimpleText({ label, value }) {
+  return (
+    <div style={simpleText}>
+      <strong>{label}:</strong> {value}
     </div>
   );
 }
@@ -504,12 +514,12 @@ function formatInvoiceType(type) {
   if (!type) return 'Invoice';
   if (type === 'USED_PART') return 'Parts Sale';
   if (type === 'REPAIR') return 'Workshop Invoice';
-  return type.replaceAll('_', ' ');
+  return String(type).replaceAll('_', ' ');
 }
 
 function formatSmallType(type) {
   if (!type) return 'ITEM';
-  return type.replaceAll('_', ' ');
+  return String(type).replaceAll('_', ' ');
 }
 
 function formatDate(dateString) {
@@ -528,330 +538,284 @@ function formatPlainDate(dateString) {
 }
 
 const pageWrap = {
-  background: '#f3f4f6',
+  background: '#e5e7eb',
   minHeight: '100vh',
-  padding: '24px',
+  padding: 24,
 };
 
 const topBar = {
-  maxWidth: '900px',
+  maxWidth: 900,
   margin: '0 auto 16px',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  gap: '12px',
+  gap: 12,
   flexWrap: 'wrap',
 };
 
 const topBarRight = {
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
+  gap: 10,
   flexWrap: 'wrap',
 };
 
-const backBtn = {
+const baseBtn = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: 8,
   border: '1px solid #d1d5db',
   background: '#fff',
   color: '#111827',
-  borderRadius: '10px',
-  padding: '10px 14px',
+  borderRadius: 8,
+  padding: '9px 13px',
   fontWeight: 700,
   cursor: 'pointer',
 };
 
-const secondaryBtn = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '8px',
-  border: '1px solid #d1d5db',
-  background: '#fff',
-  color: '#111827',
-  borderRadius: '10px',
-  padding: '10px 14px',
-  fontWeight: 700,
-  cursor: 'pointer',
-};
+const backBtn = { ...baseBtn };
+const secondaryBtn = { ...baseBtn };
 
 const printBtn = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '8px',
-  border: 'none',
-  background: '#d62828',
+  ...baseBtn,
+  border: '1px solid #111827',
+  background: '#111827',
   color: '#fff',
-  borderRadius: '10px',
-  padding: '10px 14px',
-  fontWeight: 800,
-  cursor: 'pointer',
 };
 
 const documentWrap = {
-  maxWidth: '900px',
+  maxWidth: 900,
   margin: '0 auto',
   background: '#fff',
-  padding: '26px 26px 32px',
-  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-};
-
-const printShellTable = {
-  width: '100%',
-  borderCollapse: 'collapse',
-};
-
-const printShellCell = {
-  padding: 0,
-  verticalAlign: 'top',
+  padding: '24px 28px 28px',
+  boxShadow: '0 12px 30px rgba(0,0,0,0.10)',
+  color: '#111827',
+  fontFamily: 'Arial, Helvetica, sans-serif',
 };
 
 const headerWrap = {
-  textAlign: 'center',
-  marginBottom: '18px',
+  borderBottom: '2px solid #111827',
+  paddingBottom: 12,
+  marginBottom: 18,
 };
 
-const logoArea = {
-  textAlign: 'center',
+const brandRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 20,
+  alignItems: 'flex-start',
 };
 
-const logoImage = {
-  maxWidth: '100%',
-  width: '720px',
-  height: 'auto',
-  display: 'block',
-  margin: '0 auto',
-};
-
-const brandFallback = {
-  fontSize: '34px',
+const brandName = {
+  fontSize: 30,
   fontWeight: 900,
-  color: '#111827',
+  letterSpacing: '0.03em',
+  lineHeight: 1,
 };
 
-const operatedText = {
-  fontSize: '14px',
-  marginTop: '6px',
-  color: '#374151',
-};
-
-const serviceLine = {
-  fontSize: '15px',
-  marginTop: '8px',
+const businessMeta = {
+  textAlign: 'right',
+  fontSize: 12,
+  lineHeight: 1.5,
   color: '#374151',
 };
 
 const contactStrip = {
-  marginTop: '14px',
-  borderTop: '2px solid #d62828',
-  borderBottom: '1px solid #d1d5db',
-  padding: '12px 10px',
+  marginTop: 12,
   display: 'grid',
-  gridTemplateColumns: '1.4fr 1fr 1fr',
-  gap: '12px',
-  alignItems: 'center',
-  textAlign: 'left',
-  fontSize: '14px',
-};
-
-const contactCol = {
-  borderRight: '1px solid #d1d5db',
-  paddingRight: '10px',
-};
-
-const contactColMiddle = {
-  borderRight: '1px solid #d1d5db',
-  paddingRight: '10px',
-};
-
-const contactColRight = {
-  textAlign: 'left',
-};
-
-const contactLabel = {
-  fontWeight: 800,
-  display: 'inline',
-  marginRight: '6px',
+  gridTemplateColumns: '1.7fr 0.8fr 1fr',
+  gap: 12,
+  fontSize: 12,
+  color: '#111827',
 };
 
 const abnStrip = {
-  display: 'flex',
-  justifyContent: 'center',
-  gap: '10px',
-  flexWrap: 'wrap',
-  padding: '8px 0 0',
-  fontSize: '14px',
+  marginTop: 10,
+  paddingTop: 8,
+  borderTop: '1px solid #d1d5db',
+  fontSize: 12,
   fontWeight: 700,
-  color: '#374151',
+  textAlign: 'center',
 };
 
 const documentMetaRow = {
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  gap: '16px',
-  marginTop: '18px',
-  marginBottom: '18px',
-  flexWrap: 'wrap',
+  gap: 20,
+  marginBottom: 18,
 };
 
 const docTypeTitle = {
-  fontSize: '28px',
+  fontSize: 25,
   fontWeight: 900,
-  color: '#111827',
-  letterSpacing: '0.03em',
+  letterSpacing: '0.04em',
+};
+
+const mutedText = {
+  marginTop: 4,
+  fontSize: 12,
+  color: '#6b7280',
 };
 
 const metaBlock = {
-  fontSize: '14px',
-  lineHeight: 1.8,
-  textAlign: 'right',
-  color: '#111827',
+  minWidth: 260,
+  fontSize: 12,
+};
+
+const infoLine = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 20,
+  padding: '3px 0',
+  borderBottom: '1px solid #e5e7eb',
 };
 
 const detailsGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: '24px',
-  marginBottom: '18px',
+  gap: 18,
+  marginBottom: 16,
+};
+
+const plainPanel = {
+  border: '1px solid #d1d5db',
+  padding: 12,
+  breakInside: 'avoid',
+  pageBreakInside: 'avoid',
 };
 
 const sectionBlock = {
-  marginBottom: '18px',
-  pageBreakInside: 'avoid',
+  marginBottom: 16,
   breakInside: 'avoid',
+  pageBreakInside: 'avoid',
 };
 
 const sectionTitleStyle = {
-  fontSize: '18px',
+  fontSize: 15,
   fontWeight: 900,
   color: '#111827',
-  marginBottom: '10px',
+  marginBottom: 8,
+  paddingBottom: 5,
   borderBottom: '1px solid #d1d5db',
-  paddingBottom: '6px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.02em',
 };
 
 const simpleRow = {
   display: 'grid',
-  gridTemplateColumns: '140px 1fr',
-  gap: '10px',
-  padding: '7px 0',
+  gridTemplateColumns: '110px 1fr',
+  gap: 8,
+  padding: '4px 0',
   borderBottom: '1px solid #f3f4f6',
 };
 
 const simpleLabel = {
   fontWeight: 800,
   color: '#374151',
+  fontSize: 11,
   textTransform: 'uppercase',
-  fontSize: '13px',
 };
 
 const simpleValue = {
   color: '#111827',
-  fontSize: '14px',
+  fontSize: 12,
+};
+
+const simpleText = {
+  fontSize: 12,
+  lineHeight: 1.55,
 };
 
 const serviceGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: '12px',
+  gap: 10,
 };
 
 const statBox = {
   border: '1px solid #d1d5db',
-  padding: '12px',
+  padding: 10,
 };
 
 const statLabel = {
-  fontSize: '12px',
+  fontSize: 11,
   fontWeight: 800,
-  color: '#6b7280',
+  color: '#4b5563',
   textTransform: 'uppercase',
 };
 
 const statValue = {
-  marginTop: '6px',
-  fontSize: '16px',
+  marginTop: 4,
+  fontSize: 13,
   fontWeight: 800,
   color: '#111827',
 };
 
 const notesBox = {
   border: '1px solid #d1d5db',
-  padding: '12px',
+  padding: 10,
   whiteSpace: 'pre-wrap',
-  lineHeight: 1.7,
-  fontSize: '14px',
+  lineHeight: 1.45,
+  fontSize: 12,
   color: '#111827',
-};
-
-const checklistBox = {
-  border: '1px solid #d1d5db',
-  background: '#fafafa',
-  padding: '12px',
-  whiteSpace: 'pre-wrap',
-  lineHeight: 1.7,
-  fontSize: '14px',
-  color: '#111827',
+  breakInside: 'avoid',
+  pageBreakInside: 'avoid',
 };
 
 const table = {
   width: '100%',
   borderCollapse: 'collapse',
-  border: '1px solid #d1d5db',
+  border: '1px solid #111827',
+  fontSize: 12,
 };
 
 const thNo = {
-  border: '1px solid #d1d5db',
-  padding: '10px 8px',
+  border: '1px solid #111827',
+  padding: '7px 6px',
   textAlign: 'center',
-  background: '#f3f4f6',
-  fontSize: '12px',
-  fontWeight: 800,
-  width: '50px',
+  fontSize: 11,
+  fontWeight: 900,
+  width: 36,
 };
 
 const thDesc = {
-  border: '1px solid #d1d5db',
-  padding: '10px 8px',
+  border: '1px solid #111827',
+  padding: '7px 6px',
   textAlign: 'left',
-  background: '#f3f4f6',
-  fontSize: '12px',
-  fontWeight: 800,
+  fontSize: 11,
+  fontWeight: 900,
 };
 
 const th = {
-  border: '1px solid #d1d5db',
-  padding: '10px 8px',
+  border: '1px solid #111827',
+  padding: '7px 6px',
   textAlign: 'center',
-  background: '#f3f4f6',
-  fontSize: '12px',
-  fontWeight: 800,
+  fontSize: 11,
+  fontWeight: 900,
 };
 
 const tdNo = {
   border: '1px solid #d1d5db',
-  padding: '10px 8px',
+  padding: '7px 6px',
   textAlign: 'center',
   verticalAlign: 'top',
-  fontSize: '14px',
+  fontSize: 12,
 };
 
 const td = {
   border: '1px solid #d1d5db',
-  padding: '10px 8px',
+  padding: '7px 6px',
   textAlign: 'center',
   verticalAlign: 'top',
-  fontSize: '14px',
+  fontSize: 12,
 };
 
 const tdDesc = {
   border: '1px solid #d1d5db',
-  padding: '10px 8px',
+  padding: '7px 6px',
   textAlign: 'left',
   verticalAlign: 'top',
-  fontSize: '14px',
+  fontSize: 12,
 };
 
 const tdStrong = {
@@ -861,7 +825,7 @@ const tdStrong = {
 
 const emptyTd = {
   border: '1px solid #d1d5db',
-  padding: '16px',
+  padding: 14,
   textAlign: 'center',
   color: '#6b7280',
 };
@@ -872,106 +836,116 @@ const descMain = {
 };
 
 const descSub = {
-  marginTop: '4px',
-  color: '#4b5563',
+  marginTop: 3,
+  color: '#374151',
   whiteSpace: 'pre-wrap',
-  fontSize: '13px',
+  fontSize: 11,
+  lineHeight: 1.35,
 };
 
 const footerGrid = {
   display: 'grid',
   gridTemplateColumns: '1.1fr 0.9fr',
-  gap: '20px',
-  marginTop: '24px',
+  gap: 16,
+  marginTop: 18,
+  breakInside: 'avoid',
+  pageBreakInside: 'avoid',
 };
 
 const paymentBox = {
-  background: '#0f172a',
-  color: '#fff',
-  padding: '18px',
-  lineHeight: 1.8,
-  fontSize: '14px',
-};
-
-const footerHeading = {
-  fontSize: '18px',
-  fontWeight: 900,
-  marginBottom: '10px',
+  border: '1px solid #d1d5db',
+  padding: 12,
+  breakInside: 'avoid',
+  pageBreakInside: 'avoid',
 };
 
 const totalsBox = {
-  border: '1px solid #fecaca',
-  background: '#fff5f5',
-  padding: '18px',
+  border: '1px solid #111827',
+  padding: 12,
+  breakInside: 'avoid',
+  pageBreakInside: 'avoid',
+};
+
+const smallNote = {
+  marginTop: 8,
+  fontSize: 11,
+  color: '#374151',
 };
 
 const totalRow = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: '12px',
-  padding: '10px 0',
-  borderBottom: '1px solid #fee2e2',
-  fontSize: '14px',
+  gap: 12,
+  padding: '6px 0',
+  borderBottom: '1px solid #e5e7eb',
+  fontSize: 12,
 };
 
 const totalRowBig = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: '12px',
-  padding: '14px 0 6px',
-  fontSize: '18px',
+  gap: 12,
+  padding: '9px 0 4px',
+  fontSize: 15,
   fontWeight: 900,
   color: '#111827',
 };
 
+const bottomNote = {
+  marginTop: 16,
+  paddingTop: 10,
+  borderTop: '1px solid #d1d5db',
+  fontSize: 11,
+  color: '#4b5563',
+  textAlign: 'center',
+};
+
 const loadingCard = {
-  maxWidth: '900px',
+  maxWidth: 900,
   margin: '0 auto',
   background: '#fff',
-  padding: '30px',
+  padding: 30,
   textAlign: 'center',
   boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
 };
 
 const errorCard = {
-  maxWidth: '900px',
+  maxWidth: 900,
   margin: '0 auto',
-  background: '#fff1f2',
+  background: '#fff',
   border: '1px solid #fecdd3',
-  padding: '20px',
+  padding: 20,
   color: '#be123c',
   fontWeight: 700,
 };
 
 const printStyles = `
-  @media (max-width: 900px) {
-    .print-area {
+  @media (max-width: 768px) {
+    .invoice-page {
       padding: 18px !important;
     }
   }
 
-  @media (max-width: 768px) {
-    .print-area {
-      padding: 14px !important;
-    }
-  }
-
   @media print {
-    html, body {
-      width: 100%;
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    html,
+    body {
       background: #fff !important;
       margin: 0 !important;
       padding: 0 !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      width: 100% !important;
     }
 
     body * {
       visibility: hidden !important;
     }
 
-    .print-area,
-    .print-area * {
+    .invoice-page,
+    .invoice-page * {
       visibility: visible !important;
     }
 
@@ -979,48 +953,42 @@ const printStyles = `
       display: none !important;
     }
 
-    .print-area {
+    .invoice-page {
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      margin: 0 !important;
-      padding: 8mm !important;
+      width: 190mm !important;
+      max-width: 190mm !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
       box-shadow: none !important;
-      border: none !important;
       background: #fff !important;
+      color: #000 !important;
+      font-size: 11px !important;
     }
 
-    .print-shell {
-      width: 100% !important;
-      border-collapse: collapse !important;
-    }
-
-    .print-shell thead {
-      display: table-header-group !important;
-    }
-
-    .print-shell tfoot {
-      display: table-footer-group !important;
+    * {
+      -webkit-print-color-adjust: economy !important;
+      print-color-adjust: economy !important;
     }
 
     table {
-      page-break-inside: auto;
+      page-break-inside: auto !important;
+      break-inside: auto !important;
+    }
+
+    thead {
+      display: table-header-group !important;
     }
 
     tr {
-      page-break-inside: avoid;
-      page-break-after: auto;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
 
-    td, th {
-      page-break-inside: avoid;
-    }
-
-    @page {
-      size: A4;
-      margin: 8mm;
+    .invoice-footer-block {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
   }
 `;
