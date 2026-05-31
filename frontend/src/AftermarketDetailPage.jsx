@@ -15,15 +15,22 @@ import {
   Calendar,
   Trash2,
   Boxes,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  RotateCw,
+  ExternalLink,
+  Maximize2,
 } from 'lucide-react';
 
 const API_URL = 'https://yaris-autocare-production.up.railway.app';
 
 const resolveImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return imageUrl;
-  }
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
   return `${API_URL}${imageUrl}`;
 };
 
@@ -54,6 +61,16 @@ const AftermarketDetailPage = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerZoom, setViewerZoom] = useState(1);
+  const [viewerRotation, setViewerRotation] = useState(0);
+
+  const galleryImages = useMemo(() => {
+    if (!Array.isArray(product?.images)) return [];
+    return product.images.filter((img) => img?.image);
+  }, [product]);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -62,9 +79,7 @@ const AftermarketDetailPage = () => {
         setProduct(response.data);
 
         if (response.data?.images?.length) {
-          const main =
-            response.data.images.find((img) => img.is_main) ||
-            response.data.images[0];
+          const main = response.data.images.find((img) => img.is_main) || response.data.images[0];
           setSelectedImage(main);
         }
       } catch (error) {
@@ -78,23 +93,88 @@ const AftermarketDetailPage = () => {
     fetchProduct();
   }, [id]);
 
+  useEffect(() => {
+    if (!viewerOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') closeViewer();
+      if (event.key === 'ArrowLeft') goViewerPrev();
+      if (event.key === 'ArrowRight') goViewerNext();
+      if (event.key === '+') zoomIn();
+      if (event.key === '-') zoomOut();
+      if (event.key.toLowerCase() === 'r') rotateRight();
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerOpen, viewerIndex, galleryImages.length]);
+
   const stockState = useMemo(() => {
     if (!product) return null;
     const qty = Number(product.quantity) || 0;
     const min = Number(product.min_stock_level) || 0;
 
-    if (qty <= 0) {
-      return { label: 'Out of Stock', color: COLORS.danger, bg: COLORS.dangerBg };
-    }
-    if (qty <= min) {
-      return { label: 'Low Stock', color: COLORS.warning, bg: COLORS.warningBg };
-    }
+    if (qty <= 0) return { label: 'Out of Stock', color: COLORS.danger, bg: COLORS.dangerBg };
+    if (qty <= min) return { label: 'Low Stock', color: COLORS.warning, bg: COLORS.warningBg };
+
     return {
       label: product.status || 'Available',
       color: COLORS.success,
       bg: COLORS.successBg,
     };
   }, [product]);
+
+  const openViewer = (image) => {
+    if (!galleryImages.length) return;
+
+    const index = galleryImages.findIndex((img) => img.id === image?.id);
+    setViewerIndex(index >= 0 ? index : 0);
+    setViewerZoom(1);
+    setViewerRotation(0);
+    setViewerOpen(true);
+  };
+
+  const closeViewer = () => {
+    setViewerOpen(false);
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const goViewerPrev = () => {
+    if (!galleryImages.length) return;
+    setViewerIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const goViewerNext = () => {
+    if (!galleryImages.length) return;
+    setViewerIndex((prev) => (prev + 1) % galleryImages.length);
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const zoomIn = () => setViewerZoom((prev) => Math.min(prev + 0.25, 3));
+  const zoomOut = () => setViewerZoom((prev) => Math.max(prev - 0.25, 0.5));
+  const rotateLeft = () => setViewerRotation((prev) => prev - 90);
+  const rotateRight = () => setViewerRotation((prev) => prev + 90);
+
+  const resetViewer = () => {
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const openImageNewTab = () => {
+    const image = galleryImages[viewerIndex];
+    if (!image?.image) return;
+    window.open(resolveImageUrl(image.image), '_blank', 'noopener,noreferrer');
+  };
 
   const handleDelete = async () => {
     if (!product?.id) return;
@@ -117,16 +197,15 @@ const AftermarketDetailPage = () => {
     }
   };
 
-  if (loading) {
-    return <div style={loadingStyle}>Loading product details...</div>;
-  }
+  if (loading) return <div style={loadingStyle}>Loading product details...</div>;
+  if (!product) return <div style={loadingStyle}>Product not found.</div>;
 
-  if (!product) {
-    return <div style={loadingStyle}>Product not found.</div>;
-  }
+  const activeViewerImage = galleryImages[viewerIndex];
 
   return (
     <div style={pageStyle}>
+      <style>{responsiveStyles}</style>
+
       <div style={topBar}>
         <button onClick={() => navigate('/aftermarket')} style={backBtn}>
           <ArrowLeft size={15} />
@@ -181,7 +260,7 @@ const AftermarketDetailPage = () => {
         </div>
       </div>
 
-      <div style={statsGrid}>
+      <div style={statsGrid} className="stats-grid">
         <StatCard label="Supplier" value={product.supplier || '-'} icon={<Truck size={14} />} />
         <StatCard
           label="Cost Price"
@@ -200,30 +279,42 @@ const AftermarketDetailPage = () => {
         />
       </div>
 
-      <div style={mainGrid}>
+      <div style={mainGrid} className="main-grid">
         <div style={leftCol}>
           <SectionCard title="Photo Gallery" icon={<Package size={15} />}>
-            <div style={mainImageCard}>
+            <button
+              type="button"
+              style={mainImageCard}
+              onClick={() => selectedImage?.image && openViewer(selectedImage)}
+              title="Click to enlarge"
+            >
               {selectedImage?.image ? (
-                <img
-                  src={resolveImageUrl(selectedImage.image)}
-                  alt={product.part_name}
-                  style={mainImageStyle}
-                />
+                <>
+                  <img
+                    src={resolveImageUrl(selectedImage.image)}
+                    alt={product.part_name}
+                    style={mainImageStyle}
+                  />
+                  <div style={imageHoverBadge}>
+                    <Maximize2 size={15} />
+                    View Image
+                  </div>
+                </>
               ) : (
                 <div style={emptyMedia}>
                   <Package size={42} />
                   <div style={{ marginTop: '10px' }}>No product image</div>
                 </div>
               )}
-            </div>
+            </button>
 
-            {Array.isArray(product.images) && product.images.length > 0 && (
+            {galleryImages.length > 0 && (
               <div style={thumbStrip}>
-                {product.images.map((img) => (
+                {galleryImages.map((img) => (
                   <button
                     key={img.id}
                     onClick={() => setSelectedImage(img)}
+                    onDoubleClick={() => openViewer(img)}
                     style={{
                       ...thumbBtn,
                       border:
@@ -231,12 +322,9 @@ const AftermarketDetailPage = () => {
                           ? `2px solid ${COLORS.primary}`
                           : `1px solid ${COLORS.border}`,
                     }}
+                    title="Click to select, double-click to enlarge"
                   >
-                    <img
-                      src={resolveImageUrl(img.image)}
-                      alt="thumb"
-                      style={thumbImage}
-                    />
+                    <img src={resolveImageUrl(img.image)} alt="thumb" style={thumbImage} />
                   </button>
                 ))}
               </div>
@@ -285,6 +373,102 @@ const AftermarketDetailPage = () => {
           </SectionCard>
         </div>
       </div>
+
+      {viewerOpen && activeViewerImage?.image && (
+        <div style={viewerOverlay} onClick={closeViewer}>
+          <div style={viewerShell} onClick={(e) => e.stopPropagation()}>
+            <div style={viewerTopBar}>
+              <div style={viewerTitleBlock}>
+                <div style={viewerTitle}>{product.part_name || 'Product Image'}</div>
+                <div style={viewerCounter}>
+                  Image {viewerIndex + 1} of {galleryImages.length}
+                </div>
+              </div>
+
+              <div style={viewerControls}>
+                <button type="button" style={viewerToolBtn} onClick={zoomOut} title="Zoom out">
+                  <ZoomOut size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={zoomIn} title="Zoom in">
+                  <ZoomIn size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={rotateLeft} title="Rotate left">
+                  <RotateCcw size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={rotateRight} title="Rotate right">
+                  <RotateCw size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={resetViewer} title="Reset">
+                  Reset
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={openImageNewTab} title="Open image">
+                  <ExternalLink size={17} />
+                </button>
+                <button type="button" style={viewerCloseBtn} onClick={closeViewer} title="Close">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div style={viewerImageArea}>
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  style={{ ...viewerNavBtn, left: 12 }}
+                  onClick={goViewerPrev}
+                  title="Previous image"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+              )}
+
+              <img
+                src={resolveImageUrl(activeViewerImage.image)}
+                alt={product.part_name}
+                style={{
+                  ...viewerImage,
+                  transform: `scale(${viewerZoom}) rotate(${viewerRotation}deg)`,
+                }}
+              />
+
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  style={{ ...viewerNavBtn, right: 12 }}
+                  onClick={goViewerNext}
+                  title="Next image"
+                >
+                  <ChevronRight size={28} />
+                </button>
+              )}
+            </div>
+
+            {galleryImages.length > 1 && (
+              <div style={viewerThumbs}>
+                {galleryImages.map((img, index) => (
+                  <button
+                    key={img.id || index}
+                    type="button"
+                    onClick={() => {
+                      setViewerIndex(index);
+                      resetViewer();
+                    }}
+                    style={{
+                      ...viewerThumbBtn,
+                      border:
+                        index === viewerIndex
+                          ? `2px solid ${COLORS.primary}`
+                          : '1px solid rgba(255,255,255,0.18)',
+                    }}
+                  >
+                    <img src={resolveImageUrl(img.image)} alt="thumbnail" style={viewerThumbImg} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -304,12 +488,7 @@ const SectionCard = ({ title, icon, children }) => (
 const InfoRow = ({ label, value, mono = false }) => (
   <div style={infoRow}>
     <div style={infoLabel}>{label}</div>
-    <div
-      style={{
-        ...infoValue,
-        fontFamily: mono ? 'monospace' : 'inherit',
-      }}
-    >
+    <div style={{ ...infoValue, fontFamily: mono ? 'monospace' : 'inherit' }}>
       {value || '-'}
     </div>
   </div>
@@ -571,6 +750,7 @@ const sectionBody = {
 };
 
 const mainImageCard = {
+  width: '100%',
   backgroundColor: '#fff',
   borderRadius: '14px',
   border: `1px solid ${COLORS.border}`,
@@ -579,12 +759,30 @@ const mainImageCard = {
   alignItems: 'center',
   justifyContent: 'center',
   overflow: 'hidden',
+  position: 'relative',
+  padding: 0,
+  cursor: 'zoom-in',
 };
 
 const mainImageStyle = {
   width: '100%',
   height: '100%',
   objectFit: 'cover',
+};
+
+const imageHoverBadge = {
+  position: 'absolute',
+  right: '12px',
+  bottom: '12px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '7px',
+  background: 'rgba(15, 23, 42, 0.86)',
+  color: '#fff',
+  borderRadius: '999px',
+  padding: '8px 11px',
+  fontSize: '12px',
+  fontWeight: '800',
 };
 
 const emptyMedia = {
@@ -654,4 +852,177 @@ const loadingStyle = {
   color: COLORS.muted,
   fontWeight: '600',
 };
+
+const viewerOverlay = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(2, 6, 23, 0.92)',
+  zIndex: 9999,
+  padding: '18px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const viewerShell = {
+  width: 'min(1180px, 100%)',
+  height: 'min(840px, 100%)',
+  background: '#0f172a',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: '20px',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
+};
+
+const viewerTopBar = {
+  padding: '12px',
+  borderBottom: '1px solid rgba(255,255,255,0.10)',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap',
+};
+
+const viewerTitleBlock = {
+  minWidth: 0,
+};
+
+const viewerTitle = {
+  color: '#fff',
+  fontSize: '14px',
+  fontWeight: '900',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const viewerCounter = {
+  color: '#94a3b8',
+  fontSize: '12px',
+  marginTop: '3px',
+  fontWeight: '700',
+};
+
+const viewerControls = {
+  display: 'flex',
+  gap: '8px',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+};
+
+const viewerToolBtn = {
+  height: '36px',
+  minWidth: '36px',
+  padding: '0 10px',
+  borderRadius: '10px',
+  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(255,255,255,0.06)',
+  color: '#fff',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '12px',
+  fontWeight: '800',
+};
+
+const viewerCloseBtn = {
+  height: '38px',
+  width: '38px',
+  borderRadius: '12px',
+  border: '1px solid rgba(248,113,113,0.35)',
+  background: 'rgba(239,68,68,0.18)',
+  color: '#fecaca',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const viewerImageArea = {
+  flex: 1,
+  minHeight: 0,
+  position: 'relative',
+  overflow: 'auto',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '18px',
+};
+
+const viewerImage = {
+  maxWidth: '100%',
+  maxHeight: '100%',
+  objectFit: 'contain',
+  transition: 'transform 160ms ease',
+  transformOrigin: 'center center',
+};
+
+const viewerNavBtn = {
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: '46px',
+  height: '46px',
+  borderRadius: '999px',
+  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(15, 23, 42, 0.72)',
+  color: '#fff',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 2,
+};
+
+const viewerThumbs = {
+  padding: '10px 12px',
+  borderTop: '1px solid rgba(255,255,255,0.10)',
+  display: 'flex',
+  gap: '8px',
+  overflowX: 'auto',
+};
+
+const viewerThumbBtn = {
+  width: '62px',
+  height: '52px',
+  minWidth: '62px',
+  borderRadius: '10px',
+  overflow: 'hidden',
+  padding: 0,
+  background: 'transparent',
+  cursor: 'pointer',
+};
+
+const viewerThumbImg = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+};
+
+const responsiveStyles = `
+  @media (max-width: 900px) {
+    .main-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .stats-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+  }
+`;
+
 export default AftermarketDetailPage;
