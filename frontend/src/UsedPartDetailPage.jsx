@@ -14,6 +14,15 @@ import {
   DollarSign,
   Car,
   Boxes,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  RotateCw,
+  ExternalLink,
+  Maximize2,
 } from 'lucide-react';
 import api from './api';
 
@@ -39,8 +48,14 @@ export default function UsedPartDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState('');
 
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerZoom, setViewerZoom] = useState(1);
+  const [viewerRotation, setViewerRotation] = useState(0);
+
   useEffect(() => {
     fetchPart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchPart = async () => {
@@ -63,11 +78,34 @@ export default function UsedPartDetailPage() {
 
   useEffect(() => {
     if (images.length > 0) {
-      setActiveImage(images[0]);
+      const main = part?.images?.find((img) => img.is_main)?.image || images[0];
+      setActiveImage(main);
     } else {
       setActiveImage('');
     }
-  }, [images]);
+  }, [images, part]);
+
+  useEffect(() => {
+    if (!viewerOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') closeViewer();
+      if (event.key === 'ArrowLeft') goViewerPrev();
+      if (event.key === 'ArrowRight') goViewerNext();
+      if (event.key === '+') zoomIn();
+      if (event.key === '-') zoomOut();
+      if (event.key.toLowerCase() === 'r') rotateRight();
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerOpen, viewerIndex, images.length]);
 
   const mainImage =
     activeImage ||
@@ -76,10 +114,55 @@ export default function UsedPartDetailPage() {
     '';
 
   const fitmentText = [part?.make, part?.model, part?.variant].filter(Boolean).join(' ') || '-';
+
   const yearText =
     part?.year_from || part?.year_to
       ? `${part?.year_from || ''}${part?.year_to ? ` - ${part.year_to}` : ''}`
       : '-';
+
+  const openViewer = (imageUrl) => {
+    if (!images.length || !imageUrl) return;
+    const index = images.findIndex((img) => img === imageUrl);
+    setViewerIndex(index >= 0 ? index : 0);
+    setViewerZoom(1);
+    setViewerRotation(0);
+    setViewerOpen(true);
+  };
+
+  const closeViewer = () => {
+    setViewerOpen(false);
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const goViewerPrev = () => {
+    if (!images.length) return;
+    setViewerIndex((prev) => (prev - 1 + images.length) % images.length);
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const goViewerNext = () => {
+    if (!images.length) return;
+    setViewerIndex((prev) => (prev + 1) % images.length);
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const zoomIn = () => setViewerZoom((prev) => Math.min(prev + 0.25, 3));
+  const zoomOut = () => setViewerZoom((prev) => Math.max(prev - 0.25, 0.5));
+  const rotateLeft = () => setViewerRotation((prev) => prev - 90);
+  const rotateRight = () => setViewerRotation((prev) => prev + 90);
+
+  const resetViewer = () => {
+    setViewerZoom(1);
+    setViewerRotation(0);
+  };
+
+  const openImageNewTab = () => {
+    if (!images[viewerIndex]) return;
+    window.open(images[viewerIndex], '_blank', 'noopener,noreferrer');
+  };
 
   if (loading) {
     return (
@@ -99,6 +182,8 @@ export default function UsedPartDetailPage() {
 
   return (
     <div style={page}>
+      <style>{responsiveStyles}</style>
+
       <button onClick={() => navigate('/used-parts')} style={backBtn}>
         <ArrowLeft size={15} />
         BACK TO USED PARTS
@@ -147,29 +232,43 @@ export default function UsedPartDetailPage() {
         <StatCard label="Usage" value={part.usage_type || '-'} />
       </div>
 
-      <div style={contentGrid}>
+      <div style={contentGrid} className="content-grid">
         <div style={leftCol}>
           <SectionCard title="Photo Gallery" icon={<Camera size={15} />}>
             {mainImage ? (
               <>
-                <img src={mainImage} alt={part.part_name} style={mainImageStyle} />
+                <button
+                  type="button"
+                  onClick={() => openViewer(mainImage)}
+                  style={mainImageButton}
+                  title="Click to enlarge"
+                >
+                  <img src={mainImage} alt={part.part_name} style={mainImageStyle} />
+                  <div style={imageHoverBadge}>
+                    <Maximize2 size={15} />
+                    View Image
+                  </div>
+                </button>
 
                 {images.length > 1 && (
                   <div style={thumbGrid}>
                     {images.map((img, index) => (
-                      <img
+                      <button
                         key={`${img}-${index}`}
-                        src={img}
-                        alt={`Part ${index + 1}`}
+                        type="button"
                         onClick={() => setActiveImage(img)}
+                        onDoubleClick={() => openViewer(img)}
                         style={{
-                          ...thumb,
+                          ...thumbBtn,
                           border:
                             activeImage === img
                               ? `2px solid ${COLORS.red}`
                               : `1px solid ${COLORS.border}`,
                         }}
-                      />
+                        title="Click to select, double-click to enlarge"
+                      >
+                        <img src={img} alt={`Part ${index + 1}`} style={thumb} />
+                      </button>
                     ))}
                   </div>
                 )}
@@ -183,7 +282,7 @@ export default function UsedPartDetailPage() {
             <TextBlock text={part.description || 'No description added.'} />
           </SectionCard>
 
-          <div style={doubleTextGrid}>
+          <div style={doubleTextGrid} className="double-text-grid">
             <SectionCard title="Condition Notes" icon={<Wrench size={15} />}>
               <TextBlock text={part.condition_notes || 'No condition notes added.'} />
             </SectionCard>
@@ -235,6 +334,102 @@ export default function UsedPartDetailPage() {
           </SectionCard>
         </div>
       </div>
+
+      {viewerOpen && images[viewerIndex] && (
+        <div style={viewerOverlay} onClick={closeViewer}>
+          <div style={viewerShell} onClick={(e) => e.stopPropagation()}>
+            <div style={viewerTopBar}>
+              <div style={viewerTitleBlock}>
+                <div style={viewerTitle}>{part.part_name || 'Used Part Image'}</div>
+                <div style={viewerCounter}>
+                  Image {viewerIndex + 1} of {images.length}
+                </div>
+              </div>
+
+              <div style={viewerControls}>
+                <button type="button" style={viewerToolBtn} onClick={zoomOut} title="Zoom out">
+                  <ZoomOut size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={zoomIn} title="Zoom in">
+                  <ZoomIn size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={rotateLeft} title="Rotate left">
+                  <RotateCcw size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={rotateRight} title="Rotate right">
+                  <RotateCw size={17} />
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={resetViewer} title="Reset">
+                  Reset
+                </button>
+                <button type="button" style={viewerToolBtn} onClick={openImageNewTab} title="Open image">
+                  <ExternalLink size={17} />
+                </button>
+                <button type="button" style={viewerCloseBtn} onClick={closeViewer} title="Close">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div style={viewerImageArea}>
+              {images.length > 1 && (
+                <button
+                  type="button"
+                  style={{ ...viewerNavBtn, left: 12 }}
+                  onClick={goViewerPrev}
+                  title="Previous image"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+              )}
+
+              <img
+                src={images[viewerIndex]}
+                alt={part.part_name}
+                style={{
+                  ...viewerImage,
+                  transform: `scale(${viewerZoom}) rotate(${viewerRotation}deg)`,
+                }}
+              />
+
+              {images.length > 1 && (
+                <button
+                  type="button"
+                  style={{ ...viewerNavBtn, right: 12 }}
+                  onClick={goViewerNext}
+                  title="Next image"
+                >
+                  <ChevronRight size={28} />
+                </button>
+              )}
+            </div>
+
+            {images.length > 1 && (
+              <div style={viewerThumbs}>
+                {images.map((img, index) => (
+                  <button
+                    key={`${img}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      setViewerIndex(index);
+                      resetViewer();
+                    }}
+                    style={{
+                      ...viewerThumbBtn,
+                      border:
+                        index === viewerIndex
+                          ? `2px solid ${COLORS.red}`
+                          : '1px solid rgba(255,255,255,0.18)',
+                    }}
+                  >
+                    <img src={img} alt="thumbnail" style={viewerThumbImg} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -562,13 +757,39 @@ const cardBody = {
   padding: '16px',
 };
 
+const mainImageButton = {
+  width: '100%',
+  maxHeight: '430px',
+  borderRadius: '14px',
+  overflow: 'hidden',
+  border: `1px solid ${COLORS.border}`,
+  padding: 0,
+  background: '#fff',
+  cursor: 'zoom-in',
+  position: 'relative',
+  display: 'block',
+};
+
 const mainImageStyle = {
   width: '100%',
   maxHeight: '430px',
   objectFit: 'cover',
-  borderRadius: '14px',
   display: 'block',
-  border: `1px solid ${COLORS.border}`,
+};
+
+const imageHoverBadge = {
+  position: 'absolute',
+  right: '12px',
+  bottom: '12px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '7px',
+  background: 'rgba(15, 23, 42, 0.86)',
+  color: '#fff',
+  borderRadius: '999px',
+  padding: '8px 11px',
+  fontSize: '12px',
+  fontWeight: '800',
 };
 
 const thumbGrid = {
@@ -578,12 +799,22 @@ const thumbGrid = {
   marginTop: '12px',
 };
 
-const thumb = {
+const thumbBtn = {
   width: '100%',
   height: '74px',
   objectFit: 'cover',
   borderRadius: '10px',
   cursor: 'pointer',
+  padding: 0,
+  overflow: 'hidden',
+  background: '#fff',
+};
+
+const thumb = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  display: 'block',
 };
 
 const emptyBox = {
@@ -635,3 +866,171 @@ const loadingCard = {
   color: COLORS.muted,
   fontWeight: '600',
 };
+
+const viewerOverlay = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(2, 6, 23, 0.92)',
+  zIndex: 9999,
+  padding: '18px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const viewerShell = {
+  width: 'min(1180px, 100%)',
+  height: 'min(840px, 100%)',
+  background: '#0f172a',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: '20px',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
+};
+
+const viewerTopBar = {
+  padding: '12px',
+  borderBottom: '1px solid rgba(255,255,255,0.10)',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap',
+};
+
+const viewerTitleBlock = {
+  minWidth: 0,
+};
+
+const viewerTitle = {
+  color: '#fff',
+  fontSize: '14px',
+  fontWeight: '900',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const viewerCounter = {
+  color: '#94a3b8',
+  fontSize: '12px',
+  marginTop: '3px',
+  fontWeight: '700',
+};
+
+const viewerControls = {
+  display: 'flex',
+  gap: '8px',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+};
+
+const viewerToolBtn = {
+  height: '36px',
+  minWidth: '36px',
+  padding: '0 10px',
+  borderRadius: '10px',
+  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(255,255,255,0.06)',
+  color: '#fff',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '12px',
+  fontWeight: '800',
+};
+
+const viewerCloseBtn = {
+  height: '38px',
+  width: '38px',
+  borderRadius: '12px',
+  border: '1px solid rgba(248,113,113,0.35)',
+  background: 'rgba(239,68,68,0.18)',
+  color: '#fecaca',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const viewerImageArea = {
+  flex: 1,
+  minHeight: 0,
+  position: 'relative',
+  overflow: 'auto',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '18px',
+};
+
+const viewerImage = {
+  maxWidth: '100%',
+  maxHeight: '100%',
+  objectFit: 'contain',
+  transition: 'transform 160ms ease',
+  transformOrigin: 'center center',
+};
+
+const viewerNavBtn = {
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: '46px',
+  height: '46px',
+  borderRadius: '999px',
+  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(15, 23, 42, 0.72)',
+  color: '#fff',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 2,
+};
+
+const viewerThumbs = {
+  padding: '10px 12px',
+  borderTop: '1px solid rgba(255,255,255,0.10)',
+  display: 'flex',
+  gap: '8px',
+  overflowX: 'auto',
+};
+
+const viewerThumbBtn = {
+  width: '62px',
+  height: '52px',
+  minWidth: '62px',
+  borderRadius: '10px',
+  overflow: 'hidden',
+  padding: 0,
+  background: 'transparent',
+  cursor: 'pointer',
+};
+
+const viewerThumbImg = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+};
+
+const responsiveStyles = `
+  @media (max-width: 900px) {
+    .content-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .double-text-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    body {
+      overflow-x: hidden;
+    }
+  }
+`;
