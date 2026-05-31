@@ -75,6 +75,7 @@ export default function InvoiceDetail() {
   const showVehicleSection = useMemo(() => {
     if (!invoice) return false;
     if (invoice.invoice_type === 'USED_PART') return false;
+
     return Boolean(
       invoice.rego ||
       invoice.make ||
@@ -118,6 +119,7 @@ export default function InvoiceDetail() {
 
   const openWhatsApp = () => {
     const phone = String(invoice?.customer_phone || '').replace(/\D/g, '');
+
     if (!phone) {
       alert('Customer phone is missing.');
       return;
@@ -156,9 +158,11 @@ Yaris Autocare
 
     try {
       setEmailSending(true);
+
       await axios.post(`${API_URL}/api/invoices/${invoiceId}/send-email/`, {
         email: invoice.customer_email.trim(),
       });
+
       alert('Invoice sent to customer email.');
     } catch (error) {
       console.error(error?.response?.data || error);
@@ -289,11 +293,19 @@ Yaris Autocare
               />
               <SimpleStat
                 label="Next Service At KM"
-                value={serviceDetail?.next_service_at_km ? `${serviceDetail.next_service_at_km} km` : '-'}
+                value={
+                  serviceDetail?.next_service_at_km
+                    ? `${serviceDetail.next_service_at_km} km`
+                    : '-'
+                }
               />
               <SimpleStat
                 label="Next Service Date"
-                value={serviceDetail?.next_service_date ? formatPlainDate(serviceDetail.next_service_date) : '-'}
+                value={
+                  serviceDetail?.next_service_date
+                    ? formatPlainDate(serviceDetail.next_service_date)
+                    : '-'
+                }
               />
             </div>
 
@@ -328,11 +340,9 @@ Yaris Autocare
             <table style={table}>
               <thead>
                 <tr>
-                  <th style={thNo}>#</th>
                   <th style={thDesc}>Description</th>
-                  <th style={th}>Type</th>
                   <th style={th}>Qty</th>
-                  <th style={th}>Amount</th>
+                  <th style={th}>Unit Price</th>
                   <th style={th}>Discount</th>
                   <th style={th}>Total</th>
                 </tr>
@@ -341,20 +351,26 @@ Yaris Autocare
               <tbody>
                 {visibleItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={emptyTd}>No items.</td>
+                    <td colSpan={5} style={emptyTd}>
+                      No items.
+                    </td>
                   </tr>
                 ) : (
                   visibleItems.map((item, index) => (
                     <tr key={item.id || index}>
-                      <td style={tdNo}>{index + 1}</td>
                       <td style={tdDesc}>
                         <div style={descMain}>{item.name || '-'}</div>
-                        {item.description ? <div style={descSub}>{item.description}</div> : null}
+                        {item.description ? (
+                          <div style={descSub}>{item.description}</div>
+                        ) : null}
                       </td>
-                      <td style={td}>{formatSmallType(item.item_type || item.source_type || 'ITEM')}</td>
+
                       <td style={td}>{formatQty(item.quantity)}</td>
+
                       <td style={td}>${formatMoney(item.unit_price)}</td>
+
                       <td style={td}>${formatMoney(item.discount)}</td>
+
                       <td style={tdStrong}>${formatMoney(item.line_total)}</td>
                     </tr>
                   ))
@@ -406,6 +422,7 @@ function PrintHeader() {
         <div style={brandName}>
           YARIS <span style={{ color: '#b91c1c' }}>AUTOCARE</span>
         </div>
+
         <div style={businessMeta}>
           <div>Operated by Pyramid Enterprises AU Pty Ltd</div>
           <div>Car Rental • Mechanical Services • Auto Parts</div>
@@ -517,11 +534,6 @@ function formatInvoiceType(type) {
   return String(type).replaceAll('_', ' ');
 }
 
-function formatSmallType(type) {
-  if (!type) return 'ITEM';
-  return String(type).replaceAll('_', ' ');
-}
-
 function formatDate(dateString) {
   if (!dateString) return '-';
   return new Date(dateString).toLocaleDateString();
@@ -529,7 +541,10 @@ function formatDate(dateString) {
 
 function formatTime(dateString) {
   if (!dateString) return '-';
-  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateString).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function formatPlainDate(dateString) {
@@ -769,21 +784,13 @@ const table = {
   fontSize: 12,
 };
 
-const thNo = {
-  border: '1px solid #111827',
-  padding: '7px 6px',
-  textAlign: 'center',
-  fontSize: 11,
-  fontWeight: 900,
-  width: 36,
-};
-
 const thDesc = {
   border: '1px solid #111827',
-  padding: '7px 6px',
+  padding: '7px 8px',
   textAlign: 'left',
   fontSize: 11,
   fontWeight: 900,
+  width: '58%',
 };
 
 const th = {
@@ -792,14 +799,7 @@ const th = {
   textAlign: 'center',
   fontSize: 11,
   fontWeight: 900,
-};
-
-const tdNo = {
-  border: '1px solid #d1d5db',
-  padding: '7px 6px',
-  textAlign: 'center',
-  verticalAlign: 'top',
-  fontSize: 12,
+  whiteSpace: 'nowrap',
 };
 
 const td = {
@@ -812,7 +812,7 @@ const td = {
 
 const tdDesc = {
   border: '1px solid #d1d5db',
-  padding: '7px 6px',
+  padding: '7px 8px',
   textAlign: 'left',
   verticalAlign: 'top',
   fontSize: 12,
