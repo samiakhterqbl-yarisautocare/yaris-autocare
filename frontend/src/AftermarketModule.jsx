@@ -42,7 +42,17 @@ const COLORS = {
 };
 
 const CATEGORY_OPTIONS = [
-  'All Categories',
+  'Transmission filter kit',
+  'Additive and maintenance items',
+  'Trims clips',
+  'Tail lights',
+  'Guard liners',
+  'Side mirrors',
+  'Globes',
+  'Grille',
+  'Emblems',
+  'Headlights',
+  'Gaskets',
   'Oil Filters',
   'Air Filters',
   'Cabin Filters',
@@ -60,7 +70,7 @@ const CATEGORY_OPTIONS = [
   'Batteries',
   'Fluids',
   'Accessories',
-  'Other',
+  'Other'
 ];
 
 const STATUS_OPTIONS = [
