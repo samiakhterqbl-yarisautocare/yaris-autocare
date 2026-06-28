@@ -45,6 +45,7 @@ const CATEGORY_OPTIONS = [
   'Batteries',
   'Fluids',
   'Accessories',
+  'Bumper Bracket',
   'Other'
 ];
 const AftermarketNewPage = () => {
@@ -54,7 +55,7 @@ const AftermarketNewPage = () => {
 
   const [formData, setFormData] = useState({
     part_name: '',
-    category:'Transmission filter kit',
+    category:'Other',
     description: '',
     quantity: 0,
     min_stock_level: 5,
