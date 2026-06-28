@@ -44,6 +44,7 @@ const COLORS = {
 const CATEGORY_OPTIONS = [
   'Transmission filter kit',
   'Additive and maintenance items',
+  'Bumper Bracket',
   'Trims clips',
   'Tail lights',
   'Guard liners',
