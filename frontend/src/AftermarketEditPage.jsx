@@ -36,6 +36,18 @@ const COLORS = {
 };
 
 const CATEGORY_OPTIONS = [
+  'Transmission filter kit',
+  'Additive and maintenance items',
+  'Bumper Bracket',
+  'Trims clips',
+  'Tail lights',
+  'Guard liners',
+  'Side mirrors',
+  'Globes',
+  'Grille',
+  'Emblems',
+  'Headlights',
+  'Gaskets',
   'Oil Filters',
   'Air Filters',
   'Cabin Filters',
@@ -55,7 +67,6 @@ const CATEGORY_OPTIONS = [
   'Accessories',
   'Other'
 ];
-
 const STATUS_OPTIONS = ['Available', 'Out of Stock', 'Inactive'];
 
 const AftermarketEditPage = () => {
